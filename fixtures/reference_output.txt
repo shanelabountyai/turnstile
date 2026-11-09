@@ -1,0 +1,76 @@
+== Turnstile reference run — Synthetic Night (fixture)
+commands 2662 · ok 2510 · rejected 152
+-- by code
+  CHECKED_IN                     802
+  HELD                           596
+  PAYING                         483
+  CONFIRMED                      451
+  SOLD_OUT_TIER                   99
+  WAITLISTED                      75
+  RELEASED                        40
+  PAYMENT_FAILED_RELEASED         31
+  REFUNDED                        30
+  REFUND_WINDOW_CLOSED             7
+  HOLD_EXPIRED                     4
+  WAITLIST_DUPLICATE               4
+  TIER_NOT_ON_SALE                 3
+  HOLD_NOT_YOURS                   2
+  HOLD_RELEASED                    2
+  SALES_CLOSED                     2
+  SEAT_TAKEN                       2
+  SOLD_OUT_POOL                    2
+  ALREADY_CHECKED_IN               1
+  DOORS_NOT_OPEN                   1
+  HOLD_ID_DUPLICATE                1
+  HOLD_NOT_HELD                    1
+  HOLD_UNKNOWN                     1
+  ORDER_NOT_YOURS                  1
+  ORDER_UNKNOWN                    1
+  ORPHAN_SEAT                      1
+  PAID_AFTER_TIMEOUT               1
+  PAYMENT_DUPLICATE                1
+  PAYMENT_UNKNOWN                  1
+  QTY_INVALID                      1
+  QTY_OVER_LIMIT                   1
+  SALES_NOT_OPEN                   1
+  SEATS_NOT_ALLOWED                1
+  SEATS_REQUIRED                   1
+  SEAT_DUPLICATE                   1
+  SEAT_UNKNOWN                     1
+  TICKET_ALREADY_REFUNDED          1
+  TICKET_CHECKED_IN                1
+  TICKET_NOT_IN_ORDER              1
+  TICKET_REFUNDED                  1
+  TICKET_UNKNOWN                   1
+  TIER_UNKNOWN                     1
+  WAITLIST_NOT_NEEDED              1
+  WAITLIST_TARGET_UNKNOWN          1
+  WAITLIST_UNKNOWN                 1
+-- inventory (end state)
+  scope id       capacity  sold  held refunded remaining available
+  tier  EARLY         200   187     0       14        13         0
+  tier  ADV           400   400     0       16         0         0
+  tier  DOOR          300   213     0        0        87         0
+  tier  BALC          216   204     0       17        12        12
+  pool  FLOOR         800   800     0       30         0         0
+  pool  BALCONY       216   204     0       17        12        12
+-- orders 451 · tickets issued 1051 · live 1004 · refunded 47 · checked in 802
+-- money (cents): captured 4618132 · refunded 137682 · net 4480450 · refunds 48
+  refunds CUSTOMER               47     129984
+  refunds PAID_AFTER_TIMEOUT      1       7698
+-- holds
+  HOLD_CONFIRMED           447
+  HOLD_EXPIRED              77
+  HOLD_PAY_FAILED           31
+  HOLD_PAY_TIMEOUT           1
+  HOLD_RELEASED             40
+  OFFER_CONFIRMED            4
+  OFFER_EXPIRED              1
+-- waitlist: entries 75 · offers made 5
+  CLOSED_OFF_SALE           46
+  FULFILLED                  4
+  OFFER_EXPIRED              1
+  WAITING                   24
+-- commitment d4d64203ae84f69cbc2b4e42e4297ac7dc01c151465dd147b7ce4638fef61d43
+shuffle: 5 orders of commands.csv → identical tables and commitment
+wrote expected_*.csv and expected_summary.json

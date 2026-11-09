@@ -1,0 +1,7 @@
+scope,id,pool,capacity,sold,held,refunded,remaining,available
+tier,EARLY,FLOOR,200,187,0,14,13,0
+tier,ADV,FLOOR,400,400,0,16,0,0
+tier,DOOR,FLOOR,300,213,0,0,87,0
+tier,BALC,BALCONY,216,204,0,17,12,12
+pool,FLOOR,FLOOR,800,800,0,30,0,0
+pool,BALCONY,BALCONY,216,204,0,17,12,12

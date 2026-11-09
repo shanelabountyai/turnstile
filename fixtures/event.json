@@ -1,0 +1,127 @@
+{
+  "currency": "USD",
+  "doors_at": "2027-03-20T19:00:00",
+  "event_id": "EV-SYNTH-001",
+  "name": "Synthetic Night (fixture)",
+  "pools": [
+    {
+      "capacity": 800,
+      "kind": "GA",
+      "pool_id": "FLOOR"
+    },
+    {
+      "capacity": 216,
+      "kind": "RESERVED",
+      "pool_id": "BALCONY"
+    }
+  ],
+  "rules": {
+    "cancellation_refund_bps": 10000,
+    "hold_ttl_minutes": 10,
+    "max_tickets_per_order": 8,
+    "offer_expired_rule": "DROP",
+    "offer_ttl_minutes": 1440,
+    "payment_timeout_minutes": 30,
+    "prevent_orphan_seats": true,
+    "refund_policy": [
+      {
+        "fee_refunded": true,
+        "min_days_before": 30,
+        "refund_bps": 10000
+      },
+      {
+        "fee_refunded": false,
+        "min_days_before": 7,
+        "refund_bps": 5000
+      },
+      {
+        "fee_refunded": false,
+        "min_days_before": 0,
+        "refund_bps": 0
+      }
+    ],
+    "service_fee_cents": 350,
+    "waitlist_rule": "HEAD_BLOCKS"
+  },
+  "sales_close_at": "2027-03-20T20:00:00",
+  "sales_open_at": "2026-12-01T10:00:00",
+  "sections": [
+    {
+      "pool_id": "BALCONY",
+      "rows": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "seats_per_row": 12,
+      "section_id": "A"
+    },
+    {
+      "pool_id": "BALCONY",
+      "rows": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "seats_per_row": 12,
+      "section_id": "B"
+    },
+    {
+      "pool_id": "BALCONY",
+      "rows": [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F"
+      ],
+      "seats_per_row": 12,
+      "section_id": "C"
+    }
+  ],
+  "starts_at": "2027-03-20T20:00:00",
+  "ticket_salt": "fixture-salt-20261109",
+  "tiers": [
+    {
+      "allotment": 200,
+      "off_sale_at": "2027-01-16T00:00:00",
+      "on_sale_at": "2026-12-01T10:00:00",
+      "pool_id": "FLOOR",
+      "price_cents": 2500,
+      "tier_id": "EARLY"
+    },
+    {
+      "allotment": 400,
+      "off_sale_at": "2027-03-20T17:00:00",
+      "on_sale_at": "2026-12-01T10:00:00",
+      "pool_id": "FLOOR",
+      "price_cents": 3499,
+      "tier_id": "ADV"
+    },
+    {
+      "allotment": 300,
+      "off_sale_at": "2027-03-20T20:00:00",
+      "on_sale_at": "2027-03-20T17:00:00",
+      "pool_id": "FLOOR",
+      "price_cents": 4500,
+      "tier_id": "DOOR"
+    },
+    {
+      "allotment": 216,
+      "off_sale_at": "2027-03-20T20:00:00",
+      "on_sale_at": "2026-12-01T10:00:00",
+      "pool_id": "BALCONY",
+      "price_cents": 6000,
+      "tier_id": "BALC"
+    }
+  ],
+  "timezone_label": "America/Chicago",
+  "venue": "The Foundry Hall (invented)"
+}
