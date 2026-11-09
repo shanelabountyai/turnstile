@@ -1,5 +1,33 @@
 # NEXT
 
+## ▶ 2026-11-09 (Phase 1 build, cloud, Fable): engine done, all 14 Phase 1 tasks green locally. Stopped at the Phase 2 gate for Shane's review.
+
+Branch `kickoff` → PR #1 (not merged). CI run on this push: linked below once it finishes.
+
+### Built
+`src/inventory/` (12 files; engine as one class, see decisions "Layout"), `src/inventory/tables.ts`, `tests/inventory/{golden,fixture,shuffle}.test.ts` (29 tests), `scripts/inventory-eval.ts`, `scripts/inventory-lint.ts`, package scripts `inventory:eval`, `inventory:lint`, `fixtures:check`, CI Phase 1 gate (lint → eval → fixtures:check after vitest; runner `TZ=America/Chicago`), `docs/EVAL.md`, `docs/phase-2-tasks.md` (draft).
+
+### Gate output (local, 2026-11-09 ~14:30 CT)
+- `npx vitest run tests/inventory`: 3 files, 29 tests passed (GT-01..GT-18; seven tables + summary + commitment; 20 shuffles + out-of-order refusal).
+- `npm run inventory:eval`: table identical to `fixtures/reference_output.txt`; "7 expected files and expected_summary.json match (2662 commands)"; commitment `d4d64203…61d43`.
+- `npm run inventory:lint`: OK (12 files; event.json valid). `npm run fixtures:check`: OK. `npm run lint`: 0 problems. `npm run typecheck`: clean. `npm run foundation:drift`: clean against v1.6.1 (modules removed: billing).
+- Negative proofs: tampered copy (K-00066 qty 8→9) → eval exit 1 naming row 67 K-00066; planted `Math.random()` → lint exit 1; orphan rule flipped in a copy of `event.json` → eval exit 1 at K-00103 (T21 `ORPHAN_SEAT` → `HELD`), no code change.
+- **First-run agreement** with the oracle on every table and the commitment; no expected value edited; no oracle change.
+- CI-only here: database vitest files, e2e (D-7). Template vitest files still fail locally for lack of `.env.test`/Postgres — CI decides.
+
+### Decisions this session
+D-26 (publishable key clone-owned, Phase 2 gate; Shane 2026-11-09), D-27 (ports and lineage), and the "Layout" record — `docs/decisions.md`.
+
+### Open for Shane
+1. Review PR #1 (kickoff + Phase 1 on one branch) and merge, or ask for a split.
+2. Phase 2 gate: approve `docs/phase-2-tasks.md`; decide D-26's shape and O-8 (live round trip count) when 2.5 comes up.
+3. By hand: port-table row (turnstile → 7700), build-log card #13, CLONES.md PR #14 on saas-foundation.
+
+### Next session
+Phase 2 task 2.0 (plan, stop for review) once PR #1 is merged or Shane says to continue on `kickoff`.
+
+---
+
 ## ▶ 2026-11-09 (kickoff session, cloud, Fable): scaffold done, stopped before any product code. Awaiting Shane's review of the Phase 1 plan.
 
 Branch `kickoff` → PR against `main` (not merged). CLONES.md row → PR on saas-foundation (not merged). Links in the PR descriptions and in the chat.

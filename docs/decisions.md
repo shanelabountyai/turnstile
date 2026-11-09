@@ -49,6 +49,21 @@ The PRD leaves several rules open. The golden cases and measurements in `docs/do
 | D-24 | **The fixture numbers are the oracle's answers on the generator's own defects, by the same author.** Every write-up says so. The fixture proves the engine agrees with the spec on 2,662 commands with 152 rejects over 35 codes and 79 named traps; it does not prove the policy is a good policy, that the orphan rule matches a venue's, that the system holds under load, or anything about Stripe beyond its documented signature and idempotency contracts. | Overclaiming is the failure mode the owner cares most about |
 | D-25 | **Never edit an expected value to pass a test.** Expected files come from `tools/reference_alloc.py --write-expected`; `fixtures:check` regenerates into a temp dir and compares sha256s against `fixtures/MANIFEST.json`. If TypeScript disagrees, stop and show the owner both derivations. | House rule |
 
+### Owner decision (Shane, 2026-11-09, after the kickoff contradictions list)
+
+| # | Decision | Why |
+|---|----------|-----|
+| D-26 | **The Stripe publishable key is clone-owned and decided at the Phase 2 gate.** It is not added to `.env.example`: INV-14 (template-owned) pins that file's keys to `src/core/env.ts`, which has `STRIPE_SECRET_KEY`, `STRIPE_PRICE_ID` and `STRIPE_WEBHOOK_SECRET` and no publishable key. Proposed shape for Phase 2: `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` read in a clone-owned `src/checkout/env.ts`, checked against INV-20 (public env) before it lands. Task 1.1's sentence about `.env.example` was reduced to the D-5 comment. | Owner picked this over patching the foundation's `env.ts` for one clone |
+
+### Phase 1 build (cloud, Fable, 2026-11-09 14:05–14:30 CT)
+
+| # | Record | Detail |
+|---|--------|--------|
+| D-27 | **Ports and lineage (task 1.3).** `src/inventory/canonical.ts` is Quorum `src/tally/canonical.ts` verbatim below its header (read 2026-11-09 from the public repo). `errors.ts` is Quorum `src/tally/errors.ts` renamed. `time.ts` takes the `Timestamp` brand from Quorum `src/tally/time.ts` and adds integer-seconds arithmetic on the axis (`daysFromCivil`/`civilFromDays`, Hinnant's algorithm) — the one thing Quorum never needed. `cents.ts` is **written fresh**: LoanBook's money module was not readable from the cloud; the bps division is BigInt so no float touches a cent. `scripts/inventory-lint.ts` follows Quorum `scripts/tally-lint.ts`, with `stripe` added to the banned list and the numeric `/ 10000` ban kept (BigInt `10000n` passes). | CLAUDE.md "port before you write"; donors named in `docs/portfolio-overlap.md` |
+| — | **Layout.** `src/inventory/{canonical,cents,codes,csv,engine,errors,event,index,load,tables,time,types}.ts` — the engine is one class in `engine.ts` (counts, seats, tick, commands, reports) rather than the per-concern files the task list sketched (`counts.ts`, `seats.ts`, …): the state is one object and the rules reference each other at every step; splitting it would have meant passing the whole state around. `tables.ts` renders the seven expected tables for the test, the shuffle proof and the eval script. | Same lessons, fewer seams |
+| — | **First-run agreement.** GT-01..GT-18 (18 tests), the seven tables row for row, `expected_summary.json` and the commitment all matched the oracle on the first run with no oracle change and no expected-value edit. Shuffle 20/20. | Recorded because it is the point of writing the oracle first |
+| — | **Sandbox.** All Phase 1 commands ran locally (`vitest run tests/inventory`, `inventory:eval`, `inventory:lint`, `fixtures:check`, `lint`, `typecheck`, `foundation:drift`). Database and e2e remain CI-only (D-7). | — |
+
 ## Open items (defaults in force)
 
 | # | Question | Default | Flip it by |
