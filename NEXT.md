@@ -2,7 +2,7 @@
 
 ## ▶ 2026-11-09 (Phase 1 build, cloud, Fable): engine done, all 14 Phase 1 tasks green locally. Stopped at the Phase 2 gate for Shane's review.
 
-Branch `kickoff` → PR #1 (not merged). CI run on this push: linked below once it finishes.
+Branch `kickoff` → PR #1 (not merged). **CI green on the Phase 1 head:** https://github.com/shanelabountyai/turnstile/actions/runs/42691038583 (`ci (off)` and `modules-removed` both success; the Phase 1 gate steps `inventory:lint`, `inventory:eval`, `fixtures:check` ran on the runner).
 
 ### Built
 `src/inventory/` (12 files; engine as one class, see decisions "Layout"), `src/inventory/tables.ts`, `tests/inventory/{golden,fixture,shuffle}.test.ts` (29 tests), `scripts/inventory-eval.ts`, `scripts/inventory-lint.ts`, package scripts `inventory:eval`, `inventory:lint`, `fixtures:check`, CI Phase 1 gate (lint → eval → fixtures:check after vitest; runner `TZ=America/Chicago`), `docs/EVAL.md`, `docs/phase-2-tasks.md` (draft).
