@@ -1,0 +1,80 @@
+cmd_id,expected,trap
+K-00001,SALES_NOT_OPEN,T01 sales not open
+K-00002,HELD,T02 opening second is on sale
+K-00003,HOLD_ID_DUPLICATE,T03 duplicate hold id
+K-00004,HOLD_NOT_YOURS,T04 pay on someone else's hold
+K-00005,PAYING,T05 pay start
+K-00006,CONFIRMED,T06 first webhook confirms
+K-00007,PAYMENT_DUPLICATE,T07 replayed webhook is a no-op
+K-00008,PAYMENT_UNKNOWN,T08 unknown payment
+K-00033,SEATS_NOT_ALLOWED,T09 seats on a GA tier
+K-00034,SEATS_REQUIRED,T10 reserved tier without seats
+K-00035,SEAT_UNKNOWN,T11 unknown seat
+K-00036,SEAT_DUPLICATE,T12 same seat twice
+K-00037,TIER_UNKNOWN,T13 unknown tier
+K-00064,QTY_OVER_LIMIT,T14 over the per-order limit
+K-00065,QTY_INVALID,T15 zero quantity
+K-00066,HELD,T16 exactly the limit
+K-00067,RELEASED,T17 release
+K-00068,HOLD_RELEASED,T18 release twice
+K-00069,HOLD_RELEASED,T19 pay a released hold
+K-00102,HELD,T20 pair at the aisle
+K-00103,ORPHAN_SEAT,T21 would orphan C-F-03
+K-00104,HELD,T22 adjacent pair is fine
+K-00105,SEAT_TAKEN,T23 seat already held
+K-00106,PAYING,T24 pay the pair
+K-00107,CONFIRMED,T25 pair confirmed
+K-00108,SEAT_TAKEN,T26 one second before expiry: still taken
+K-00109,HELD,T27 at the expiry second: free
+K-00110,HOLD_EXPIRED,T28 paying an expired hold
+K-00111,PAYING,T29 pay
+K-00112,CONFIRMED,T30 confirmed
+K-00205,HELD,T31 hold
+K-00206,PAYING,T32 pay start
+K-00207,PAID_AFTER_TIMEOUT,"T33 paid after timeout → refund, no tickets"
+K-00208,HELD,T34 hold
+K-00209,PAYING,T35 pay start
+K-00210,PAYMENT_FAILED_RELEASED,T36 payment failed releases the hold
+K-00211,HOLD_NOT_HELD,T37 cannot pay a failed hold again
+K-00265,HELD,T38 hold
+K-00266,HOLD_EXPIRED,T39 release after expiry
+K-00267,HOLD_UNKNOWN,T40 unknown hold
+K-00734,REFUNDED,T41 full refund incl. fee (75 days)
+K-00735,TICKET_ALREADY_REFUNDED,T42 refund the same ticket twice
+K-00736,ORDER_NOT_YOURS,T43 refund someone else's order
+K-00737,TICKET_NOT_IN_ORDER,T44 ticket not in order
+K-00738,ORDER_UNKNOWN,T45 unknown order
+K-00998,WAITLIST_NOT_NEEDED,T46 waitlist while tickets are available
+K-00999,TIER_NOT_ON_SALE,T47 waitlist for an off-sale tier
+K-01000,WAITLIST_TARGET_UNKNOWN,T48 unknown waitlist target
+K-01001,WAITLIST_UNKNOWN,T49 leave an unknown entry
+K-01389,REFUNDED,"T50 half refund floors 3499 → 1749, fee kept (19 days)"
+K-01474,WAITLISTED,T51 head joins for 4
+K-01475,WAITLISTED,T52 second joins for 2
+K-01476,WAITLIST_DUPLICATE,T53 same customer twice
+K-01477,REFUNDED,T54 2 seats free (8 days: 50%)
+STATE@2027-03-12T10:03:00,"HEAD_BLOCKS:W-0058 WAITING, W-0059 WAITING","T55 head blocks: 2 free, head wants 4, nobody offered"
+K-01478,REFUNDED,T56 4 seats free → head offered
+STATE@2027-03-12T10:05:00,OFFERED:W-0058→O-0003 W-0059→O-0004,"T57 head offered the 4, second offered the 2"
+K-01479,HOLD_NOT_YOURS,T58 pay someone else's offer
+K-01480,PAYING,T59 accept offer
+K-01481,CONFIRMED,T60 offer confirmed
+K-01493,HOLD_EXPIRED,T61 accepting an expired offer
+K-01507,REFUND_WINDOW_CLOSED,T62 refund inside 7 days
+K-01536,TIER_NOT_ON_SALE,T63 DOOR before its on-sale
+K-01537,TIER_NOT_ON_SALE,T64 EARLY after its off-sale
+K-01722,DOORS_NOT_OPEN,T65 scan before doors
+K-02133,HELD,T66 last floor ticket held
+K-02134,SOLD_OUT_POOL,"T67 tier has allotment, pool has none"
+K-02135,WAITLISTED,T68 join DOOR waitlist
+K-02136,SOLD_OUT_POOL,"T69 expiry tick: the freed ticket went to the waitlist head, not to the walk-up"
+K-02137,PAYING,T70 head accepts
+K-02138,CONFIRMED,T71 confirmed from the waitlist
+STATE@2027-03-20T19:44:30,FLOOR pool_remaining=0 DOOR tier_remaining=87,T72 pool 0 while DOOR still shows allotment
+K-02465,CHECKED_IN,T73 scan
+K-02466,ALREADY_CHECKED_IN,T74 second scan of the same ticket
+K-02467,TICKET_REFUNDED,T75 scan a refunded ticket
+K-02468,TICKET_UNKNOWN,T76 unknown ticket
+K-02469,TICKET_CHECKED_IN,T77 refund after check-in
+K-02661,SALES_CLOSED,T78 after sales close
+K-02662,SALES_CLOSED,T79 waitlist after close
