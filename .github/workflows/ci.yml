@@ -24,6 +24,7 @@ jobs:
       DIRECT_URL: postgresql://postgres:postgres@localhost:5432/turnstile_test?connection_limit=10&pool_timeout=20
       AUTH_SECRET: ci-only-secret-not-for-real-use-0123456789abc
       APP_URL: http://localhost:7700
+      TZ: America/Chicago # the runner itself, not just Postgres (D-9: nothing in the engine may depend on it)
     services:
       postgres:
         image: postgres:17
@@ -57,6 +58,12 @@ jobs:
           echo "DATABASE_URL_SYSTEM=$DATABASE_URL" >> "$GITHUB_ENV"
           echo "DATABASE_URL=postgresql://app_rw:app_rw@localhost:5432/turnstile_test?connection_limit=8&pool_timeout=20" >> "$GITHUB_ENV"
       - run: npx vitest run
+      # Phase 1 gate (docs/phase-1-tasks.md 1.14): the pure engine, the oracle agreement, the frozen fixtures.
+      # fixtures:check runs AFTER inventory:eval so a product-code write into fixtures/ fails the run (task 1.2).
+      # No Stripe secret is configured here and none is needed (D-5).
+      - run: npm run inventory:lint
+      - run: npm run inventory:eval
+      - run: npm run fixtures:check
       # Production build, served — the way it ships. login.spec.ts drives a real page.
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test

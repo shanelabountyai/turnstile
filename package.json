@@ -30,7 +30,10 @@
     "new-project": "tsx scripts/new-project.ts",
     "foundation:drift": "tsx scripts/foundation-drift.ts",
     "foundation:status": "tsx scripts/foundation-status.ts",
-    "foundation:check-modules": "tsx scripts/foundation-check-modules.ts"
+    "foundation:check-modules": "tsx scripts/foundation-check-modules.ts",
+    "inventory:eval": "tsx scripts/inventory-eval.ts",
+    "inventory:lint": "tsx scripts/inventory-lint.ts",
+    "fixtures:check": "python3 -I tools/verify_fixtures.py && python3 -I tools/golden_answers.py && git diff --exit-code fixtures/ && test -z \"$(git status --porcelain fixtures/)\""
   },
   "dependencies": {
     "@prisma/adapter-pg": "^7.10.1",

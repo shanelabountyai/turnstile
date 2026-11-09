@@ -6,6 +6,8 @@ import type { MembershipEnded } from '@/core/tenancy/orgs';
 // deletion. Removing the billing module deletes the lines marked `// billing`.
 // FR-05: a deleted org must not keep charging.
 export async function beforeOrgDelete(orgId: string): Promise<void> {
+  // Turnstile: nothing yet; Phase 2 refuses deletion of a venue with live tickets (seam, D-21).
+  void orgId;
 }
 
 // Clone-owned (v1.4.0): which of a user's orgs the template's org lists show — `/onboarding`, where every
