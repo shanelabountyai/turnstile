@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.1, Sonnet 5.5): design system ported. Next: 3.2 read model.
+
+Built: `src/app/turnstile.css`, `src/components/{ui,pill}.tsx`, `docs/DESIGN_SYSTEM.md`, `tools/contrast.py` (`npm run design:contrast`: OK, 0 pairs under floor, both schemes), `/o/[org]/design` reference page, root layout imports the stylesheet. Gate: lint, tsc, inventory:lint, foundation:drift clean; `next build` rc 0 and lists the design route. Not looked at in a browser (light/dark by eye is Shane's).
+Next session: 3.2 `src/checkout/read.ts` (Opus: it carries the `available` formula).
+
+---
 ## ▶ 2026-11-10 (Phase 2 tasks 2.7–2.8 + exit, local Mac, Opus 5.5): Phase 2 green in CI. Stopped at the Phase 3 gate for Shane's review.
 
 Branch `phase-2` → PR #2 (base `kickoff`, unmerged).
