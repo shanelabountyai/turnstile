@@ -93,6 +93,7 @@ model Org {
   exports        OrgExport[]
   aiUsage        AiUsage[]
   aiBudget       AiBudget?
+  ticketedEvents Event[] // app
   aiHolds        AiHold[]
   events         OrgEvent[]
   eventSeq       Int             @default(0) // the last OrgEvent.seq handed out; only the commit trigger writes it
