@@ -1,5 +1,35 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 2 tasks 2.0–2.3, local Mac, Fable): schema, guards and load green locally. Stopped at the 2.2 gate for Shane's review.
+
+Branch `phase-2` (off `kickoff`) → PR #2. Commits this session: D-28..D-30 recorded (`2dd4f75`), 2.1 schema (`4d3add2`), INV-34 export hooks (`60a2c43`), 2.3 load (`ea3b77e`), 2.2 guards (`9b7b78b`). Not pushed yet unless this entry says so below.
+
+### Built
+- `prisma/schema/turnstile.prisma`: 13 models (Event, Pool, Tier, Section, Seat, Hold, Payment, Order, Ticket, WaitlistEntry, Refund, CommandLog, Customer), 8 Postgres enums, natural ids as composite keys per event; `core.prisma` gained one `// app` back-relation line (drift allows it).
+- `prisma/migrations/20261110000000_turnstile_init` (Prisma DDL + 42 hand-written CHECKs: every `*At` matches the D-9 axis regex, cents/counts ≥ 0, windows half-open), `…000001_rls_policies_turnstile` (regenerated, 31 tables), `…000002_turnstile_guards` (D-21 triggers: append-only CommandLog/Order; Refund admits only `stripeRefundId` NULL→value once; one transition-guard function on Hold/Payment/Ticket/Seat/WaitlistEntry with the brief's transitions as trigger args, each transition requiring a CommandLog row of the same command in the same transaction via transaction-local `turnstile.cmd_id`).
+- `src/checkout/load.ts` + `scripts/turnstile-load.ts` (`npm run turnstile:load -- --org <slug>`, `:test` variant), write-once.
+- `src/app/export-hooks.ts`: the 13 tables exported (INV-34 failed without it).
+- Tests: `tests/checkout/guards.test.ts` (9), `tests/checkout/load.test.ts` (2).
+
+### Gate output (local, 2026-11-10)
+- `npm run db:setup`: wrote `.env.local` and `.env.test` (both gitignored, checked), created `turnstile` and `turnstile_test`, 18 template migrations applied to each, EXIT=0. The three new migrations applied to both afterwards.
+- `prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema --exit-code` (shadow db `turnstile_shadow`): rc=0, "No difference detected".
+- `npm test`: 45 files, 308 passed, 33 skipped (the RLS-enforce leg), 0 failed. Baseline before the export-hooks fix was 1 failed (INV-34).
+- `npm run turnstile:load:test -- --org guards` second run: "refused: EV-SYNTH-001 is already loaded in this org (write-once)". Counts in `turnstile_test`: Seat 216, Tier 4, Pool 2, Customer 700 (capacity 800 + 216 = 1,016).
+- `inventory:eval`: 7 files match, 2662 commands. `fixtures:check`: OK. `inventory:lint`: OK. `lint`: 0 problems. `typecheck`: clean. `foundation:drift`: clean against v1.6.1 (modules removed: billing) — needed `git remote add template "~/Projects/saas foundation"` + `git fetch template --tags` on this Mac first.
+
+### Decisions this session
+D-28, D-29, D-30 resolved as recommended (`docs/decisions.md`, "Phase 2 shape"). Refinement of D-21 recorded in the guards migration header: Refund is append-only except `stripeRefundId` NULL→value once (the provider's id, D-23; NULL = `PENDING_PROVIDER`).
+
+### Open for Shane (the 2.2 gate)
+1. Review the schema and the triggers (`prisma/schema/turnstile.prisma`, `prisma/migrations/20261110000002_turnstile_guards/migration.sql`).
+2. Say go for 2.4 (cast path; `Engine.hydrate` entry point per D-28, no rule change) → stop again after 2.4.
+
+### Next session
+Task 2.4 on `phase-2`: `src/checkout/cast.ts` (advisory lock per pool, hydrate, advance + command, delta + CommandLog), two-writer last-seat test.
+
+---
+
 ## ▶ 2026-11-10 06:58 CT (Phase 2 task 2.0, cloud, Fable): plan written, stopped for review. No Phase 2 code.
 
 Branch `phase-2` (off `kickoff`) → PR #2 based on `kickoff`. PR #1 (kickoff + Phase 1) still open and unmerged — merge #1 first, then #2's base can be retargeted to `main`.
