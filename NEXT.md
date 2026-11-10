@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.3, Sonnet 5.5): Event screen built. Next: 3.4 Buy screen.
+
+Built: `/o/[org]/events` (list) and `/o/[org]/events/[eventKey]` (pool cards, tier cards with the `available` inputs as a hover `title` plus a keyboard-reachable "How is N worked out?" disclosure, on-sale windows, rules and refund windows read-only, `SOLD_OUT_POOL` worded "pool sold out" vs `SOLD_OUT_TIER` "tier sold out", each with a one-line reason). "Events" link in the org nav. The read model gains `timezoneLabel`, the sales window and `rules` on `event`, plus `dollars()`/`percent()` (string slicing, no float path; tested). The eval:db cast loop moved to `scripts/cast-fixture.ts` (`castFixture`), shared by eval:db and the new `e2e/event.spec.ts`.
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · foundation:drift clean · `tests/checkout/read.test.ts` 7 passed · `inventory:eval:db` 2,662 commands in 36.1 s, readEvent = recount = replay = expected, commitment `d4d64203…61d43` (unchanged after the extraction) · `e2e/event.spec.ts` 1 passed against the production build: DOOR "87 remaining · 0 available — pool sold out", BALC "12 remaining · 12 available". Full vitest and full e2e: CI.
+Not looked at in a browser by eye (layout in light/dark is Shane's).
+Next session: 3.4 Buy screen (Opus recommended: hold/pay/webhook path, countdown vs server clock D-34, ORPHAN_SEAT preview).
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.2, Opus 5.5): read model built. Next: 3.3 Event screen.
 
 Built: `src/checkout/read.ts`, with `eventView(engine, asOf)` (pure: pools, tiers with the formula inputs and `soldOut` pool-before-tier, seats per section and row, waitlists with FIFO positions and live offers, orders, ledger) and `readEvent(orgId, eventId, at)` (shared pool locks, hydrate, `advance(at)` in memory, writes nothing). `tests/checkout/read.test.ts` (6 tests): fixture end state gives FLOOR 800/800, DOOR 87 remaining / 0 available / SOLD_OUT_POOL, BALCONY 204 sold / 12 available, ledger 4,618,132 / 137,682 / 4,480,450 ¢; per-order refunds = expected_orders.csv; DB: expiry second frees holds and offers the head in the view with 0 rows written. `inventory:eval:db` now also checks readEvent = recount. Decision D-31 "as built" is recorded.

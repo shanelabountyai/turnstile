@@ -4,7 +4,7 @@
 import { withOrg } from '@/core/db/rls';
 import { compareStrings } from '@/inventory/canonical';
 import { Engine } from '@/inventory/engine';
-import { rowKey } from '@/inventory/event';
+import { rowKey, type Rules } from '@/inventory/event';
 import type { Timestamp } from '@/inventory/time';
 import { engineState, eventDef, loadRows } from './cast';
 
@@ -12,7 +12,10 @@ export type SoldOut = 'SOLD_OUT_POOL' | 'SOLD_OUT_TIER' | null;
 
 export interface EventView {
   asOf: Timestamp;
-  event: { eventKey: string; name: string; venue: string; startsAt: Timestamp; doorsAt: Timestamp; cancelledAt: Timestamp | null };
+  event: {
+    eventKey: string; name: string; venue: string; timezoneLabel: string; startsAt: Timestamp; doorsAt: Timestamp;
+    salesOpenAt: Timestamp; salesCloseAt: Timestamp; cancelledAt: Timestamp | null; rules: Rules;
+  };
   pools: { pool: string; kind: string; capacity: number; sold: number; held: number; refunded: number; remaining: number }[];
   /** `available = min(tierRemaining, poolRemaining)`; both inputs shown so a screen can explain the number. */
   tiers: {
@@ -39,7 +42,8 @@ export function eventView(e: Engine, asOf: Timestamp): EventView {
 
   return {
     asOf,
-    event: { eventKey: e.ev.event_id, name: e.ev.name, venue: e.ev.venue, startsAt: e.ev.starts_at, doorsAt: e.ev.doors_at, cancelledAt: e.cancelledAt },
+    event: { eventKey: e.ev.event_id, name: e.ev.name, venue: e.ev.venue, timezoneLabel: e.ev.timezone_label, startsAt: e.ev.starts_at, doorsAt: e.ev.doors_at,
+      salesOpenAt: e.ev.sales_open_at, salesCloseAt: e.ev.sales_close_at, cancelledAt: e.cancelledAt, rules: e.ev.rules },
     pools: [...poolRow.values()].map((r) => ({ pool: r.id, kind: e.pools.get(r.id)!.kind, capacity: r.capacity, sold: r.sold, held: r.held, refunded: r.refunded, remaining: r.remaining })),
     tiers: inv.filter((r) => r.scope === 'tier').map((r) => {
       const t = e.tiers.get(r.id)!;
@@ -78,4 +82,17 @@ export async function readEvent(orgId: string, eventId: string, at: Timestamp): 
   const asOf = last && compareStrings(at, last) < 0 ? last : at;
   e.advance(asOf);
   return eventView(e, asOf);
+}
+
+/** Integer cents as dollars for display, by string slicing (no float path): 4618132 → "$46,181.32". */
+export function dollars(c: number): string {
+  const d = String(Math.abs(c)).padStart(3, '0');
+  return `${c < 0 ? '-' : ''}$${d.slice(0, -2).replace(/\B(?=(\d{3})+$)/g, ',')}.${d.slice(-2)}`;
+}
+
+/** Basis points as a percent for display, same way: 10000 → "100%", 5000 → "50%", 125 → "1.25%". */
+export function percent(bps: number): string {
+  const d = String(bps).padStart(3, '0');
+  const frac = d.slice(-2).replace(/0+$/, '');
+  return `${d.slice(0, -2)}${frac ? `.${frac}` : ''}%`;
 }

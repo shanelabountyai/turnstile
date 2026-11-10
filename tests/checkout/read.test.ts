@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { db } from '@/core/db';
 import { castCommand } from '@/checkout/cast';
 import { loadFixtureEvent } from '@/checkout/load';
-import { eventView, readEvent } from '@/checkout/read';
+import { dollars, eventView, percent, readEvent } from '@/checkout/read';
 import { parseCsv } from '@/inventory/csv';
 import { Engine } from '@/inventory/engine';
 import { loadCommands, loadEvent } from '@/inventory/load';
@@ -113,5 +113,12 @@ describe('readEvent (database)', () => {
 
   it('an `at` before the log reads as of the last command', async () => {
     expect((await readEvent(orgId, eventId, T('2026-12-01T00:00:00'))).asOf).toBe('2026-12-02T10:00:01');
+  });
+});
+
+describe('display formatters (no float path)', () => {
+  it('cents and bps format by string slicing', () => {
+    expect([dollars(4618132), dollars(350), dollars(5), dollars(0), dollars(-137682)]).toEqual(['$46,181.32', '$3.50', '$0.05', '$0.00', '-$1,376.82']);
+    expect([percent(10000), percent(5000), percent(125), percent(0)]).toEqual(['100%', '50%', '1.25%', '0%']);
   });
 });
