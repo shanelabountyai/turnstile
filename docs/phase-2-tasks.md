@@ -9,7 +9,7 @@ Phase 1's engine is the spec made executable in TypeScript. Phase 2 makes it tru
 
 Donors read: foundation `src/core/db/{index,rls,system,cross-org}.ts` (RLS off here, D-6: `withOrg` is a plain transaction; webhooks are a cross-org path and must be listed in `cross-org.ts`), `prisma/schema/core.prisma` (org-owned rows carry `orgId @db.Uuid` + `onDelete: Cascade`), `scripts/rls-policies.ts` (re-run after adding org-owned models even with RLS off, so the generated migration stays complete); Quorum `src/meetings/db.ts` (`asApp` with `SET LOCAL ROLE`), `quorum_init` migration (append-only triggers, insert guards, SECURITY DEFINER cast function).
 
-**Three shape decisions proposed (each needs a yes; defaults below take effect if you say "go"):**
+**Three shape decisions — resolved 2026-11-10 (Shane: take the recommendations; recorded as D-28..D-30 in `docs/decisions.md`):**
 
 | # | Decision | Recommendation | Alternative |
 |---|---|---|---|

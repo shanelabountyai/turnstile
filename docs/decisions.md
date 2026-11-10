@@ -64,6 +64,14 @@ The PRD leaves several rules open. The golden cases and measurements in `docs/do
 | — | **First-run agreement.** GT-01..GT-18 (18 tests), the seven tables row for row, `expected_summary.json` and the commitment all matched the oracle on the first run with no oracle change and no expected-value edit. Shuffle 20/20. | Recorded because it is the point of writing the oracle first |
 | — | **Sandbox.** All Phase 1 commands ran locally (`vitest run tests/inventory`, `inventory:eval`, `inventory:lint`, `fixtures:check`, `lint`, `typecheck`, `foundation:drift`). Database and e2e remain CI-only (D-7). | — |
 
+### Phase 2 shape (Shane, 2026-11-10: "take the recommendations")
+
+| # | Decision | Why |
+|---|----------|-----|
+| D-28 | **Cast path = hydrate and delta; `CommandLog` is the truth.** `Engine.hydrate(event, rows)` rebuilds a Phase 1 engine from the event's stored rows (holds, payments, orders, tickets, seats, entries, refunds, results) inside the command's transaction; `advance(now)` and the one command run in memory; the changed rows plus one `CommandLog` row are written in that transaction. `inventory:eval:db` replays the log through the pure engine from scratch and compares to the stored projections, so a projection bug surfaces as a disagreement with the log. The engine gains one entry point (`hydrate`); no rule, fixture or expected value changes — `inventory:eval` against the frozen fixtures is the proof. | O(state) per command and the rules exist once; replaying the whole log per command was the alternative |
+| D-29 | **No application role, no `SECURITY DEFINER` write path.** Integrity is the append-only and transition-guard triggers (D-21) plus the per-pool advisory lock (D-22). | Quorum needed a role to hide the sealed voter link; Turnstile has nothing to hide from its own app |
+| D-30 | **Stripe is an interface with two implementations.** `StripeLive` (official `stripe` package, keys only from the owner's `.env.local` / Vercel) and `StripeRecorded` (`fixtures/stripe/*.json`), the second used by every test, `inventory:eval:db` and CI. `verifyStripeSignature(rawBody, header, secret, nowSeconds)` is pure; `nowSeconds` is a parameter. | D-5: no key where the agent runs; `stripe-mock` would add a CI service for no new lesson |
+
 ## Open items (defaults in force)
 
 | # | Question | Default | Flip it by |
