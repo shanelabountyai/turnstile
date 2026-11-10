@@ -17,4 +17,5 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   'src/modules/apikeys/keys.ts': 'an API key names its org: the hashed-key lookup runs before any org is known', // apikeys
   'src/modules/apikeys/webhooks.ts': 'webhook fan-out and delivery: the cron sweep crosses every org', // apikeys
   // clone entries below
+  'src/app/api/checkout/webhook/route.ts': 'Stripe webhook: the org and event are read from the PaymentIntent metadata before any org is known (D-23)', // app
 };
