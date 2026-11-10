@@ -1,5 +1,30 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 2 tasks 2.5–2.6, local Mac, Fable then Opus 5.5): Stripe boundary and inventory:eval:db green. Stopped at the 2.6 gate for Shane's review.
+
+Branch `phase-2` → PR #2 (base `kickoff`, unmerged). Pushed.
+
+### The 2.6 gate number
+`npm run inventory:eval:db` (local Postgres 17, `turnstile_test`): **2662 commands through the cast path in 33.7 s; recount from stored rows = replay of the CommandLog = the seven expected files + expected_summary.json; commitment `d4d64203ae84f69cbc2b4e42e4297ac7dc01c151465dd147b7ce4638fef61d43`** (Phase 1's). Stripe recorded: 484 PaymentIntents, 48 refund calls, 48 Refund rows, 0 pending provider. Negative proof: a scratchpad copy with K-00066 qty 8→9 exits 1 at row 67 (K-00066 REJECT vs OK); `fixtures/` untouched.
+
+### Built
+- 2.5: `src/checkout/{stripe,webhook,checkout,clock,env}.ts`, `src/app/api/checkout/webhook/route.ts` (in `cross-org.ts` with `// app`, `// public` for INV-01), `fixtures/stripe/webhook.json`, `tests/checkout/webhook.test.ts` (11: valid / tampered / wrong secret / stale ±301 s / malformed / replayed event.id / PAYMENT_DUPLICATE / PAID_AFTER_TIMEOUT issues the refund call / PENDING_PROVIDER retry / route 503-404-400 / axisNow). `stripe` 23.1.0 added.
+- 2.6: `scripts/inventory-eval-db.ts`, `scripts/inventory-report.ts` (shared with `inventory:eval`, output identical).
+- Found by eval:db and fixed: Seat one-tick composites in the guard; `ord` on Pool/Tier/Section; the recorded-Stripe answer per command. All recorded in decisions (D-21/D-26/D-30 as built).
+
+### Gate output (local)
+lint 0 · typecheck clean · inventory:lint OK · inventory:eval match · fixtures:check OK · foundation:drift clean · `npm test` 47 files, 326 passed, 33 skipped, 0 failed · `prisma migrate diff --exit-code` "No difference detected".
+
+### Open for Shane (the 2.6 gate)
+1. Review the 2.5/2.6 commits; note the two in-place migration edits (no deployed DB; CI's DB is ephemeral).
+2. Say go for 2.7 (CI: `migrate diff`, `inventory:eval:db` on the off leg; no Stripe secret) and 2.8 (`docs/EVAL.md` Phase 2 section).
+3. By hand when you want the live check: `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` in `.env.local` (O-8 round trip is yours, recorded in EVAL.md).
+
+### Next session
+2.7 then 2.8, then the Phase 2 exit: CI green linked here, `docs/phase-3-tasks.md` drafted, stop.
+
+---
+
 ## ▶ 2026-11-10 (Phase 2 task 2.4, local Mac, Fable): cast path + two-writer test green. Stopped at the 2.4 gate for Shane's review.
 
 Branch `phase-2` → PR #2 (base `kickoff`, unmerged). Commits: engine `hydrate` (D-28), schema trim (`Payment.paymentIntentId` dropped: `payment_id` is the `pi_…` id), `src/checkout/cast.ts` + `tests/checkout/cast.test.ts`, decisions D-22/D-28 "as built".
