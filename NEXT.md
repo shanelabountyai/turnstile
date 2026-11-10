@@ -1,5 +1,27 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 2 tasks 2.7–2.8 + exit, local Mac, Opus 5.5): Phase 2 green in CI. Stopped at the Phase 3 gate for Shane's review.
+
+Branch `phase-2` → PR #2 (base `kickoff`, unmerged).
+
+### CI (the Phase 2 exit number)
+https://github.com/shanelabountyai/turnstile/actions/runs/42848895625 — `ci (off)` and `modules-removed` green. vitest 47 files, 326 passed, 33 skipped, 0 failed; `prisma migrate diff` "No difference detected"; `inventory:eval:db` 2662 commands in 52.3 s, recount = log replay = expected, commitment `d4d64203…61d43`; Stripe recorded 484 PI / 48 refunds / 0 pending. No Stripe secret in CI.
+
+### Built
+- 2.7: `.github/workflows/ci.yml` — off leg only: `migrate diff` against a `turnstile_shadow` db, then `npx tsx scripts/inventory-eval-db.ts` (plain `tsx`, not the npm script: CI has no `.env.test`; the env comes from the job).
+- 2.8: `docs/EVAL.md` Phase 2 section (eval:db, concurrency, signature, guards, CI link).
+- Exit: `docs/phase-3-tasks.md` drafted — four proposed decisions D-31..D-34 (read model, act-as-customer, notices skipped by type, server clock decides) and tasks 3.0–3.10.
+
+### Open for Shane (the Phase 3 gate)
+1. Review PR #2 (and #1 underneath it).
+2. Review `docs/phase-3-tasks.md`; say go (defaults D-31..D-34 take effect) or change any.
+3. By hand, any time: O-8 live round trip (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` in `.env.local`), recorded in EVAL.md.
+
+### Next session
+Phase 3 task 3.0 (donor read + record D-31..D-34), then 3.1 design-system port.
+
+---
+
 ## ▶ 2026-11-10 (Phase 2 tasks 2.5–2.6, local Mac, Fable then Opus 5.5): Stripe boundary and inventory:eval:db green. Stopped at the 2.6 gate for Shane's review.
 
 Branch `phase-2` → PR #2 (base `kickoff`, unmerged). Pushed.

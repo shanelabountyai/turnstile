@@ -1,4 +1,4 @@
-# EVAL — Turnstile Phase 1 (pure engine)
+# EVAL — Turnstile Phase 1 (pure engine) and Phase 2 (database path)
 
 Every number here is produced by the command named next to it. Measured on the frozen fixtures (`fixtures/`, seed 20261109) by the TypeScript engine under `src/inventory/`, 2026-11-09, cloud session.
 
@@ -116,6 +116,35 @@ The same fields in the same order as `fixtures/reference_output.txt` (the oracle
 | `expected_waitlist.csv` | `4f9ac54daec14b6003f164b93b49f113db923c0406f72a2fd66881032eb0fdea` |
 
 `fixtures:check` = `verify_fixtures.py` OK (11 files, 0 mismatches; recount 7/7 equal; 76 traps agree) · `golden_answers.py` OK · `fixtures/` unchanged in git.
+
+## Phase 2 — the database path (local Postgres 17, 2026-11-10; CI run below)
+
+Same limits as above (D-24), plus: this proves the stored rows agree with the pure engine on the fixture stream, with Stripe **recorded** (`fixtures/stripe/`, D-30). It does not prove anything about Stripe's live behaviour (that is the by-hand round trip below), about throughput, or about more than two concurrent writers.
+
+### `inventory:eval:db` — `npx tsx scripts/inventory-eval-db.ts` (CI) / `npm run inventory:eval:db` (local)
+
+- **2,662 commands through the cast path** (`src/checkout/cast.ts`: per-pool advisory lock, hydrate, `advance` + command, delta + `CommandLog`) in 32.6 s; 2,662 `CommandLog` rows.
+- Two recounts, both equal to each other, to the seven `expected_*` files and to `expected_summary.json`: (a) the engine hydrated from stored rows, (b) a fresh pure engine replaying the `CommandLog`.
+- Commitment `d4d64203ae84f69cbc2b4e42e4297ac7dc01c151465dd147b7ce4638fef61d43` — Phase 1's, unchanged.
+- Stripe recorded: 484 PaymentIntents, 48 refund calls, 48 `Refund` rows, 0 `PENDING_PROVIDER`.
+- Negative proof (2026-11-10, scratchpad copy of `fixtures/`, K-00066 qty 8 → 9): exit 1 at row 67, K-00066 `REJECT` vs `OK`. `fixtures/` untouched.
+
+### Concurrency — `tests/checkout/cast.test.ts` (7 tests)
+
+Two concurrent `HOLD`s for the last floor ticket (pool 10, 9 held): results `['HELD','SOLD_OUT_POOL']`, log statuses `['OK','REJECT']`, held 10 of 10. Two writers only; no load test. Also: replay on `cmd_id` writes nothing; a command earlier than the log is refused; expiry runs before the command at the inclusive second; orphan reject recorded; pay → confirm → refund writes order, tickets, seat `SOLD` then `OPEN`, refund row.
+
+### Webhook signature and the Stripe boundary — `tests/checkout/webhook.test.ts` (11 tests)
+
+Stripe's documented scheme (`t=…,v1=…`, HMAC-SHA256 over `t.payload`, 300 s tolerance) against the published fixture secret. Accepted: valid header with several `v1` values. Refused: tampered body, wrong secret, `t` stale by 301 s either way, missing or malformed header (route: 400, nothing cast). Replayed `event.id` returns the stored result and casts nothing; a new event for a settled payment is `PAYMENT_DUPLICATE`; success after the payment timeout is `PAID_AFTER_TIMEOUT`, no tickets, refund call issued automatically; a provider failure on refund leaves `PENDING_PROVIDER` and the retry settles it; route 503 without a secret, 404 for an unknown event.
+
+### Schema and guards
+
+- `prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema --exit-code`: "No difference detected" (CI and local).
+- `tests/checkout/guards.test.ts` (9): D-21 triggers: `CommandLog` and `Order` refuse UPDATE/DELETE; `Refund` admits only `stripeRefundId` NULL → value, once; Hold/Payment/Ticket/Seat/WaitlistEntry refuse DELETE, refuse a move that is not a listed transition (e.g. Seat `OPEN → SOLD`, Ticket `REFUNDED → ISSUED`), and refuse a listed one without a `CommandLog` row of the same command in the same transaction; the axis CHECK refuses an off-axis timestamp (D-9).
+
+### CI
+
+Green on `0880d65`: https://github.com/shanelabountyai/turnstile/actions/runs/42848895625 — `ci (off)`: vitest 47 files, 326 passed, 33 skipped (the RLS-enforce leg), 0 failed; `migrate diff` "No difference detected"; `inventory:eval:db` 2,662 commands in 52.3 s on the runner, same recount and commitment, same Stripe counts. `modules-removed`: success. No Stripe secret configured.
 
 ## Live Stripe round trip (Phase 2, by hand)
 
