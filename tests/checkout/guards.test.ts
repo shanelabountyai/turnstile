@@ -87,6 +87,9 @@ describe('transition guards (D-21)', () => {
     await expect(db.seat.delete({ where })).rejects.toThrow('Seat rows are never deleted (D-21)');
     await expect(asCommand('K-11', (tx) => tx.seat.update({ where, data: { state: 'SOLD' } }))).rejects.toThrow('OPEN -> SOLD is not a transition (D-21)');
     await asCommand('K-12', (tx) => tx.seat.update({ where, data: { state: 'HELD', holdId: 'H-1' } }));
+    // HELD -> HELD: only a re-hold (freed and re-held in one tick) — the holdId must change
+    await expect(asCommand('K-12b', (tx) => tx.seat.update({ where, data: { state: 'HELD', holdId: 'H-1' } }))).rejects.toThrow('HELD -> HELD is not a transition (D-21)');
+    await asCommand('K-12c', (tx) => tx.seat.update({ where, data: { state: 'HELD', holdId: 'H-2' } }));
     await asCommand('K-13', (tx) => tx.seat.update({ where, data: { state: 'SOLD', holdId: null, ticketId: 'T-1' } }));
     await asCommand('K-14', (tx) => tx.seat.update({ where, data: { state: 'OPEN', ticketId: null } }));
   });

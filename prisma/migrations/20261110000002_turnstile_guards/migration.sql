@@ -3,7 +3,8 @@
 -- 1. Append-only: CommandLog, Order — UPDATE and DELETE refused. Refund — DELETE refused; the one UPDATE admitted sets
 --    stripeRefundId from NULL (the provider's id when the refund call returns, D-23) with every other column unchanged.
 -- 2. Transition guards on Hold, Payment, Ticket, Seat, WaitlistEntry: DELETE refused; an UPDATE must move `state`
---    along one of the brief's transitions (§2), listed as the trigger's arguments; every transition needs a
+--    along one of the brief's transitions (§2), listed as the trigger's arguments (a same-state entry such as Seat
+--    HELD>HELD is admitted only when the row changes); every transition needs a
 --    CommandLog row of the same command in the same transaction (turnstile.cmd_id, set transaction-local by the
 --    cast path before it writes; the CommandLog row is written first).
 -- TRUNCATE is left alone (row triggers do not fire on it) so tests can empty the tables, as the foundation's audit
@@ -40,7 +41,7 @@ BEGIN
   IF TG_OP = 'DELETE' THEN
     RAISE EXCEPTION '% rows are never deleted (D-21)', TG_TABLE_NAME;
   END IF;
-  IF NOT ((OLD.state::text || '>' || NEW.state::text) = ANY (TG_ARGV)) THEN
+  IF NOT ((OLD.state::text || '>' || NEW.state::text) = ANY (TG_ARGV)) OR (OLD.state = NEW.state AND OLD = NEW) THEN
     RAISE EXCEPTION '% %: % -> % is not a transition (D-21)', TG_TABLE_NAME, OLD."eventId", OLD.state, NEW.state;
   END IF;
   IF cmd IS NULL OR NOT EXISTS (SELECT 1 FROM "CommandLog" c WHERE c."eventId" = NEW."eventId" AND c."cmdId" = cmd) THEN
@@ -55,7 +56,11 @@ CREATE TRIGGER "Payment_guard" BEFORE UPDATE OR DELETE ON "Payment" FOR EACH ROW
   EXECUTE FUNCTION turnstile_transition_guard('PENDING>SUCCEEDED', 'PENDING>FAILED', 'PENDING>SUCCEEDED_LATE');
 CREATE TRIGGER "Ticket_guard" BEFORE UPDATE OR DELETE ON "Ticket" FOR EACH ROW
   EXECUTE FUNCTION turnstile_transition_guard('ISSUED>CHECKED_IN', 'ISSUED>REFUNDED', 'CHECKED_IN>REFUNDED');
+-- Seat composites through OPEN inside one command (the delta writes the end state of the tick): HELD>HELD is a seat
+-- freed by an expiry or release and re-held in the same tick (the next waitlist head, or the command at the expiry
+-- second; the row must differ, i.e. a new holdId); SOLD>HELD is a refund whose freed seat the waitlist fill offers
+-- in the same tick (R-5). Both passed through OPEN; the CommandLog row of that command is the record of it.
 CREATE TRIGGER "Seat_guard" BEFORE UPDATE OR DELETE ON "Seat" FOR EACH ROW
-  EXECUTE FUNCTION turnstile_transition_guard('OPEN>HELD', 'HELD>OPEN', 'HELD>SOLD', 'SOLD>OPEN');
+  EXECUTE FUNCTION turnstile_transition_guard('OPEN>HELD', 'HELD>OPEN', 'HELD>SOLD', 'SOLD>OPEN', 'HELD>HELD', 'SOLD>HELD');
 CREATE TRIGGER "WaitlistEntry_guard" BEFORE UPDATE OR DELETE ON "WaitlistEntry" FOR EACH ROW
   EXECUTE FUNCTION turnstile_transition_guard('WAITING>OFFERED', 'WAITING>LEFT', 'WAITING>CLOSED', 'WAITING>CLOSED_OFF_SALE', 'OFFERED>FULFILLED', 'OFFERED>OFFER_EXPIRED', 'OFFERED>OFFER_DECLINED', 'OFFERED>OFFER_PAY_FAILED', 'OFFERED>LEFT', 'OFFERED>CLOSED');
