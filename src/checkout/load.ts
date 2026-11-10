@@ -22,9 +22,9 @@ export async function loadFixtureEvent(orgId: string, dir = 'fixtures') {
         currency: ev.currency, ticketSalt: ev.ticket_salt, rules: ev.rules,
       },
     });
-    await tx.pool.createMany({ data: ev.pools.map((p) => ({ orgId, eventId, poolId: p.pool_id, kind: p.kind, capacity: p.capacity })) });
-    await tx.tier.createMany({ data: ev.tiers.map((t) => ({ orgId, eventId, tierId: t.tier_id, poolId: t.pool_id, allotment: t.allotment, priceCents: t.price_cents, onSaleAt: t.on_sale_at, offSaleAt: t.off_sale_at })) });
-    await tx.section.createMany({ data: ev.sections.map((s) => ({ orgId, eventId, sectionId: s.section_id, poolId: s.pool_id, rows: s.rows, seatsPerRow: s.seats_per_row })) });
+    await tx.pool.createMany({ data: ev.pools.map((p, ord) => ({ orgId, eventId, ord, poolId: p.pool_id, kind: p.kind, capacity: p.capacity })) });
+    await tx.tier.createMany({ data: ev.tiers.map((t, ord) => ({ orgId, eventId, ord, tierId: t.tier_id, poolId: t.pool_id, allotment: t.allotment, priceCents: t.price_cents, onSaleAt: t.on_sale_at, offSaleAt: t.off_sale_at })) });
+    await tx.section.createMany({ data: ev.sections.map((s, ord) => ({ orgId, eventId, ord, sectionId: s.section_id, poolId: s.pool_id, rows: s.rows, seatsPerRow: s.seats_per_row })) });
     await tx.seat.createMany({ data: [...seats.values()].map((s) => ({ orgId, eventId, seatId: s.seat_id, section: s.section, row: s.row, num: s.num, tierId: s.tier, poolId: s.pool })) });
     await tx.customer.createMany({ data: customers.map((c) => ({ orgId, customerId: c.customer_id!, name: c.name ?? '', email: c.email ?? '' })), skipDuplicates: true });
     return { eventId, pools: ev.pools.length, tiers: ev.tiers.length, sections: ev.sections.length, seats: seats.size, customers: customers.length };

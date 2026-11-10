@@ -27,7 +27,7 @@ const ts = (v: string | null): Timestamp | null => v as Timestamp | null;
 export async function loadRows(tx: Tx, eventId: string): Promise<Rows> {
   const where = { eventId };
   const [event, seats, holds, payments, orders, tickets, entries, refunds] = await Promise.all([
-    tx.event.findUniqueOrThrow({ where: { id: eventId }, include: { pools: { orderBy: { poolId: 'asc' } }, tiers: { orderBy: { tierId: 'asc' } }, sections: { orderBy: { sectionId: 'asc' } } } }),
+    tx.event.findUniqueOrThrow({ where: { id: eventId }, include: { pools: { orderBy: { ord: 'asc' } }, tiers: { orderBy: { ord: 'asc' } }, sections: { orderBy: { ord: 'asc' } } } }),
     tx.seat.findMany({ where }), tx.hold.findMany({ where }), tx.payment.findMany({ where }), tx.order.findMany({ where }),
     tx.ticket.findMany({ where }), tx.waitlistEntry.findMany({ where }), tx.refund.findMany({ where }),
   ]);

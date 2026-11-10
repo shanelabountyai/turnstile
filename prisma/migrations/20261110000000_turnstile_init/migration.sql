@@ -62,6 +62,7 @@ CREATE TABLE "Pool" (
     "orgId" UUID NOT NULL,
     "eventId" UUID NOT NULL,
     "poolId" TEXT NOT NULL,
+    "ord" INTEGER NOT NULL,
     "kind" "PoolKind" NOT NULL,
     "capacity" INTEGER NOT NULL,
 
@@ -73,6 +74,7 @@ CREATE TABLE "Tier" (
     "orgId" UUID NOT NULL,
     "eventId" UUID NOT NULL,
     "tierId" TEXT NOT NULL,
+    "ord" INTEGER NOT NULL,
     "poolId" TEXT NOT NULL,
     "allotment" INTEGER NOT NULL,
     "priceCents" INTEGER NOT NULL,
@@ -87,6 +89,7 @@ CREATE TABLE "Section" (
     "orgId" UUID NOT NULL,
     "eventId" UUID NOT NULL,
     "sectionId" TEXT NOT NULL,
+    "ord" INTEGER NOT NULL,
     "poolId" TEXT NOT NULL,
     "rows" TEXT[],
     "seatsPerRow" INTEGER NOT NULL,

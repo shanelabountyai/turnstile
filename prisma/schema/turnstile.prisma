@@ -100,6 +100,7 @@ model Pool {
   eventId  String   @db.Uuid
   event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   poolId   String
+  ord      Int // position in event.json (the order the inventory table prints)
   kind     PoolKind
   capacity Int
 
@@ -111,6 +112,7 @@ model Tier {
   eventId    String @db.Uuid
   event      Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
   tierId     String
+  ord        Int // position in event.json (the order the inventory table prints)
   poolId     String
   allotment  Int
   priceCents Int
@@ -125,6 +127,7 @@ model Section {
   eventId     String   @db.Uuid
   event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
   sectionId   String
+  ord         Int // position in event.json (the order the inventory table prints)
   poolId      String
   rows        String[]
   seatsPerRow Int
@@ -132,7 +135,7 @@ model Section {
   @@id([eventId, sectionId])
 }
 
-/// Guarded (D-21): OPEN → HELD → OPEN | SOLD → OPEN.
+/// Guarded (D-21): OPEN → HELD → OPEN | SOLD → OPEN; plus the one-tick composites through OPEN: HELD → HELD (new holdId) and SOLD → HELD (refund then fill).
 model Seat {
   orgId    String    @db.Uuid
   eventId  String    @db.Uuid
