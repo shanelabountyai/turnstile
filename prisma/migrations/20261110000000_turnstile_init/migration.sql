@@ -146,7 +146,6 @@ CREATE TABLE "Payment" (
     "state" "PaymentState" NOT NULL DEFAULT 'PENDING',
     "startedAt" CHAR(19) NOT NULL,
     "endedAt" CHAR(19),
-    "paymentIntentId" TEXT,
 
     CONSTRAINT "Payment_pkey" PRIMARY KEY ("eventId","paymentId")
 );

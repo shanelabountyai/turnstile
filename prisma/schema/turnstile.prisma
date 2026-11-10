@@ -176,18 +176,17 @@ model Hold {
   @@id([eventId, holdId])
 }
 
-/// Guarded (D-21): PENDING → SUCCEEDED | FAILED | SUCCEEDED_LATE. `paymentIntentId` is Stripe's (D-23).
+/// Guarded (D-21): PENDING → SUCCEEDED | FAILED | SUCCEEDED_LATE. `paymentId` is the Stripe PaymentIntent id (`pi_…`, D-23).
 model Payment {
-  orgId           String       @db.Uuid
-  eventId         String       @db.Uuid
-  event           Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
-  paymentId       String
-  holdId          String
-  amountCents     Int
-  state           PaymentState @default(PENDING)
-  startedAt       String       @db.Char(19)
-  endedAt         String?      @db.Char(19)
-  paymentIntentId String?
+  orgId       String       @db.Uuid
+  eventId     String       @db.Uuid
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  paymentId   String
+  holdId      String
+  amountCents Int
+  state       PaymentState @default(PENDING)
+  startedAt   String       @db.Char(19)
+  endedAt     String?      @db.Char(19)
 
   @@id([eventId, paymentId])
 }
