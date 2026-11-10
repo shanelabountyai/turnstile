@@ -1,5 +1,24 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 2 task 2.4, local Mac, Fable): cast path + two-writer test green. Stopped at the 2.4 gate for Shane's review.
+
+Branch `phase-2` → PR #2 (base `kickoff`, unmerged). Commits: engine `hydrate` (D-28), schema trim (`Payment.paymentIntentId` dropped: `payment_id` is the `pi_…` id), `src/checkout/cast.ts` + `tests/checkout/cast.test.ts`, decisions D-22/D-28 "as built".
+
+### Gate output (local, 2026-11-10)
+- `npx vitest run tests/checkout`: 3 files, 18 tests passed (guards 9, load 2, cast 7 — the race: `['HELD','SOLD_OUT_POOL']`, log statuses `['OK','REJECT']`, held qty 10 of pool 10).
+- `npm test`: 46 files, 315 passed, 33 skipped (RLS-enforce leg), 0 failed.
+- `inventory:eval`: 7 files match, 2662 commands, commitment unchanged after adding `hydrate`. `inventory:lint` OK (12 files). `fixtures:check` OK. `lint` 0 problems. `typecheck` clean. `foundation:drift` clean. `prisma migrate diff --exit-code` rc 0 (shadow `turnstile_shadow`).
+- Both local databases were dropped and re-created (`dropdb`/`createdb` + `migrate deploy`) after the schema trim; `prisma migrate reset` refuses to run from Claude Code.
+
+### Open for Shane (the 2.4 gate)
+1. Review `src/checkout/cast.ts` (lock-all-pools, D-22 as built) and `Engine.hydrate`.
+2. Say go for 2.5 (Stripe boundary). **Before 2.5 runs live, add `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` to `.env.local` yourself** — the build never asks for them and never reads them in tests.
+
+### Next session
+2.5: `src/checkout/stripe.ts` (interface; `StripeRecorded` from `fixtures/stripe/*.json`; `StripeLive` on the official `stripe` package — ask-before-add is satisfied by D-5/D-30), `verifyStripeSignature(rawBody, header, secret, nowSeconds)`, `src/app/api/checkout/webhook/route.ts` (listed in `cross-org.ts`), `src/checkout/env.ts` for the publishable key (D-26, INV-20 check), `fixtures/stripe/` recorded payloads + the fixture secret. Then 2.6 `inventory:eval:db`.
+
+---
+
 ## ▶ 2026-11-10 (Phase 2 tasks 2.0–2.3, local Mac, Fable): schema, guards and load green locally. Stopped at the 2.2 gate for Shane's review.
 
 Branch `phase-2` (off `kickoff`) → PR #2. Commits this session: D-28..D-30 recorded (`2dd4f75`), 2.1 schema (`4d3add2`), INV-34 export hooks (`60a2c43`), 2.3 load (`ea3b77e`), 2.2 guards (`9b7b78b`). Not pushed yet unless this entry says so below.
