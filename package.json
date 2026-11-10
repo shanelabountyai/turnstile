@@ -32,6 +32,7 @@
     "foundation:status": "tsx scripts/foundation-status.ts",
     "foundation:check-modules": "tsx scripts/foundation-check-modules.ts",
     "inventory:eval": "tsx scripts/inventory-eval.ts",
+    "design:contrast": "python3 -I tools/contrast.py",
     "inventory:lint": "tsx scripts/inventory-lint.ts",
     "inventory:eval:db": "dotenv -e .env.test -e .env.local -- tsx scripts/inventory-eval-db.ts",
     "turnstile:load": "dotenv -e .env.local -- tsx scripts/turnstile-load.ts",
