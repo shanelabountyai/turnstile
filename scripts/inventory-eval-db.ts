@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import { castCommand, engineState, eventDef, loadRows } from '@/checkout/cast';
 import { applyWebhook, payStart, requestRefund } from '@/checkout/checkout';
 import { loadFixtureEvent } from '@/checkout/load';
+import { readEvent } from '@/checkout/read';
 import { StripeRecorded } from '@/checkout/stripe';
 import { signStripePayload } from '@/checkout/webhook';
 import { db } from '@/core/db';
@@ -81,6 +82,12 @@ replay.run(log.map((l) => l.payload as unknown as Command));
 const replayed = tables(replay);
 
 printReport(`${ev.name} (recount from rows)`, recount);
+// (c) the read model the screens use (task 3.2, D-31): same ledger and the same available per tier as the recount
+const view = await readEvent(org.id, eventId, log.at(-1)!.at as Timestamp);
+const viewInv = view.tiers.map((t) => `${t.tier}:${t.sold}/${t.held}/${t.remaining}/${t.available}`).join(' ');
+const recInv = recount.expected_inventory.filter((r) => r.scope === 'tier').map((r) => `${r.id}:${r.sold}/${r.held}/${r.remaining}/${r.available}`).join(' ');
+const viewLedger = `${view.ledger.capturedCents}/${view.ledger.refundedCents}/${view.ledger.netCents}`;
+const recLedger = `${recount.summary.captured_cents}/${recount.summary.refunded_cents}/${recount.summary.net_cents}`;
 const refunds = await db.refund.count({ where: { eventId } });
 const pending = await db.refund.count({ where: { eventId, stripeRefundId: null } });
 console.log(`-- stripe (recorded): ${stripe.calls.filter((c) => c.kind === 'paymentIntent').length} PaymentIntents · ${stripe.calls.filter((c) => c.kind === 'refund').length} refund calls · ${refunds} Refund rows, ${pending} pending provider`);
@@ -89,6 +96,8 @@ console.log(`-- cast: ${cmds.length} commands in ${castSeconds.toFixed(1)} s; Co
 const problems = [
   diffTables(recount, replayed) && `recount from rows vs log replay: ${diffTables(recount, replayed)}`,
   diffExpected(FX, recount) && `recount from rows vs expected_*: ${diffExpected(FX, recount)}`,
+  viewInv !== recInv && `readEvent tiers ${viewInv} vs recount ${recInv}`,
+  viewLedger !== recLedger && `readEvent ledger ${viewLedger} vs recount ${recLedger}`,
   results.length !== cmds.length && `${results.length} results for ${cmds.length} commands`,
   pending !== 0 && `${pending} refunds pending provider`,
 ].filter(Boolean);
@@ -97,4 +106,4 @@ if (problems.length) {
   for (const p of problems) console.error(`DIFFERS: ${p}`);
   process.exit(1);
 }
-console.log(`eval:db: recount from rows = log replay = 7 expected files and expected_summary.json (${log.length} commands); commitment ${recount.summary.commitment}`);
+console.log(`eval:db: readEvent = recount from rows = log replay = 7 expected files and expected_summary.json (${log.length} commands); commitment ${recount.summary.commitment}`);

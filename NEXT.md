@@ -1,5 +1,12 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.2, Opus 5.5): read model built. Next: 3.3 Event screen.
+
+Built: `src/checkout/read.ts`, with `eventView(engine, asOf)` (pure: pools, tiers with the formula inputs and `soldOut` pool-before-tier, seats per section and row, waitlists with FIFO positions and live offers, orders, ledger) and `readEvent(orgId, eventId, at)` (shared pool locks, hydrate, `advance(at)` in memory, writes nothing). `tests/checkout/read.test.ts` (6 tests): fixture end state gives FLOOR 800/800, DOOR 87 remaining / 0 available / SOLD_OUT_POOL, BALCONY 204 sold / 12 available, ledger 4,618,132 / 137,682 / 4,480,450 ¢; per-order refunds = expected_orders.csv; DB: expiry second frees holds and offers the head in the view with 0 rows written. `inventory:eval:db` now also checks readEvent = recount. Decision D-31 "as built" is recorded.
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · inventory:eval match · fixtures:check OK · foundation:drift clean · `npm test` 48 files, 332 passed, 33 skipped, 0 failed · `inventory:eval:db` 2,662 commands in 34.7 s, readEvent = recount = replay = expected, commitment `d4d64203…61d43`.
+Next session: 3.3 Event screen (Sonnet is enough: UI wiring over `readEvent`, no new rule).
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.1, Sonnet 5.5): design system ported. Next: 3.2 read model.
 
 Built: `src/app/turnstile.css`, `src/components/{ui,pill}.tsx`, `docs/DESIGN_SYSTEM.md`, `tools/contrast.py` (`npm run design:contrast`: OK, 0 pairs under floor, both schemes), `/o/[org]/design` reference page, root layout imports the stylesheet. Gate: lint, tsc, inventory:lint, foundation:drift clean; `next build` rc 0 and lists the design route. Not looked at in a browser (light/dark by eye is Shane's).
