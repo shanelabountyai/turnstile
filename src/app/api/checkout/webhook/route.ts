@@ -1,3 +1,4 @@
+// public: Stripe calls this; the signature (verifyStripeSignature) is the guard, not a session.
 // POST /api/checkout/webhook — Stripe's payment_intent.* events (D-23). The org and event come from the PaymentIntent's
 // metadata (set by payStart), so this runs before an org is known: cross-org (cross-org.ts, INV-32). The signature is
 // checked by the pure verifier with the real clock; the fixture secret never reaches here (D-5).
