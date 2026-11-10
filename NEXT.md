@@ -1,5 +1,17 @@
 # NEXT
 
+## ▶ 2026-11-10 06:58 CT (Phase 2 task 2.0, cloud, Fable): plan written, stopped for review. No Phase 2 code.
+
+Branch `phase-2` (off `kickoff`) → PR #2 based on `kickoff`. PR #1 (kickoff + Phase 1) still open and unmerged — merge #1 first, then #2's base can be retargeted to `main`.
+
+Plan and three proposed shape decisions (D-28 hydrate-and-delta cast path with `CommandLog` as truth; D-29 triggers only, no app role; D-30 Stripe interface with a recorded implementation for tests/CI) are in `docs/phase-2-tasks.md` §2.0. Defaults take effect on "go".
+
+Preflight for this session: both repos reachable; Stripe connector present in the session but unused (D-5).
+
+**Next session:** task 2.1 (schema) on `phase-2` after Shane's go.
+
+---
+
 ## ▶ 2026-11-09 (Phase 1 build, cloud, Fable): engine done, all 14 Phase 1 tasks green locally. Stopped at the Phase 2 gate for Shane's review.
 
 Branch `kickoff` → PR #1 (not merged). **CI green on the Phase 1 head:** https://github.com/shanelabountyai/turnstile/actions/runs/42691038583 (`ci (off)` and `modules-removed` both success; the Phase 1 gate steps `inventory:lint`, `inventory:eval`, `fixtures:check` ran on the runner).
