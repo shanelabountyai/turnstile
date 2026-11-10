@@ -33,6 +33,8 @@
     "foundation:check-modules": "tsx scripts/foundation-check-modules.ts",
     "inventory:eval": "tsx scripts/inventory-eval.ts",
     "inventory:lint": "tsx scripts/inventory-lint.ts",
+    "turnstile:load": "dotenv -e .env.local -- tsx scripts/turnstile-load.ts",
+    "turnstile:load:test": "dotenv -e .env.test -e .env.local -- tsx scripts/turnstile-load.ts",
     "fixtures:check": "python3 -I tools/verify_fixtures.py && python3 -I tools/golden_answers.py && git diff --exit-code fixtures/ && test -z \"$(git status --porcelain fixtures/)\""
   },
   "dependencies": {
