@@ -1,5 +1,15 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.4, Opus 5.5): Buy screen built. Next: 3.5 Box office.
+
+Built: `/o/[org]/events/[event]/buy` (act-as picker per D-32; holds and offers with a display-only countdown; Pay / Release / Decline; PAYING shows Elements where `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is set, else "Recorded Stripe"; tickets with codes; GA quantity form; reserved seats as row lists of checkboxes; waitlist join/leave with positions). Every button casts one command and the page reads its result from the CommandLog by `cmd_id`. Stripe.js loads from js.stripe.com via `next/script` (no npm dependency added). `stripeGateway()` = live with a secret key, recorded without; `clientSecret()` on the gateway.
+Decided **D-35** (Shane, this session): per-event clock, `Event.clockOffsetSeconds` (migration `…000003_event_clock`), set on the event screen (`setEventClock`, `org.update`, audited). UI and webhook casts are stamped inside the pool lock by `stampAfter`, which keeps the log in (at, cmd_id) order. The webhook route now uses the event clock too.
+Found and fixed: the 3.3 event page failed FR-06 (`await params` before `requireOrg`); it would have gone red in CI.
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · foundation:drift clean · fixtures:check OK · migrate diff "No difference detected" · `inventory:eval` match · `inventory:eval:db` 2,662 commands in 34.8 s, readEvent = recount = replay = expected, commitment `d4d64203…61d43` unchanged · `npm test` 49 files, 338 passed, 33 skipped, 0 failed · e2e `buy.spec` 1 passed, `event.spec` 1 passed (production build). Full e2e: CI.
+Not looked at in a browser by eye; live Elements is your O-8 (needs `stripe listen --forward-to localhost:7700/api/checkout/webhook`).
+Next session: 3.5 Box office (Opus: refund preview must equal the cast to the cent). Add the waitlist-offer e2e there.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.3, Opus 5.5; Sonnet was picked but no /model switch ran): Event screen built. Next: 3.4 Buy screen.
 
 Built: `/o/[org]/events` (list) and `/o/[org]/events/[eventKey]` (pool cards, tier cards with the `available` inputs as a hover `title` plus a keyboard-reachable "How is N worked out?" disclosure, on-sale windows, rules and refund windows read-only, `SOLD_OUT_POOL` worded "pool sold out" vs `SOLD_OUT_TIER` "tier sold out", each with a one-line reason). "Events" link in the org nav. The read model gains `timezoneLabel`, the sales window and `rules` on `event`, plus `dollars()`/`percent()` (string slicing, no float path; tested). The eval:db cast loop moved to `scripts/cast-fixture.ts` (`castFixture`), shared by eval:db and the new `e2e/event.spec.ts`.
