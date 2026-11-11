@@ -32,7 +32,7 @@ export interface EventView {
   /** Every hold and offer. `deadline` is the cart expiry (HELD) or the payment timeout (PAYING); `secondsLeft` counts to it from asOf, for a display-only countdown (D-34). */
   holds: { hold: string; kind: 'HOLD' | 'OFFER'; customer: string; tier: string; qty: number; seats: string[]; state: string; amountCents: number; paymentId: string | null; order: string | null; deadline: Timestamp | null; secondsLeft: number | null }[];
   orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
-  ledger: { capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number };
+  ledger: { capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number; toArrive: number };
   /**
    * Task 3.7: one line per captured payment, in payment order. Late money (PAID_AFTER_TIMEOUT / _CANCEL) has no order and
    * is refunded in full, so the lines, not the orders, add up to the ledger: Σ captured, Σ refunded, Σ net = `ledger`.
@@ -87,7 +87,7 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
       return { payment: p.payment_id, order: h.order_id, customer: h.customer, tier: h.tier, qty: h.qty, capturedCents: p.amount_cents, refundedCents: refunded,
         netCents: p.amount_cents - refunded, late: rs.find((r) => !r.order_id)?.reason ?? null };
     }),
-    ledger: { capturedCents: s.captured_cents, refundedCents: s.refunded_cents, netCents: s.net_cents, refunds: s.refunds, ticketsLive: s.tickets_live, checkedIn: s.checked_in },
+    ledger: { capturedCents: s.captured_cents, refundedCents: s.refunded_cents, netCents: s.net_cents, refunds: s.refunds, ticketsLive: s.tickets_live, checkedIn: s.checked_in, toArrive: s.tickets_live - s.checked_in },
   };
 }
 

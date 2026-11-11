@@ -43,7 +43,7 @@ export default async function Door({ params, searchParams }: { params: Promise<{
       <Stats>
         <Stat label="Checked in" value={<span data-testid="checked-in">{v.ledger.checkedIn}</span>} />
         <Stat label="Live tickets" value={<span data-testid="live">{v.ledger.ticketsLive}</span>} sub="issued, not refunded" />
-        <Stat label="Still to arrive" value={v.ledger.ticketsLive - v.ledger.checkedIn} />
+        <Stat label="Still to arrive" value={v.ledger.toArrive} />
       </Stats>
 
       <Section id="scan" title="Scan">

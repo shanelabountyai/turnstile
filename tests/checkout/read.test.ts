@@ -41,6 +41,7 @@ describe('eventView on the fixture end state (seed 20261109)', () => {
     expect(v.ledger).toMatchObject({ capturedCents: 4618132, refundedCents: 137682, netCents: 4480450 });
     expect([v.ledger.capturedCents, v.ledger.refundedCents, v.ledger.netCents, v.ledger.refunds, v.ledger.ticketsLive, v.ledger.checkedIn])
       .toEqual([want.captured_cents, want.refunded_cents, want.net_cents, want.refunds, want.tickets_live, want.checked_in]);
+    expect(v.ledger.toArrive).toBe(want.tickets_live! - want.checked_in!);
   });
 
   it('ledger CSV (task 3.7): columns sum to 4,618,132 / 137,682 / 4,480,450 ¢; order lines = expected_orders.csv', () => {

@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.9, Sonnet 5.5): Accessibility and e2e gate built. Next: 3.10 EVAL.md Phase 3 section + closure deliverables.
+
+Built: `e2e/axe.ts` (Quorum's `expectAccessible`, light and dark, premise text checked first; axe-core from the lockfile, no dependency added) and `e2e/a11y.spec.ts` (design, events list, event, buy, box, door, ledger over the cast end state; `bypassCSP`). Phase 3 exit grep: `inventory:lint` now also scans `.tsx` under `src/app/o/**/events/` for float, `reduce` and binary arithmetic; it found one (door "still to arrive" = live − checked in), moved to the read model as `ledger.toArrive` (asserted in read.test.ts). Mutation (put the subtraction back) → lint red.
+Gate (local): lint 0 · typecheck clean · inventory:lint OK (12 engine files, 6 screen files) · foundation:drift clean · `npm test` 50 files, 341 passed, 33 skipped, 0 failed · full e2e on the production build 25 passed, 0 failed, 0 flaky · axe 0 violations on 7 pages × 2 schemes. Engine and cast untouched (`read.ts` gained one derived field), so inventory:eval / eval:db not rerun. CI decides.
+Not looked at in a browser by eye (axe does not judge layout).
+Next session: 3.10 `docs/EVAL.md` Phase 3 section, then the closure deliverables (DEMO.md run command by command, exec brief, LinkedIn posts, cost review). Sonnet is enough for the EVAL section; the closure items are writing.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.8, Opus 5.5): Outbox notices built. Next: 3.9 Accessibility and e2e gate.
 
 Built: `src/checkout/notices.ts` (`queueNotices`; templates `turnstile.order_confirmed`, `turnstile.offer` registered at runtime into the foundation's record), called in `castCommand` after the delta, so notices commit with the command. Rows go in with `attempts = MAX_ATTEMPTS` (D-33) and `lastError` saying why; no template-owned file edited. `inventory:eval:db` now counts and checks the outbox.
