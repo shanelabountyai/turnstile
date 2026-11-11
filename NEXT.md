@@ -1,5 +1,12 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.8, Opus 5.5): Outbox notices built. Next: 3.9 Accessibility and e2e gate.
+
+Built: `src/checkout/notices.ts` (`queueNotices`; templates `turnstile.order_confirmed`, `turnstile.offer` registered at runtime into the foundation's record), called in `castCommand` after the delta, so notices commit with the command. Rows go in with `attempts = MAX_ATTEMPTS` (D-33) and `lastError` saying why; no template-owned file edited. `inventory:eval:db` now counts and checks the outbox.
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · foundation:drift clean · inventory:eval match · `npm test` 50 files, 341 passed, 33 skipped, 0 failed · `notices.test.ts` 2 passed (drain sends 0, `sendEmail` never called; mutation `attempts: 0` → red) · `inventory:eval:db` 2,662 commands in 33.2 s, readEvent = recount = replay = expected, commitment `d4d64203…61d43` unchanged; outbox 451 confirmations = orders, 5 offer notices = offers_made, 0 sent or drainable (in EVAL.md). No e2e touched.
+Next session: 3.9 Accessibility and e2e gate (axe on every Turnstile page, Quorum pattern; production build; then the `inventory:lint` grep for arithmetic in `src/app/o/**` from the exit criteria). Sonnet is enough: test wiring, no rule.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.7, Opus 5.5): Ledger built. Next: 3.8 Outbox notices.
 
 Built: `/o/[org]/events/[event]/ledger` + `…/ledger/csv` (linked from the event page). One line per captured payment (late money has no order, so per-order lines would miss one refund); `EventView.payments` + `ledgerCsv` in `src/checkout/read.ts`, writer is core's `toCsv`.

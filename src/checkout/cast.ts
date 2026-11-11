@@ -12,6 +12,7 @@ import { compareStrings } from '@/inventory/canonical';
 import type { Command, EngineState, Hold, Order, Payment, Refund, Result, Ticket, WaitlistEntry } from '@/inventory/types';
 import type { Timestamp } from '@/inventory/time';
 import { eventNow, stampAfter } from './clock';
+import { queueNotices } from './notices';
 
 /** `clock`: stamp the command on the event clock at this wall instant, inside the lock (D-35, `stampAfter`), instead of trusting `cmd.at`. */
 export type CastOptions = { stripeEventId?: string; clock?: Date };
@@ -153,6 +154,8 @@ export function castCommand(orgId: string, eventId: string, given: Command, opts
     if (d.entries.created.length) await tx.waitlistEntry.createMany({ data: d.entries.created.map(([entryId, w]) => ({ ...base, entryId, ...entryRow(w) })) });
     for (const [entryId, w] of d.entries.changed) await tx.waitlistEntry.update({ where: { eventId_entryId: { eventId, entryId } }, data: entryRow(w) });
     if (d.refunds.created.length) await tx.refund.createMany({ data: d.refunds.created.map(([refundId, r]) => ({ ...base, refundId, ...refundRow(r) })) });
+    const offers = [...d.entries.created, ...d.entries.changed].filter(([, w]) => w.state === 'OFFERED').map(([, w]) => [w, e.holds.get(w.offer_id!)] as [WaitlistEntry, Hold | undefined]);
+    await queueNotices(tx, orgId, d.orders.created.map(([, o]) => o), offers);
     if (e.cancelledAt !== before.cancelledAt) await tx.event.update({ where: { id: eventId }, data: { cancelledAt: e.cancelledAt } });
     return res;
   });

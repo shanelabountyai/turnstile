@@ -12,6 +12,7 @@ import { loadEvent } from '@/inventory/load';
 import { tables } from '@/inventory/tables';
 import type { Command, Result } from '@/inventory/types';
 import type { Timestamp } from '@/inventory/time';
+import { MAX_ATTEMPTS } from '@/modules/notifications/outbox';
 import { castFixture } from './cast-fixture';
 import { diffExpected, diffTables, printReport } from './inventory-report';
 
@@ -52,6 +53,9 @@ const recLedger = `${recount.summary.captured_cents}/${recount.summary.refunded_
 const refunds = await db.refund.count({ where: { eventId } });
 const pending = await db.refund.count({ where: { eventId, stripeRefundId: null } });
 console.log(`-- stripe (recorded): ${stripe.calls.filter((c) => c.kind === 'paymentIntent').length} PaymentIntents · ${stripe.calls.filter((c) => c.kind === 'refund').length} refund calls · ${refunds} Refund rows, ${pending} pending provider`);
+const outbox = Object.fromEntries((await db.outbox.groupBy({ by: ['template'], where: { orgId: org.id }, _count: true })).map((g) => [g.template, g._count]));
+const outboxSent = await db.outbox.count({ where: { orgId: org.id, OR: [{ sentAt: { not: null } }, { attempts: { lt: MAX_ATTEMPTS } }] } });
+console.log(`-- outbox (D-33): ${outbox['turnstile.order_confirmed'] ?? 0} order confirmations · ${outbox['turnstile.offer'] ?? 0} offer notices · ${outboxSent} sent or drainable`);
 console.log(`-- cast: ${cmds.length} commands in ${castSeconds.toFixed(1)} s; CommandLog rows ${log.length}`);
 
 const problems = [
@@ -60,6 +64,9 @@ const problems = [
   viewInv !== recInv && `readEvent tiers ${viewInv} vs recount ${recInv}`,
   viewLedger !== recLedger && `readEvent ledger ${viewLedger} vs recount ${recLedger}`,
   results.length !== cmds.length && `${results.length} results for ${cmds.length} commands`,
+  (outbox['turnstile.order_confirmed'] ?? 0) !== recount.summary.orders && `order confirmations ${outbox['turnstile.order_confirmed'] ?? 0} vs orders ${recount.summary.orders}`,
+  (outbox['turnstile.offer'] ?? 0) !== recount.summary.offers_made && `offer notices ${outbox['turnstile.offer'] ?? 0} vs offers_made ${recount.summary.offers_made}`,
+  outboxSent !== 0 && `${outboxSent} outbox rows sent or drainable`,
   pending !== 0 && `${pending} refunds pending provider`,
 ].filter(Boolean);
 await db.$disconnect();

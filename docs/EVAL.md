@@ -146,6 +146,10 @@ Stripe's documented scheme (`t=…,v1=…`, HMAC-SHA256 over `t.payload`, 300 s 
 
 Green on `0880d65`: https://github.com/shanelabountyai/turnstile/actions/runs/42848895625 — `ci (off)`: vitest 47 files, 326 passed, 33 skipped (the RLS-enforce leg), 0 failed; `migrate diff` "No difference detected"; `inventory:eval:db` 2,662 commands in 52.3 s on the runner, same recount and commitment, same Stripe counts. `modules-removed`: success. No Stripe secret configured.
 
+## Notices — the outbox (Phase 3 task 3.8, D-33; local, 2026-11-10)
+
+Written in the cast transaction, never sent. `inventory:eval:db` after the 2,662 commands: **451 order confirmations (= 451 orders) · 5 offer notices (= offers_made 5) · 0 rows sent or drainable** (every row has `attempts = MAX_ATTEMPTS` and `sentAt` null; the script exits 1 if any count differs). `tests/checkout/notices.test.ts` (2): one confirmation + one offer notice with the right address, amount ($38.49 = 3499 + 350 ¢) and offer expiry; `drainOutbox()` returns `{ sent: 0, failed: 0 }` and `sendEmail` is never called; a replayed cmd_id queues nothing. Mutation check: rows queued with `attempts: 0` turn the test red.
+
 ## Live Stripe round trip (Phase 2, by hand)
 
 Not yet run. Owner's step (O-8): one order through Stripe Elements with test card 4242, one refund; PaymentIntent and Refund ids recorded here. No key is ever in this repo or CI.
