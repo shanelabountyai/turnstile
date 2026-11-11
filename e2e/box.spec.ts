@@ -1,15 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { castCommand } from '@/checkout/cast';
 import { db } from '@/core/db';
-import type { Command } from '@/inventory/types';
-import { EVENT, freshEvent, holdGa, paySucceeded, setClock, signIn } from './turnstile';
+import { castAs, EVENT, freshEvent, holdGa, paySucceeded, setClock, signIn } from './turnstile';
 
 // Task 3.5: the box office on a freshly loaded fixture event. The waitlist shows FIFO positions with the head marked,
 // and the head is the one offered; a refund preview equals, to the cent, what the cast then records.
 let ids = { orgId: '', eventId: '' };
-const cast = (c: Partial<Command> & Pick<Command, 'kind' | 'customer'>) => castCommand(ids.orgId, ids.eventId, {
-  cmd_id: `E2E-${crypto.randomUUID()}`, at: '2026-12-01T10:00:00', ref: '', tier_id: '', qty: 0, seats: [], payment_id: '', target: '', tickets: [], note: 'box.spec', ...c,
-}, { clock: new Date() });
+const cast = (c: Parameters<typeof castAs>[1]) => castAs(ids, c);
 const cents = (s: string) => Number(s.replace(/[$,.]/g, ''));
 
 test.beforeAll(async () => { ids = await freshEvent('box.spec'); });

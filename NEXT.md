@@ -1,5 +1,12 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.6, Opus 5.5): Door built. Next: 3.7 Ledger.
+
+Built: `/o/[org]/events/[event]/door` (linked from the event page): scan by code or ticket id → one CHECK_IN cast; unknown codes are cast as typed so the engine answers TICKET_UNKNOWN; each code spelled out as a sentence (ALREADY_CHECKED_IN gives the first scan time); checked in / live / still to arrive from the read model. `castAs` moved into `e2e/turnstile.ts` (box.spec uses it).
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · foundation:drift clean · `npm test` 49 files, 338 passed, 33 skipped, 0 failed · e2e door, box, buy, event 4 passed (production build). No engine, cast or read change, so inventory:eval / eval:db not rerun (3.5's numbers stand). Full e2e: CI.
+Next session: 3.7 Ledger (captured/refunded/net, per order, CSV export with own writer; CSV totals = 4,618,132 / 137,682 / 4,480,450 ¢). Sonnet is enough: display plus a small writer over `readEvent`; Opus if you want the money path reviewed.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.5, Opus 5.5): Box office built. Next: 3.6 Door.
 
 Built: `/o/[org]/events/[event]/box` (linked from the event page). Window sale hands off to the Buy screen as the chosen customer (same cast path). Waitlists per target in FIFO order, head pilled, no skip control. Refund: pick order → tick tickets → preview (`previewRefund`: the command run on the hydrated engine in memory, nothing written; shows days-before, window %, fee kept/refunded, per-ticket lines, total) → "Refund $X" casts `requestRefund` as the order's customer. Read model orders gain `states`. e2e helpers shared in `e2e/turnstile.ts` (buy.spec now uses them).

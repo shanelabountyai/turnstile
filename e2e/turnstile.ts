@@ -1,8 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { expect, type Page } from '@playwright/test';
+import { castCommand } from '@/checkout/cast';
 import { loadFixtureEvent } from '@/checkout/load';
 import { signStripePayload } from '@/checkout/webhook';
 import { db } from '@/core/db';
+import type { Command } from '@/inventory/types';
 import { seedDemo } from '../scripts/seed-demo';
 
 // Shared by the Turnstile screen specs: a freshly loaded fixture event in the acme org (no commands cast), the event
@@ -47,3 +49,8 @@ export async function paySucceeded(page: Page, ids: { orgId: string; eventId: st
   expect(res.status()).toBe(200);
   return res.json();
 }
+
+/** One command straight through the cast path, stamped on the event clock (D-35): setup a spec does not need a screen for. */
+export const castAs = (ids: { orgId: string; eventId: string }, c: Partial<Command> & Pick<Command, 'kind' | 'customer'>) => castCommand(ids.orgId, ids.eventId, {
+  cmd_id: `E2E-${crypto.randomUUID()}`, at: '2026-12-01T10:00:00', ref: '', tier_id: '', qty: 0, seats: [], payment_id: '', target: '', tickets: [], note: 'e2e', ...c,
+}, { clock: new Date() });
