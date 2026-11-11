@@ -78,6 +78,7 @@ model Event {
   ticketSalt    String
   rules         Json
   cancelledAt   String?  @db.Char(19)
+  clockOffsetSeconds Int @default(0) // D-35: event clock = axisNow + this; set by staff, read by every cast and screen
   createdAt     DateTime @default(now()) @db.Timestamptz(6)
 
   pools    Pool[]

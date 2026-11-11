@@ -11,8 +11,10 @@ import { Engine } from '@/inventory/engine';
 import { compareStrings } from '@/inventory/canonical';
 import type { Command, EngineState, Hold, Order, Payment, Refund, Result, Ticket, WaitlistEntry } from '@/inventory/types';
 import type { Timestamp } from '@/inventory/time';
+import { eventNow, stampAfter } from './clock';
 
-export type CastOptions = { stripeEventId?: string };
+/** `clock`: stamp the command on the event clock at this wall instant, inside the lock (D-35, `stampAfter`), instead of trusting `cmd.at`. */
+export type CastOptions = { stripeEventId?: string; clock?: Date };
 
 type Rows = {
   event: Prisma.EventGetPayload<{ include: { pools: true; tiers: true; sections: true } }>;
@@ -111,18 +113,19 @@ export class CommandOutOfOrder extends Error {}
  * Cast one command against the event. Idempotent on cmd_id: a command already in the CommandLog returns its stored
  * result without running again (the webhook route's dedupe on event.id rides on this, D-13/D-23).
  */
-export function castCommand(orgId: string, eventId: string, cmd: Command, opts: CastOptions = {}): Promise<Result> {
+export function castCommand(orgId: string, eventId: string, given: Command, opts: CastOptions = {}): Promise<Result> {
   return withOrg({ orgId }, async (tx) => {
     const pools = await tx.pool.findMany({ where: { eventId }, select: { poolId: true }, orderBy: { poolId: 'asc' } });
     for (const p of pools) await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${`${eventId}:${p.poolId}`}))`;
 
-    const seen = await tx.commandLog.findUnique({ where: { eventId_cmdId: { eventId, cmdId: cmd.cmd_id } } });
+    const seen = await tx.commandLog.findUnique({ where: { eventId_cmdId: { eventId, cmdId: given.cmd_id } } });
     if (seen) return { cmd_id: seen.cmdId, at: seen.at as Timestamp, kind: seen.kind, customer: seen.customer, status: seen.status, code: seen.code, detail: seen.detail };
-    const last = await tx.commandLog.findFirst({ where: { eventId }, orderBy: [{ at: 'desc' }, { cmdId: 'desc' }], select: { at: true, cmdId: true } });
-    if (last && (compareStrings(cmd.at, last.at as Timestamp) < 0)) throw new CommandOutOfOrder(`${cmd.cmd_id} at ${cmd.at} is before the log's last command ${last.cmdId} at ${last.at}`);
-
+    const lastRow = await tx.commandLog.findFirst({ where: { eventId }, orderBy: [{ at: 'desc' }, { cmdId: 'desc' }], select: { at: true, cmdId: true } });
+    const last = lastRow && { at: lastRow.at as Timestamp, cmdId: lastRow.cmdId };
     const rows = await loadRows(tx, eventId);
-    const e = new Engine(eventDef(rows.event)).hydrate(engineState(rows, ts(last?.at ?? null)));
+    const cmd = opts.clock ? { ...given, at: stampAfter(eventNow(opts.clock, rows.event), given.cmd_id, last) } : given;
+    if (last && compareStrings(cmd.at, last.at) < 0) throw new CommandOutOfOrder(`${cmd.cmd_id} at ${cmd.at} is before the log's last command ${last.cmdId} at ${last.at}`);
+    const e = new Engine(eventDef(rows.event)).hydrate(engineState(rows, last?.at ?? null));
     const before = {
       holds: snap(e.holds), payments: snap(e.payments), orders: snap(e.orders), tickets: snap(e.tickets),
       seats: snap([...e.seats.values()].map((s) => [s.seat_id, [s.state, s.hold_id, s.ticket_id]] as [string, unknown])),

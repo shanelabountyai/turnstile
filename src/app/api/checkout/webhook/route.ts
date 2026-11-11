@@ -24,7 +24,7 @@ export async function POST(req: Request): Promise<Response> {
   const now = new Date();
   const out = await applyWebhook({
     orgId: event.orgId, eventId: event.id, rawBody, header: req.headers.get('stripe-signature'), secret: env.STRIPE_WEBHOOK_SECRET,
-    nowSeconds: Math.floor(now.getTime() / 1000), at: axisNow(now, event.timezoneLabel), stripe: () => new StripeLive(),
+    nowSeconds: Math.floor(now.getTime() / 1000), at: axisNow(now, event.timezoneLabel), clock: now, stripe: () => new StripeLive(), // stamped on the event clock in the lock (D-35)
   });
   return Response.json(out.result ?? { reason: out.reason }, { status: out.status });
 }
