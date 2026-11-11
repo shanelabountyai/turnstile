@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.7, Opus 5.5): Ledger built. Next: 3.8 Outbox notices.
+
+Built: `/o/[org]/events/[event]/ledger` + `…/ledger/csv` (linked from the event page). One line per captured payment (late money has no order, so per-order lines would miss one refund); `EventView.payments` + `ledgerCsv` in `src/checkout/read.ts`, writer is core's `toCsv`.
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · foundation:drift clean · `npm test` 49 files, 338 passed, 33 skipped, 1 failed: INV-01 on `buy/actions.ts#releaseHold` ("rows changed"), because the e2e run was writing to `turnstile_test` at the same time (my mistake); alone it passed 14/14 · `read.test.ts` 8 passed: CSV sums 4,618,132 / 137,682 / 4,480,450 ¢ · e2e `ledger.spec`, `event.spec` 2 passed (production build). No engine or cast change, so inventory:eval / eval:db were not rerun. Full e2e: CI.
+Lesson: vitest and e2e share `turnstile_test`; never run them at once.
+Next session: 3.8 Outbox notices (D-33): order confirmation + offer notice written in the cast transaction, worker skips them, drain test, outbox counts after eval:db in EVAL.md. Opus: it touches the cast transaction.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.6, Opus 5.5): Door built. Next: 3.7 Ledger.
 
 Built: `/o/[org]/events/[event]/door` (linked from the event page): scan by code or ticket id → one CHECK_IN cast; unknown codes are cast as typed so the engine answers TICKET_UNKNOWN; each code spelled out as a sentence (ALREADY_CHECKED_IN gives the first scan time); checked in / live / still to arrive from the read model. `castAs` moved into `e2e/turnstile.ts` (box.spec uses it).

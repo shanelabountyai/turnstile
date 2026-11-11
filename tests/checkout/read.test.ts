@@ -9,7 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { db } from '@/core/db';
 import { castCommand } from '@/checkout/cast';
 import { loadFixtureEvent } from '@/checkout/load';
-import { dollars, eventView, percent, readEvent } from '@/checkout/read';
+import { dollars, eventView, ledgerCsv, percent, readEvent } from '@/checkout/read';
 import { parseCsv } from '@/inventory/csv';
 import { Engine } from '@/inventory/engine';
 import { loadCommands, loadEvent } from '@/inventory/load';
@@ -41,6 +41,18 @@ describe('eventView on the fixture end state (seed 20261109)', () => {
     expect(v.ledger).toMatchObject({ capturedCents: 4618132, refundedCents: 137682, netCents: 4480450 });
     expect([v.ledger.capturedCents, v.ledger.refundedCents, v.ledger.netCents, v.ledger.refunds, v.ledger.ticketsLive, v.ledger.checkedIn])
       .toEqual([want.captured_cents, want.refunded_cents, want.net_cents, want.refunds, want.tickets_live, want.checked_in]);
+  });
+
+  it('ledger CSV (task 3.7): columns sum to 4,618,132 / 137,682 / 4,480,450 ¢; order lines = expected_orders.csv', () => {
+    const rows = parseCsv(ledgerCsv(v).replace(/\r\n/g, '\n'), 'ledger');
+    const sum = (k: string) => rows.reduce((n, r) => n + Number(r[k]), 0);
+    expect([sum('captured_cents'), sum('refunded_cents'), sum('net_cents')]).toEqual([4618132, 137682, 4480450]);
+    expect(rows).toHaveLength(engine.summary().by_code.CONFIRMED! + rows.filter((r) => r.late).length);
+    const late = rows.filter((r) => r.late);
+    expect(late.map((r) => [r.order_id, r.late, r.refunded_cents === r.captured_cents])).toEqual([['', 'PAID_AFTER_TIMEOUT', true]]);
+    const want = parseCsv(readFileSync('fixtures/expected_orders.csv', 'utf8'), 'expected_orders');
+    expect(rows.filter((r) => r.order_id).map((r) => [r.order_id, r.payment_id, r.refunded_cents]).sort())
+      .toEqual(want.map((o) => [o.order_id, o.payment_id, o.refunded_cents]).sort());
   });
 
   it('orders, seats and waitlists agree with the engine', () => {

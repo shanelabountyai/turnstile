@@ -1,6 +1,7 @@
 // The read model (task 3.2, D-31): what every Turnstile screen shows, from one place. Hydrate the engine from the
 // stored rows, advance(at) in memory, project. Nothing is written: an expiry seen here is persisted by the next cast.
 // No rule lives here — every count comes from the engine (`inventoryRows`, `summary`), so the formula exists once.
+import { toCsv } from '@/core/audit';
 import { withOrg } from '@/core/db/rls';
 import { compareStrings } from '@/inventory/canonical';
 import { Engine } from '@/inventory/engine';
@@ -32,6 +33,11 @@ export interface EventView {
   holds: { hold: string; kind: 'HOLD' | 'OFFER'; customer: string; tier: string; qty: number; seats: string[]; state: string; amountCents: number; paymentId: string | null; order: string | null; deadline: Timestamp | null; secondsLeft: number | null }[];
   orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
   ledger: { capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number };
+  /**
+   * Task 3.7: one line per captured payment, in payment order. Late money (PAID_AFTER_TIMEOUT / _CANCEL) has no order and
+   * is refunded in full, so the lines, not the orders, add up to the ledger: Σ captured, Σ refunded, Σ net = `ledger`.
+   */
+  payments: { payment: string; order: string | null; customer: string; tier: string; qty: number; capturedCents: number; refundedCents: number; netCents: number; late: string | null }[];
 }
 
 /** Pure projection of an engine at `asOf`. Exported for the fixture test (no database). */
@@ -73,6 +79,13 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
       const d = deadline(h);
       return { hold: h.hold_id, kind: h.kind, customer: h.customer, tier: h.tier, qty: h.qty, seats: h.seats, state: h.state, amountCents: h.qty * (h.price_cents + h.fee_cents),
         paymentId: h.payment_id, order: h.order_id, deadline: d, secondsLeft: d && Math.max(0, toSeconds(d) - toSeconds(asOf)) };
+    }),
+    payments: [...e.payments.values()].filter((p) => p.state.startsWith('SUCCEEDED')).sort((a, b) => compareStrings(a.payment_id, b.payment_id)).map((p) => {
+      const h = e.holds.get(p.hold_id)!;
+      const rs = e.refunds.filter((r) => r.payment_id === p.payment_id);
+      const refunded = rs.reduce((n, r) => n + r.amount_cents, 0);
+      return { payment: p.payment_id, order: h.order_id, customer: h.customer, tier: h.tier, qty: h.qty, capturedCents: p.amount_cents, refundedCents: refunded,
+        netCents: p.amount_cents - refunded, late: rs.find((r) => !r.order_id)?.reason ?? null };
     }),
     ledger: { capturedCents: s.captured_cents, refundedCents: s.refunded_cents, netCents: s.net_cents, refunds: s.refunds, ticketsLive: s.tickets_live, checkedIn: s.checked_in },
   };
@@ -124,6 +137,14 @@ export async function previewRefund(orgId: string, eventId: string, cmd: Command
     return { ticket: r.ticket_id, seat: t.seat, priceCents: t.price_cents, feeCents: t.fee_cents, amountCents: r.amount_cents };
   });
   return { result, daysBefore, refundBps: terms.refund_bps, feeRefunded: terms.fee_refunded, lines, totalCents: lines.reduce((a, l) => a + l.amountCents, 0) };
+}
+
+/** The ledger export (task 3.7): `payments` as CSV, integer cents, through core's RFC 4180 writer. No totals row: sum the columns. */
+export function ledgerCsv(v: EventView): string {
+  return toCsv([
+    ['payment_id', 'order_id', 'customer', 'tier', 'qty', 'captured_cents', 'refunded_cents', 'net_cents', 'late'],
+    ...v.payments.map((p) => [p.payment, p.order, p.customer, p.tier, p.qty, p.capturedCents, p.refundedCents, p.netCents, p.late]),
+  ]);
 }
 
 /** Integer cents as dollars for display, by string slicing (no float path): 4618132 → "$46,181.32". */
