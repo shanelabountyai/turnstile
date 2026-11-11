@@ -150,7 +150,7 @@ Green on `0880d65`: https://github.com/shanelabountyai/turnstile/actions/runs/42
 
 Written in the cast transaction, never sent. `inventory:eval:db` after the 2,662 commands: **451 order confirmations (= 451 orders) · 5 offer notices (= offers_made 5) · 0 rows sent or drainable** (every row has `attempts = MAX_ATTEMPTS` and `sentAt` null; the script exits 1 if any count differs). `tests/checkout/notices.test.ts` (2): one confirmation + one offer notice with the right address, amount ($38.49 = 3499 + 350 ¢) and offer expiry; `drainOutbox()` returns `{ sent: 0, failed: 0 }` and `sendEmail` is never called; a replayed cmd_id queues nothing. Mutation check: rows queued with `attempts: 0` turn the test red.
 
-## Phase 3 — the screens (local Mac, production build, 2026-11-10; CI run not yet recorded)
+## Phase 3 — the screens (local Mac, production build, 2026-11-10; CI green: https://github.com/shanelabountyai/turnstile/actions/runs/43063558361)
 
 Same limits as above (D-24). Phase 3 adds no rule: the engine and the cast path are unchanged since Phase 2, so `inventory:eval` and `inventory:eval:db` still print the same commitment `d4d64203…61d43`. What this section proves is that **every number on a screen comes from the read model** (`src/checkout/read.ts`), and that the screens can be used without a mouse-only path or a contrast failure. It does not prove the layout is good: nobody has looked at these pages in a browser by eye, and axe does not judge layout.
 
@@ -167,7 +167,7 @@ Same limits as above (D-24). Phase 3 adds no rule: the engine and the cast path 
 - vitest and e2e share `turnstile_test`; run one at a time (a concurrent run once failed INV-01 on a changed-rows count).
 
 ### Not run here
-CI for Phase 3 (record the run URL here when green). Live Stripe Elements and the O-8 round trip (below) are the owner's, by hand.
+CI for Phase 3: green on 3e22f32 (ci (off) and modules-removed both success), https://github.com/shanelabountyai/turnstile/actions/runs/43063558361. Live Stripe Elements and the O-8 round trip (below) are the owner's, by hand.
 
 ## Live Stripe round trip (Phase 2, by hand)
 
