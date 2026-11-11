@@ -1,5 +1,13 @@
 # NEXT
 
+## ▶ 2026-11-10 (Phase 3 task 3.5, Opus 5.5): Box office built. Next: 3.6 Door.
+
+Built: `/o/[org]/events/[event]/box` (linked from the event page). Window sale hands off to the Buy screen as the chosen customer (same cast path). Waitlists per target in FIFO order, head pilled, no skip control. Refund: pick order → tick tickets → preview (`previewRefund`: the command run on the hydrated engine in memory, nothing written; shows days-before, window %, fee kept/refunded, per-ticket lines, total) → "Refund $X" casts `requestRefund` as the order's customer. Read model orders gain `states`. e2e helpers shared in `e2e/turnstile.ts` (buy.spec now uses them).
+Gate (local): lint 0 · typecheck clean · inventory:lint OK · inventory:eval match · fixtures:check OK · foundation:drift clean · `npm test` 49 files, 338 passed, 33 skipped, 0 failed · `inventory:eval:db` 2,662 commands in 30.3 s, readEvent = recount = replay = expected, commitment `d4d64203…61d43` unchanged · e2e `box.spec`, `buy.spec`, `event.spec` 3 passed (production build). box.spec: preview $34.98 = cast 3498 ¢ = Refund rows 3498 ¢; waitlist head offered and paid to PAYING. Full e2e: CI.
+Not looked at in a browser by eye.
+Next session: 3.6 Door (check-in by code; TICKET_UNKNOWN, TICKET_REFUNDED, DOORS_NOT_OPEN, ALREADY_CHECKED_IN + a success in e2e). Sonnet is enough: one command kind, codes already exist.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.4, Opus 5.5): Buy screen built. Next: 3.5 Box office.
 
 Built: `/o/[org]/events/[event]/buy` (act-as picker per D-32; holds and offers with a display-only countdown; Pay / Release / Decline; PAYING shows Elements where `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` is set, else "Recorded Stripe"; tickets with codes; GA quantity form; reserved seats as row lists of checkboxes; waitlist join/leave with positions). Every button casts one command and the page reads its result from the CommandLog by `cmd_id`. Stripe.js loads from js.stripe.com via `next/script` (no npm dependency added). `stripeGateway()` = live with a secret key, recorded without; `clientSecret()` on the gateway.

@@ -34,7 +34,7 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
         title={v.event.name}
         status={v.event.cancelledAt ? <Pill k="risk">Cancelled {when(v.event.cancelledAt)}</Pill> : <Pill k="info">Doors {when(v.event.doorsAt)} · starts {when(v.event.startsAt)}</Pill>}
         lead={<>As of {when(v.asOf)} ({v.event.timezoneLabel}). Sales {when(v.event.salesOpenAt)} to {when(v.event.salesCloseAt)}.</>}
-        actions={<LinkButton href={`/o/${ctx.slug}/events/${ev.eventKey}/buy`}>Buy</LinkButton>}
+        actions={<><LinkButton href={`/o/${ctx.slug}/events/${ev.eventKey}/buy`}>Buy</LinkButton> <LinkButton href={`/o/${ctx.slug}/events/${ev.eventKey}/box`} variant="secondary">Box office</LinkButton></>}
       />
 
       <Section id="clock" title="Event clock">

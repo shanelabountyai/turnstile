@@ -6,6 +6,7 @@ import { compareStrings } from '@/inventory/canonical';
 import { Engine } from '@/inventory/engine';
 import { rowKey, type Rules } from '@/inventory/event';
 import { toSeconds, type Timestamp } from '@/inventory/time';
+import type { Command, Result } from '@/inventory/types';
 import { engineState, eventDef, loadRows } from './cast';
 
 export type SoldOut = 'SOLD_OUT_POOL' | 'SOLD_OUT_TIER' | null;
@@ -29,7 +30,7 @@ export interface EventView {
   waitlists: { target: string; waiting: { entry: string; customer: string; qty: number; joinedAt: Timestamp; position: number }[]; offered: { entry: string; customer: string; qty: number; offer: string; expiresAt: Timestamp }[] }[];
   /** Every hold and offer. `deadline` is the cart expiry (HELD) or the payment timeout (PAYING); `secondsLeft` counts to it from asOf, for a display-only countdown (D-34). */
   holds: { hold: string; kind: 'HOLD' | 'OFFER'; customer: string; tier: string; qty: number; seats: string[]; state: string; amountCents: number; paymentId: string | null; order: string | null; deadline: Timestamp | null; secondsLeft: number | null }[];
-  orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[] }[];
+  orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
   ledger: { capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number };
 }
 
@@ -66,7 +67,7 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
     orders: [...e.orders.values()].sort((a, b) => compareStrings(a.order_id, b.order_id)).map((o) => ({
       order: o.order_id, customer: o.customer, tier: o.tier, qty: o.qty, seats: o.seats, grossCents: o.gross_cents, feesCents: o.fees_cents,
       refundedCents: o.tickets.reduce((n, t) => n + e.tickets.get(t)!.refunded_cents, 0), confirmedAt: o.confirmed_at, viaOffer: o.via_offer, tickets: o.tickets,
-      codes: o.tickets.map((t) => e.tickets.get(t)!.code),
+      codes: o.tickets.map((t) => e.tickets.get(t)!.code), states: o.tickets.map((t) => e.tickets.get(t)!.state),
     })),
     holds: [...e.holds.values()].sort((a, b) => compareStrings(b.created_at, a.created_at) || compareStrings(b.hold_id, a.hold_id)).map((h) => {
       const d = deadline(h);
@@ -83,6 +84,11 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
  * is as of that command instead (the engine cannot run backwards).
  */
 export async function readEvent(orgId: string, eventId: string, at: Timestamp): Promise<EventView> {
+  const { e, asOf, last } = await hydrated(orgId, eventId, at);
+  return eventView(e, asOf, last);
+}
+
+async function hydrated(orgId: string, eventId: string, at: Timestamp) {
   const { rows, last } = await withOrg({ orgId }, async (tx) => {
     const pools = await tx.pool.findMany({ where: { eventId }, select: { poolId: true }, orderBy: { poolId: 'asc' } });
     for (const p of pools) await tx.$executeRaw`SELECT pg_advisory_xact_lock_shared(hashtext(${`${eventId}:${p.poolId}`}))`;
@@ -92,7 +98,32 @@ export async function readEvent(orgId: string, eventId: string, at: Timestamp): 
   const e = new Engine(eventDef(rows.event)).hydrate(engineState(rows, last));
   const asOf = last && compareStrings(at, last) < 0 ? last : at;
   e.advance(asOf);
-  return eventView(e, asOf, last);
+  return { e, asOf, last };
+}
+
+export interface RefundPreview {
+  result: Result;
+  /** The window that applies at `result.at` (R-3): days before the start and the policy row. */
+  daysBefore: number; refundBps: number; feeRefunded: boolean;
+  lines: { ticket: string; seat: string; priceCents: number; feeCents: number; amountCents: number }[];
+  totalCents: number;
+}
+
+/**
+ * Task 3.5: what a REFUND_REQUEST would do, by running it on the hydrated engine in memory and writing nothing. The
+ * amounts are the engine's own (`cmdRefund`), so the preview and the cast can only differ if the clock crosses a
+ * window boundary between the two (the cast is stamped later, D-35); the screen shows the `at` it previewed.
+ */
+export async function previewRefund(orgId: string, eventId: string, cmd: Command): Promise<RefundPreview> {
+  const { e, asOf } = await hydrated(orgId, eventId, cmd.at);
+  const n = e.refunds.length;
+  const result = e.apply({ ...cmd, at: asOf });
+  const [daysBefore, terms] = e.refundTerms(asOf);
+  const lines = e.refunds.slice(n).map((r) => {
+    const t = e.tickets.get(r.ticket_id)!;
+    return { ticket: r.ticket_id, seat: t.seat, priceCents: t.price_cents, feeCents: t.fee_cents, amountCents: r.amount_cents };
+  });
+  return { result, daysBefore, refundBps: terms.refund_bps, feeRefunded: terms.fee_refunded, lines, totalCents: lines.reduce((a, l) => a + l.amountCents, 0) };
 }
 
 /** Integer cents as dollars for display, by string slicing (no float path): 4618132 → "$46,181.32". */

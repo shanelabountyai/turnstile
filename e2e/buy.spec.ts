@@ -1,45 +1,17 @@
-import { readFileSync } from 'node:fs';
-import { expect, test, type Page } from '@playwright/test';
-import { loadFixtureEvent } from '@/checkout/load';
-import { signStripePayload } from '@/checkout/webhook';
+import { expect, test } from '@playwright/test';
 import { db } from '@/core/db';
-import { seedDemo } from '../scripts/seed-demo';
+import { EVENT, freshEvent, holdGa, paySucceeded, setClock, signIn } from './turnstile';
 
 // Task 3.4: the Buy screen on a freshly loaded fixture event (no commands cast), with the event clock moved into the
 // sales window (D-35) and Stripe recorded (no key on the server under test). The webhook is posted the way Stripe
 // would, signed with the fixture secret.
-const EVENT = 'EV-SYNTH-001';
-const SECRET = (JSON.parse(readFileSync('fixtures/stripe/webhook.json', 'utf8')) as { secret: string }).secret;
-let orgId = '';
-let eventId = '';
+let ids = { orgId: '', eventId: '' };
 
-test.beforeAll(async () => {
-  if (!/_test(\?|$)/.test(process.env.DATABASE_URL ?? '')) throw new Error('buy.spec empties Turnstile rows; run it against a *_test database');
-  await seedDemo();
-  await db.$executeRawUnsafe('TRUNCATE "Event", "Pool", "Tier", "Section", "Seat", "Hold", "Payment", "Order", "Ticket", "WaitlistEntry", "Refund", "CommandLog", "Customer"');
-  orgId = (await db.org.findUniqueOrThrow({ where: { slug: 'acme' }, select: { id: true } })).id;
-  eventId = (await loadFixtureEvent(orgId, 'fixtures')).eventId;
-});
+test.beforeAll(async () => { ids = await freshEvent('buy.spec'); });
 test.afterAll(() => db.$disconnect());
 
-async function setClock(page: Page, to: string) {
-  await page.goto(`/o/acme/events/${EVENT}`);
-  await page.getByLabel('Set the event clock to').fill(to);
-  await page.getByRole('button', { name: 'Set clock' }).click();
-  await expect(page.getByTestId('event-clock')).toHaveText(new RegExp(`^${to.slice(0, 16).replace('T', ' ')}`));
-}
-
-async function holdGa(page: Page, tier: string, qty: number): Promise<string> {
-  await page.locator('select[name="tier"]').selectOption(tier);
-  await page.getByRole('spinbutton', { name: 'Quantity' }).first().fill(String(qty));
-  await page.getByRole('button', { name: 'Hold tickets' }).click();
-  await expect(page.getByTestId('result')).toContainText('OK HELD');
-  return (await page.getByTestId('result').textContent())!.match(/H-[0-9A-F]{8}/)![0];
-}
-
 test('hold → pay → signed webhook → tickets; an expired hold shows its code; an orphan pick is refused', async ({ page }) => {
-  await page.goto('/demo');
-  await page.getByRole('button', { name: 'owner@acme.demo.test' }).click();
+  await signIn(page);
   await setClock(page, '2026-12-01T10:05:30');
 
   await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0001`);
@@ -49,13 +21,7 @@ test('hold → pay → signed webhook → tickets; an expired hold shows its cod
   await expect(page.getByTestId('result')).toContainText(`OK PAYING · pi_rec_${hold} 7698`); // 2 × (3,499 + 350) ¢
   await expect(page.getByTestId('paying')).toContainText('Recorded Stripe');
 
-  const body = JSON.stringify({
-    id: `evt_e2e_${hold}`, object: 'event', type: 'payment_intent.succeeded',
-    data: { object: { id: `pi_rec_${hold}`, object: 'payment_intent', metadata: { hold_id: hold, org_id: orgId, event_id: eventId } } },
-  });
-  const res = await page.request.post('/api/checkout/webhook', { data: body, headers: { 'content-type': 'application/json', 'stripe-signature': signStripePayload(body, SECRET, Math.floor(Date.now() / 1000)) } });
-  expect(res.status()).toBe(200);
-  expect(await res.json()).toMatchObject({ status: 'OK', code: 'CONFIRMED' });
+  expect(await paySucceeded(page, ids, hold)).toMatchObject({ status: 'OK', code: 'CONFIRMED' });
 
   await page.reload();
   const order = page.getByTestId(/^order-ORD-/);
