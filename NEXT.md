@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-11 (Phase 3 task 3.10, Sonnet 5.5): EVAL.md Phase 3 section written. Next: push, record the CI run URL, then closure deliverables.
+
+Built: `docs/EVAL.md` Phase 3 section (screen numbers traced to the read model, e2e 25/0/0, axe 14 scans 0 violations, lint grep). Numbers copied from the 3.2–3.9 gate lines; no command rerun this session. CI run URL for Phase 3 not yet recorded (placeholder in the heading and "Not run here").
+Left: confirm CI green on `phase-2` and paste the URL into EVAL.md; closure (DEMO.md run command by command, exec brief via `exec-brief`, LinkedIn posts into the Ledger, cost review); PR stays unmerged.
+
+---
 ## ▶ 2026-11-10 (Phase 3 task 3.9, Sonnet 5.5): Accessibility and e2e gate built. Next: 3.10 EVAL.md Phase 3 section + closure deliverables.
 
 Built: `e2e/axe.ts` (Quorum's `expectAccessible`, light and dark, premise text checked first; axe-core from the lockfile, no dependency added) and `e2e/a11y.spec.ts` (design, events list, event, buy, box, door, ledger over the cast end state; `bypassCSP`). Phase 3 exit grep: `inventory:lint` now also scans `.tsx` under `src/app/o/**/events/` for float, `reduce` and binary arithmetic; it found one (door "still to arrive" = live − checked in), moved to the read model as `ledger.toArrive` (asserted in read.test.ts). Mutation (put the subtraction back) → lint red.

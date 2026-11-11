@@ -1,4 +1,4 @@
-# EVAL — Turnstile Phase 1 (pure engine) and Phase 2 (database path)
+# EVAL — Turnstile Phase 1 (pure engine), Phase 2 (database path) and Phase 3 (screens)
 
 Every number here is produced by the command named next to it. Measured on the frozen fixtures (`fixtures/`, seed 20261109) by the TypeScript engine under `src/inventory/`, 2026-11-09, cloud session.
 
@@ -149,6 +149,25 @@ Green on `0880d65`: https://github.com/shanelabountyai/turnstile/actions/runs/42
 ## Notices — the outbox (Phase 3 task 3.8, D-33; local, 2026-11-10)
 
 Written in the cast transaction, never sent. `inventory:eval:db` after the 2,662 commands: **451 order confirmations (= 451 orders) · 5 offer notices (= offers_made 5) · 0 rows sent or drainable** (every row has `attempts = MAX_ATTEMPTS` and `sentAt` null; the script exits 1 if any count differs). `tests/checkout/notices.test.ts` (2): one confirmation + one offer notice with the right address, amount ($38.49 = 3499 + 350 ¢) and offer expiry; `drainOutbox()` returns `{ sent: 0, failed: 0 }` and `sendEmail` is never called; a replayed cmd_id queues nothing. Mutation check: rows queued with `attempts: 0` turn the test red.
+
+## Phase 3 — the screens (local Mac, production build, 2026-11-10; CI run not yet recorded)
+
+Same limits as above (D-24). Phase 3 adds no rule: the engine and the cast path are unchanged since Phase 2, so `inventory:eval` and `inventory:eval:db` still print the same commitment `d4d64203…61d43`. What this section proves is that **every number on a screen comes from the read model** (`src/checkout/read.ts`), and that the screens can be used without a mouse-only path or a contrast failure. It does not prove the layout is good: nobody has looked at these pages in a browser by eye, and axe does not judge layout.
+
+### Screen numbers traced to the read model
+- `tests/checkout/read.test.ts` (8): on the fixture end state, FLOOR 800/800 sold, DOOR 87 remaining / 0 available (`SOLD_OUT_POOL`), BALCONY 204 sold / 12 available; per-order refunds equal `expected_orders.csv`; the ledger CSV's columns sum to **4,618,132 / 137,682 / 4,480,450 ¢** (captured / refunded / net), 451 order lines plus one late-money line (`PAID_AFTER_TIMEOUT`, refunded in full) = 452 captured payments. Reading at the expiry second frees holds and offers the waitlist head in the view with 0 rows written.
+- `inventory:eval:db` also checks `readEvent` = recount = replay = `expected_*`.
+- Refund preview = cast = rows: e2e `box.spec`, $34.98 shown = cast detail 3498 ¢ = `Refund` rows 3498 ¢.
+- `npm run inventory:lint` scans the 6 screen files under `src/app/o/**/events/` for float, `reduce` and binary arithmetic. It found one (door "still to arrive"), moved to the read model as `ledger.toArrive`; mutation (subtraction put back) turns the lint red.
+
+### End-to-end and accessibility
+- Full e2e on the production build: **25 passed, 0 failed, 0 flaky** (local). Door covers all four refusals (`DOORS_NOT_OPEN`, `TICKET_REFUNDED`, `ALREADY_CHECKED_IN` with the first scan time, `TICKET_UNKNOWN`) and a success (count 0 → 1).
+- axe-core (from the lockfile, no dependency added) on **7 pages × light and dark = 14 scans, 0 violations** (`e2e/a11y.spec.ts`: design, events list, event, buy, box, door, ledger over the cast end state). `npm run design:contrast`: OK, 0 pairs under the floor, both schemes.
+- Local gate: lint 0 · typecheck clean · `foundation:drift` clean · `npm test` 50 files, 341 passed, 33 skipped (RLS-enforce leg), 0 failed.
+- vitest and e2e share `turnstile_test`; run one at a time (a concurrent run once failed INV-01 on a changed-rows count).
+
+### Not run here
+CI for Phase 3 (record the run URL here when green). Live Stripe Elements and the O-8 round trip (below) are the owner's, by hand.
 
 ## Live Stripe round trip (Phase 2, by hand)
 
