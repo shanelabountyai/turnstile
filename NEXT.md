@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-11 (Sonnet 5.5): Phase 3 CI green. Next: closure deliverables.
+
+CI was red from 3.8 on: `modules-removed` failed because `notices.ts` imports the notifications module. Fixed by `REQUIRED_MODULES = ['notifications']` in `src/app/required-modules.ts` (3e22f32). Run 43063558361: `ci (off)` and `modules-removed` both success; URL recorded in `docs/EVAL.md`. PR #2 stays unmerged.
+Next session, in order: (1) `docs/DEMO.md`, running every command in it once; (2) exec brief via `exec-brief`; (3) LinkedIn posts into the Ledger (mine Defects Found / Hardest Bug, the CI red above is one); (4) cost review (no crons or Neon here? check `vercel.json`, CI schedule). Record artifact URLs in `docs/RELEASE_NOTES.md`. Writing, so Sonnet is enough.
+
+---
 ## ▶ 2026-11-11 (Phase 3 task 3.10, Sonnet 5.5): EVAL.md Phase 3 section written. Next: push, record the CI run URL, then closure deliverables.
 
 Built: `docs/EVAL.md` Phase 3 section (screen numbers traced to the read model, e2e 25/0/0, axe 14 scans 0 violations, lint grep). Numbers copied from the 3.2–3.9 gate lines; no command rerun this session. CI run URL for Phase 3 not yet recorded (placeholder in the heading and "Not run here").
