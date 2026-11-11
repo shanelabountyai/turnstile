@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
-import { axisNow } from '@/checkout/clock';
-import { dollars, percent, readEvent, type EventView } from '@/checkout/read';
+import { axisNow, eventNow } from '@/checkout/clock';
+import { dollars, eventByKey, percent, readEvent, type EventView } from '@/checkout/read';
 import { requireOrg } from '@/core/authz/guards';
-import { withOrg } from '@/core/db/rls';
-import { PageHeader, Pill, Section, Stat, Stats } from '@/components/ui';
+import { ActionForm } from '@/core/ui/action-form';
+import { LinkButton, PageHeader, Pill, Section, Stat, Stats } from '@/components/ui';
+import { setEventClock } from './actions';
 
 // Task 3.3: the event as of now (D-31 read model, D-34 server clock). Every number is the read model's; this page
 // formats and words them, nothing more. SOLD_OUT_POOL and SOLD_OUT_TIER read differently on purpose (non-negotiable 2).
@@ -17,11 +18,12 @@ const SOLD_OUT: Record<NonNullable<TierView['soldOut']>, { short: string; why: s
 const when = (t: string) => t.replace('T', ' ');
 
 export default async function EventScreen({ params }: { params: Promise<{ org: string; event: string }> }) {
+  const ctx = await requireOrg((await params).org);
   const p = await params;
-  const ctx = await requireOrg(p.org);
-  const ev = await withOrg({ orgId: ctx.orgId }, (tx) => tx.event.findUnique({ where: { orgId_eventKey: { orgId: ctx.orgId, eventKey: p.event } }, select: { id: true, timezoneLabel: true } }));
+  const ev = await eventByKey(ctx.orgId, p.event);
   if (!ev) notFound();
-  const v = await readEvent(ctx.orgId, ev.id, axisNow(new Date(), ev.timezoneLabel));
+  const wall = new Date();
+  const v = await readEvent(ctx.orgId, ev.id, eventNow(wall, ev));
   const pool = new Map(v.pools.map((x) => [x.pool, x]));
   const r = v.event.rules;
 
@@ -32,7 +34,28 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
         title={v.event.name}
         status={v.event.cancelledAt ? <Pill k="risk">Cancelled {when(v.event.cancelledAt)}</Pill> : <Pill k="info">Doors {when(v.event.doorsAt)} · starts {when(v.event.startsAt)}</Pill>}
         lead={<>As of {when(v.asOf)} ({v.event.timezoneLabel}). Sales {when(v.event.salesOpenAt)} to {when(v.event.salesCloseAt)}.</>}
+        actions={<LinkButton href={`/o/${ctx.slug}/events/${ev.eventKey}/buy`}>Buy</LinkButton>}
       />
+
+      <Section id="clock" title="Event clock">
+        <p className="hint">
+          Every command and screen reads this clock, which runs at wall-clock speed from where staff set it (D-35). The server decides each expiry at the
+          inclusive second; it can only move forward past the log{v.logAt && <> (last command {when(v.logAt)})</>}.
+        </p>
+        <p>Wall clock {when(axisNow(wall, ev.timezoneLabel))} · event clock <strong data-testid="event-clock">{when(v.asOf)}</strong></p>
+        <ActionForm action={setEventClock.bind(null, ctx.slug)}>
+          <input type="hidden" name="event" value={ev.eventKey} />
+          <div className="cluster">
+            <label>Set the event clock to <input name="to" type="datetime-local" step={1} defaultValue={v.asOf} required /></label>
+            <button type="submit">Set clock</button>
+          </div>
+        </ActionForm>
+        <ActionForm action={setEventClock.bind(null, ctx.slug)}>
+          <input type="hidden" name="event" value={ev.eventKey} />
+          <input type="hidden" name="reset" value="1" />
+          <button type="submit" className="button" data-variant="secondary">Back to the wall clock</button>
+        </ActionForm>
+      </Section>
 
       <Section id="pools" title="Pools">
         <p className="hint">A pool is the room itself. Tiers sell from it, and their allotments add up to more than it holds, so the pool runs out first.</p>

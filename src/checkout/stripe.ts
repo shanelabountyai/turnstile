@@ -12,7 +12,13 @@ export interface StripeGateway {
   createPaymentIntent(a: PaymentIntentArgs): Promise<{ id: string }>;
   /** Idempotency key = refund id (D-5). Returns Stripe's refund id. */
   createRefund(a: RefundArgs): Promise<{ id: string }>;
+  /** What Stripe Elements needs to confirm a PaymentIntent in the browser; null where there is no live Stripe. */
+  clientSecret(paymentIntentId: string): Promise<string | null>;
 }
+
+/** Live Stripe where a secret key is set, recorded otherwise. Recorded is safe to fall back to: it moves no money, and
+ * nothing is sold without a webhook signed with STRIPE_WEBHOOK_SECRET (the e2e sets the fixture's; production never does). */
+export const stripeGateway = (): StripeGateway => (env.STRIPE_SECRET_KEY ? new StripeLive() : new StripeRecorded());
 
 export class StripeLive implements StripeGateway {
   private readonly s: Stripe;
@@ -30,6 +36,9 @@ export class StripeLive implements StripeGateway {
   async createRefund(a: RefundArgs) {
     const r = await this.s.refunds.create({ payment_intent: a.paymentIntentId, amount: a.amountCents }, { idempotencyKey: a.refundId });
     return { id: r.id };
+  }
+  async clientSecret(paymentIntentId: string) {
+    return (await this.s.paymentIntents.retrieve(paymentIntentId)).client_secret;
   }
 }
 
@@ -49,5 +58,8 @@ export class StripeRecorded implements StripeGateway {
     this.calls.push({ kind: 'refund', ...a });
     if (this.failRefundOnce.delete(a.refundId)) throw new StripeProviderError(`recorded provider failure for ${a.refundId}`);
     return { id: this.recorded.refunds?.[a.refundId] ?? `re_rec_${a.refundId}` };
+  }
+  async clientSecret() {
+    return null;
   }
 }
