@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-12 (Sonnet 5.5): closure 1 of 4 done — `docs/DEMO.md` written, every command run. Next: exec brief.
+
+Built: `docs/DEMO.md` (commands run 2026-11-12: seed, load, load again → refused, eval, fixtures:check, inventory:lint, eval:db, dev server, demo sign-in, all screens 200, globex ledger CSV 452 lines = 4,618,132 / 137,682 / 4,480,450 ¢). Added `scripts/turnstile-cast.ts` + `npm run turnstile:cast -- --org <slug>` (end-of-night view in the dev DB, 33.8 s, refuses a second run); tsc and eslint clean. The live click path (hold, pay, webhook, refund, door) was not re-driven by hand; e2e covers it (25 passed). Live Stripe (O-8) still yours. `AGENTS.md` is untracked (Next dev wrote it), left out of the commit.
+Next, in order: (2) exec brief via `exec-brief`; (3) LinkedIn posts into the Ledger; (4) cost review (`vercel.json` has a daily cron `/api/cron` at 0 6 * * *, check CI schedule and whether it is deployed at all). Record artifact URLs here or in `docs/RELEASE_NOTES.md`.
+
+---
 ## ▶ 2026-11-11 (Sonnet 5.5): Phase 3 CI green. Next: closure deliverables.
 
 CI was red from 3.8 on: `modules-removed` failed because `notices.ts` imports the notifications module. Fixed by `REQUIRED_MODULES = ['notifications']` in `src/app/required-modules.ts` (3e22f32). Run 43063558361: `ci (off)` and `modules-removed` both success; URL recorded in `docs/EVAL.md`. PR #2 stays unmerged.
