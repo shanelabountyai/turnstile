@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-13 (Opus 5.5): closure 2 of 4 done — exec brief published. Next: LinkedIn posts.
+
+Built: "Turnstile in Brief" https://claude.ai/artifact/5GDjdxZcQBqCGKBHVkTqbM (private until shared), URL in `docs/RELEASE_NOTES.md`. Numbers re-run 2026-11-13: `npm test` 341 passed / 33 skipped; `inventory:eval` 2,662 commands match, commitment d4d64203…61d43; `fixtures:check` OK; `inventory:lint` OK. e2e (25) quoted from closure, not re-run. No screenshots (no capture spec), matching Earmark's brief. Five calls: waitlist head never skipped; late money refunded; countdown decides nothing; outbox undrainable; failure = Seat guard refusing HELD>HELD found by eval:db (D-21 as built).
+Next, in order: (3) LinkedIn posts into the Ledger (mine the five calls + CI red at 3.8 + the D-35 clock); (4) cost review (not deployed: no `.vercel/`; `vercel.json` daily cron unused; check CI `schedule`). Port 7700 is still missing from the port table in `~/.claude/CLAUDE.md`.
+
+---
 ## ▶ 2026-11-12 (Sonnet 5.5): closure 1 of 4 done — `docs/DEMO.md` written, every command run. Next: exec brief.
 
 Built: `docs/DEMO.md` (commands run 2026-11-12: seed, load, load again → refused, eval, fixtures:check, inventory:lint, eval:db, dev server, demo sign-in, all screens 200, globex ledger CSV 452 lines = 4,618,132 / 137,682 / 4,480,450 ¢). Added `scripts/turnstile-cast.ts` + `npm run turnstile:cast -- --org <slug>` (end-of-night view in the dev DB, 33.8 s, refuses a second run); tsc and eslint clean. The live click path (hold, pay, webhook, refund, door) was not re-driven by hand; e2e covers it (25 passed). Live Stripe (O-8) still yours. `AGENTS.md` is untracked (Next dev wrote it), left out of the commit.
