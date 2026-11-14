@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-13 (Opus 5.5): closure 3 of 4 done — LinkedIn posts in the Ledger. Next: cost review.
+
+Harvested 5 angles (waitlist head, late money, caps > room, undrainable outbox, seat guard). Shane picked 2: Ledger #170 (MarTech, late payment refunded, $76.98 at +32 min) and #171 (Scale, waitlist head never skipped), queued after Earmark #168/#169 so pillars alternate. Dropped: seat-guard story (duplicates the "tests green, still broken" theme in #147/#165/#168); caps > room (reuses the $100M anchor in #148/#153/#166). Tech source links point at `phase-2` `docs/decisions.md` (main does not have it; no WRITEUP.md exists). The Ledger page's PROJECTS list lacks `turnstile` and `earmark`, so cards show the raw id — needs a page republish if it matters.
+Next: (4) cost review — not deployed (no `.vercel/`); `vercel.json` daily cron `/api/cron` unused; check CI `schedule`; record keep/slow/off + restore notes in `docs/decisions.md`. Port 7700 still missing from the port table in `~/.claude/CLAUDE.md`.
+
+---
 ## ▶ 2026-11-13 (Opus 5.5): closure 2 of 4 done — exec brief published. Next: LinkedIn posts.
 
 Built: "Turnstile in Brief" https://claude.ai/artifact/5GDjdxZcQBqCGKBHVkTqbM (private until shared), URL in `docs/RELEASE_NOTES.md`. Numbers re-run 2026-11-13: `npm test` 341 passed / 33 skipped; `inventory:eval` 2,662 commands match, commitment d4d64203…61d43; `fixtures:check` OK; `inventory:lint` OK. e2e (25) quoted from closure, not re-run. No screenshots (no capture spec), matching Earmark's brief. Five calls: waitlist head never skipped; late money refunded; countdown decides nothing; outbox undrainable; failure = Seat guard refusing HELD>HELD found by eval:db (D-21 as built).
