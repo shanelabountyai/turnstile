@@ -3,7 +3,9 @@
 //      Math.random, random bytes, process.env, fetch, timers, stripe or anthropic — the engine is pure (D-8).
 //   2. No float path under src/inventory/: parseFloat, toFixed, Math.round/floor/ceil, a decimal literal, or a
 //      numeric `/ 100` / `/ 10000` (cents.ts divides in BigInt: `/ 10000n` is allowed).
-//   3. fixtures/event.json parses against the closed schema (GT-13).
+//   3. (task 3.9, Phase 3 exit) No arithmetic in the Turnstile screens: nothing in a .tsx under src/app/o/**/events/ computes a
+//      number (float, rounding, reduce, binary + - * / %); every figure comes from the read model.
+//   4. fixtures/event.json parses against the closed schema (GT-13).
 // Shape after Quorum scripts/tally-lint.ts (task 1.3).
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { parseEvent } from '../src/inventory/event';
@@ -48,8 +50,32 @@ export function lintEngineDir(dir = ENGINE_DIR): string[] {
     .flatMap((p) => lintEngineSource(p, readFileSync(p, 'utf8')));
 }
 
+// A binary operator between two operands in JSX/TS code. Strings, comments, className, URLs and `=>` are blanked first.
+const SCREEN_ARITH: [RegExp, string][] = [
+  [/\bparseFloat\b|\.toFixed\b|\bMath\.|\bNumber\s*\(/, 'float or rounding'],
+  [/\.reduce\s*\(/, 'reduce (aggregation belongs in read.ts)'],
+  [/[\w)\]]\s+[-+*/%]\s+[\w(]/, 'binary arithmetic'],
+];
+const blank = (src: string) => stripComments(src).replace(/`[^`]*`|"[^"\n]*"|'[^'\n]*'/g, '""').replace(/=>/g, " ");
+
+export function lintScreenSource(path: string, source: string): string[] {
+  const code = blank(source);
+  return SCREEN_ARITH.filter(([re]) => re.test(code)).map(([, what]) => `${path}: ${what} in a Turnstile screen`);
+}
+
+const lintScreenCount = () => readdirSync('src/app/o', { recursive: true, withFileTypes: true }).filter((d) => d.isFile() && /\.tsx$/.test(d.name) && /[\\/]events([\\/]|$)/.test(d.parentPath)).length;
+
+export function lintScreens(dir = 'src/app/o'): string[] {
+  if (!existsSync(dir)) return [`${dir}: missing`];
+  return readdirSync(dir, { recursive: true, withFileTypes: true })
+    .filter((d) => d.isFile() && /\.tsx$/.test(d.name) && /[\\/]events([\\/]|$)/.test(d.parentPath))
+    .map((d) => `${d.parentPath}/${d.name}`)
+    .sort()
+    .flatMap((p) => lintScreenSource(p, readFileSync(p, 'utf8')));
+}
+
 if (process.argv[1]?.endsWith('inventory-lint.ts')) {
-  const problems = lintEngineDir();
+  const problems = [...lintEngineDir(), ...lintScreens()];
   try {
     parseEvent(JSON.parse(readFileSync('fixtures/event.json', 'utf8')));
   } catch (e) {
@@ -59,5 +85,5 @@ if (process.argv[1]?.endsWith('inventory-lint.ts')) {
     for (const p of problems) console.error(p);
     process.exit(1);
   }
-  console.log(`inventory:lint OK (${readdirSync(ENGINE_DIR).length} files under ${ENGINE_DIR}; fixtures/event.json valid)`);
+  console.log(`inventory:lint OK (${readdirSync(ENGINE_DIR).length} files under ${ENGINE_DIR}; fixtures/event.json valid; ${lintScreenCount()} Turnstile screen files, no arithmetic)`);
 }

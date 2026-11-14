@@ -43,6 +43,7 @@ TypeScript on a clone of saas-foundation v1.6.1: Next.js 16, Prisma 7, PostgreSQ
 - `npm run inventory:lint` — greps `src/inventory/` for `Date.now`, `Math.random`, `new Date(`, `prisma`, `fetch`, `stripe`, `anthropic`, `@/core`; greps `src/` for float money; validates `fixtures/event.json`
 - `npm run inventory:eval:db` — Phase 2: the 2,662 commands through the cast path with Stripe recorded, then a recount from stored rows; same diff; empties the test database first
 - `npm run turnstile:load -- --org <slug>` — Phase 2: fixture event and customers into an org, write-once
+- `npm run turnstile:cast -- --org <slug>` — Phase 3 demo: the 2,662 fixture commands into a loaded event (Stripe recorded); refuses a second run
 
 ## Definition of done (any task)
 Tests green (or recorded as CI-only with the reason), `inventory:eval` matching the reference exactly, `fixtures:check` OK, `inventory:lint` OK, no float money and no forbidden import under `src/inventory/`, decisions doc updated if a rule changed, `NEXT.md` updated, numbers (not adjectives) in the commit message when a measurement changed.
