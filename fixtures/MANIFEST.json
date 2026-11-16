@@ -1,0 +1,16 @@
+{
+  "files": {
+    "answer_key.csv": "2ec6190b194defce1de03135f35dd20fee4a2352a53ee7bc1fbab151071137c8",
+    "commands.csv": "4718068e32b2bf07a35aacae6b6ef8482822d420156f239e8ea93bae3367b4c0",
+    "customers.csv": "459d372195f1524364e7dea74ba6c2d660bfd317eecb6cb22cbe5c689a553e40",
+    "event.json": "291f4fced7f7428293cbca0adacf9318532d3bbb1dcf7e70098410aa2f937de9",
+    "expected_commands.csv": "6fa76dd45bf33719efad5f2ed80e0b70a6d2880d5a0548ef40d631a6df7b41c4",
+    "expected_inventory.csv": "6935bf0c2670c7fbdda95ddce72a18fc073e0b71e92cafca3212439ee0bad964",
+    "expected_orders.csv": "d0501ae774fc1e15e49007388c885884d6eed5232cf55c636836b3407ae21c52",
+    "expected_refunds.csv": "d7c0e215efb8a97ae857a244f0f58ab5beb8379a997254155dc513a27fd30c60",
+    "expected_summary.json": "44f1727709cab54741027e9777f3e82068a867dced6466523abde93d208222af",
+    "expected_tickets.csv": "884d32745dd686ebc7658b21e985d4672439c03653166c96fb16bb5cee7d328e",
+    "expected_waitlist.csv": "4f9ac54daec14b6003f164b93b49f113db923c0406f72a2fd66881032eb0fdea"
+  },
+  "seed": 20261109
+}

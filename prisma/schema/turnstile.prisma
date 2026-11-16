@@ -1,0 +1,304 @@
+// Turnstile tables (D-20): the engine's state (src/inventory/types.ts) one to one, so the Phase 2 recount is a
+// projection, not a translation. Natural ids are the engine's (`H-00001`, `ORD-00001`, `T-00001`, `W-0001`,
+// `O-0001`, `R-00001`), unique per event. Every `*At` is CHAR(19) on the one axis (D-9) with a CHECK in the
+// migration; money is INTEGER cents. Every table carries orgId (rls:policies); Event cascades from Org and the
+// rest from Event. Hand-written in the migration: the CHECKs, the append-only and transition triggers (D-21).
+
+enum PoolKind {
+  GA
+  RESERVED
+}
+
+enum SeatState {
+  OPEN
+  HELD
+  SOLD
+}
+
+enum HoldKind {
+  HOLD
+  OFFER
+}
+
+enum HoldState {
+  HELD
+  PAYING
+  CONFIRMED
+  RELEASED
+  EXPIRED
+  PAY_FAILED
+  PAY_TIMEOUT
+  CANCELLED
+}
+
+enum PaymentState {
+  PENDING
+  SUCCEEDED
+  FAILED
+  SUCCEEDED_LATE
+}
+
+enum TicketState {
+  ISSUED
+  CHECKED_IN
+  REFUNDED
+}
+
+enum EntryState {
+  WAITING
+  OFFERED
+  FULFILLED
+  LEFT
+  CLOSED
+  CLOSED_OFF_SALE
+  OFFER_EXPIRED
+  OFFER_DECLINED
+  OFFER_PAY_FAILED
+}
+
+enum CommandStatus {
+  OK
+  REJECT
+}
+
+/// One event (one per org for now; the model allows more). `rules` is event.json's `rules` object (parsed by the engine).
+model Event {
+  id            String   @id @default(uuid()) @db.Uuid
+  orgId         String   @db.Uuid
+  org           Org      @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  eventKey      String // event.json event_id, e.g. EV-SYNTH-001
+  name          String
+  venue         String
+  timezoneLabel String
+  startsAt      String   @db.Char(19)
+  doorsAt       String   @db.Char(19)
+  salesOpenAt   String   @db.Char(19)
+  salesCloseAt  String   @db.Char(19)
+  currency      String
+  ticketSalt    String
+  rules         Json
+  cancelledAt   String?  @db.Char(19)
+  clockOffsetSeconds Int @default(0) // D-35: event clock = axisNow + this; set by staff, read by every cast and screen
+  createdAt     DateTime @default(now()) @db.Timestamptz(6)
+
+  pools    Pool[]
+  tiers    Tier[]
+  sections Section[]
+  seats    Seat[]
+  holds    Hold[]
+  payments Payment[]
+  orders   Order[]
+  tickets  Ticket[]
+  entries  WaitlistEntry[]
+  refunds  Refund[]
+  commands CommandLog[]
+
+  @@unique([orgId, eventKey])
+}
+
+model Pool {
+  orgId    String   @db.Uuid
+  eventId  String   @db.Uuid
+  event    Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  poolId   String
+  ord      Int // position in event.json (the order the inventory table prints)
+  kind     PoolKind
+  capacity Int
+
+  @@id([eventId, poolId])
+}
+
+model Tier {
+  orgId      String @db.Uuid
+  eventId    String @db.Uuid
+  event      Event  @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  tierId     String
+  ord        Int // position in event.json (the order the inventory table prints)
+  poolId     String
+  allotment  Int
+  priceCents Int
+  onSaleAt   String @db.Char(19)
+  offSaleAt  String @db.Char(19)
+
+  @@id([eventId, tierId])
+}
+
+model Section {
+  orgId       String   @db.Uuid
+  eventId     String   @db.Uuid
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  sectionId   String
+  ord         Int // position in event.json (the order the inventory table prints)
+  poolId      String
+  rows        String[]
+  seatsPerRow Int
+
+  @@id([eventId, sectionId])
+}
+
+/// Guarded (D-21): OPEN → HELD → OPEN | SOLD → OPEN; plus the one-tick composites through OPEN: HELD → HELD (new holdId) and SOLD → HELD (refund then fill).
+model Seat {
+  orgId    String    @db.Uuid
+  eventId  String    @db.Uuid
+  event    Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  seatId   String // <section>-<row>-<nn>
+  section  String
+  row      String
+  num      Int
+  tierId   String
+  poolId   String
+  state    SeatState @default(OPEN)
+  holdId   String?
+  ticketId String?
+
+  @@id([eventId, seatId])
+}
+
+/// Guarded (D-21): HELD → PAYING | EXPIRED | RELEASED | CANCELLED; PAYING → CONFIRMED | PAY_FAILED | PAY_TIMEOUT | CANCELLED.
+model Hold {
+  orgId        String    @db.Uuid
+  eventId      String    @db.Uuid
+  event        Event     @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  holdId       String
+  kind         HoldKind
+  customer     String
+  tierId       String
+  qty          Int
+  seats        String[]
+  state        HoldState @default(HELD)
+  createdAt    String    @db.Char(19)
+  expiresAt    String    @db.Char(19)
+  priceCents   Int
+  feeCents     Int
+  paymentId    String?
+  payStartedAt String?   @db.Char(19)
+  payTimeoutAt String?   @db.Char(19)
+  entryId      String?
+  orderId      String?
+  endedAt      String?   @db.Char(19)
+
+  @@id([eventId, holdId])
+}
+
+/// Guarded (D-21): PENDING → SUCCEEDED | FAILED | SUCCEEDED_LATE. `paymentId` is the Stripe PaymentIntent id (`pi_…`, D-23).
+model Payment {
+  orgId       String       @db.Uuid
+  eventId     String       @db.Uuid
+  event       Event        @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  paymentId   String
+  holdId      String
+  amountCents Int
+  state       PaymentState @default(PENDING)
+  startedAt   String       @db.Char(19)
+  endedAt     String?      @db.Char(19)
+
+  @@id([eventId, paymentId])
+}
+
+/// Append-only (D-21).
+model Order {
+  orgId       String   @db.Uuid
+  eventId     String   @db.Uuid
+  event       Event    @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  orderId     String
+  customer    String
+  tierId      String
+  qty         Int
+  seats       String[]
+  grossCents  Int
+  feesCents   Int
+  paymentId   String
+  confirmedAt String   @db.Char(19)
+  tickets     String[]
+  holdId      String
+  viaOffer    Boolean
+
+  @@id([eventId, orderId])
+}
+
+/// Guarded (D-21): ISSUED → CHECKED_IN | REFUNDED; CHECKED_IN → REFUNDED.
+model Ticket {
+  orgId         String      @db.Uuid
+  eventId       String      @db.Uuid
+  event         Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketId      String
+  orderId       String
+  tierId        String
+  seat          String      @default("") // '' for GA, as the engine has it
+  priceCents    Int
+  feeCents      Int
+  state         TicketState @default(ISSUED)
+  issuedAt      String      @db.Char(19)
+  checkedInAt   String?     @db.Char(19)
+  refundedCents Int         @default(0)
+  refundedAt    String?     @db.Char(19)
+  code          String // sha256(event_id|ticket_id|salt)[:20]
+
+  @@id([eventId, ticketId])
+}
+
+/// Guarded (D-21): WAITING → OFFERED | LEFT | CLOSED | CLOSED_OFF_SALE; OFFERED → FULFILLED | OFFER_EXPIRED | OFFER_DECLINED | OFFER_PAY_FAILED | LEFT | CLOSED.
+model WaitlistEntry {
+  orgId     String     @db.Uuid
+  eventId   String     @db.Uuid
+  event     Event      @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  entryId   String
+  customer  String
+  target    String // a GA tier id or a reserved section id
+  qty       Int
+  joinedAt  String     @db.Char(19)
+  state     EntryState @default(WAITING)
+  offerId   String?
+  offeredAt String?    @db.Char(19)
+  endedAt   String?    @db.Char(19)
+  orderId   String?
+
+  @@id([eventId, entryId])
+}
+
+/// Append-only (D-21), except `stripeRefundId` NULL → value once (the provider's id when the refund call returns; NULL = PENDING_PROVIDER, D-23).
+model Refund {
+  orgId          String  @db.Uuid
+  eventId        String  @db.Uuid
+  event          Event   @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  refundId       String
+  orderId        String  @default("")
+  ticketId       String  @default("")
+  paymentId      String
+  amountCents    Int
+  reason         String
+  at             String  @db.Char(19)
+  stripeRefundId String?
+
+  @@id([eventId, refundId])
+}
+
+/// Every command and its result, rejected ones included (D-10); the source of truth the recount replays (D-28). Append-only.
+model CommandLog {
+  orgId         String        @db.Uuid
+  eventId       String        @db.Uuid
+  event         Event         @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  cmdId         String
+  at            String        @db.Char(19)
+  kind          String
+  customer      String        @default("")
+  payload       Json // the Command as received (src/inventory/types.ts Command)
+  status        CommandStatus
+  code          String
+  detail        String        @default("")
+  stripeEventId String?       @unique // set when the command came from a Stripe webhook; the dedupe key (D-13, D-23)
+  createdAt     DateTime      @default(now()) @db.Timestamptz(6)
+
+  @@id([eventId, cmdId])
+  @@index([eventId, at])
+}
+
+/// Fixture customers (customers.csv), per org.
+model Customer {
+  orgId      String @db.Uuid
+  customerId String
+  name       String
+  email      String
+
+  @@id([orgId, customerId])
+}

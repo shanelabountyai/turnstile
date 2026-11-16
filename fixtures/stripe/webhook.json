@@ -1,0 +1,49 @@
+{
+  "_note": "Published on purpose (D-5, D-30). The signing secret is a fixture, deliberately not whsec_-shaped so no scanner mistakes it for a real one. The two events are the documented shapes of payment_intent.succeeded and payment_intent.payment_failed (Stripe API reference, 2025 versions), written by hand, not captured from a live account; only the fields the webhook handler reads are guaranteed (id, type, created, data.object.id, data.object.metadata).",
+  "secret": "fixture-webhook-secret-not-real-0123456789abcdef0123456789abcdef",
+  "events": {
+    "succeeded": {
+      "id": "evt_fixture_succeeded_00001",
+      "object": "event",
+      "api_version": "2025-08-27.basil",
+      "created": 1764604860,
+      "type": "payment_intent.succeeded",
+      "livemode": false,
+      "pending_webhooks": 1,
+      "request": { "id": null, "idempotency_key": "H-00002" },
+      "data": {
+        "object": {
+          "id": "pi_fixture_00001",
+          "object": "payment_intent",
+          "amount": 5700,
+          "amount_received": 5700,
+          "currency": "usd",
+          "status": "succeeded",
+          "metadata": { "hold_id": "H-00002", "org_id": "", "event_id": "" }
+        }
+      }
+    },
+    "failed": {
+      "id": "evt_fixture_failed_00001",
+      "object": "event",
+      "api_version": "2025-08-27.basil",
+      "created": 1764604920,
+      "type": "payment_intent.payment_failed",
+      "livemode": false,
+      "pending_webhooks": 1,
+      "request": { "id": null, "idempotency_key": "H-00002" },
+      "data": {
+        "object": {
+          "id": "pi_fixture_00001",
+          "object": "payment_intent",
+          "amount": 5700,
+          "amount_received": 0,
+          "currency": "usd",
+          "status": "requires_payment_method",
+          "last_payment_error": { "code": "card_declined", "decline_code": "generic_decline" },
+          "metadata": { "hold_id": "H-00002", "org_id": "", "event_id": "" }
+        }
+      }
+    }
+  }
+}

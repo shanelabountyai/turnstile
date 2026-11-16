@@ -10,7 +10,6 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   'src/core/auth/link.ts': 'email change revokes invites to the old address in every org (deviation: not in the kickoff list)',
   'src/core/tenancy/export.ts': 'cron builds and sweeps exports in every org; the manifest reads _prisma_migrations',
   'src/core/auth/demo.ts': "demo sign-in lists every demo user's orgs (sign-in)",
-  'src/modules/billing/webhook.ts': 'Stripe webhook: the event names the org', // billing
   'src/modules/notifications/outbox.ts': 'cron drain and sweep across every org', // notifications
   'scripts/seed-demo.ts': 'seed:demo writes several orgs',
   'src/modules/sso/hooks.ts': '/login routing by email domain, the SSO-required link check, domain uniqueness, cron sweep', // sso
@@ -18,4 +17,5 @@ export const CROSS_ORG_FILES: Readonly<Record<string, string>> = {
   'src/modules/apikeys/keys.ts': 'an API key names its org: the hashed-key lookup runs before any org is known', // apikeys
   'src/modules/apikeys/webhooks.ts': 'webhook fan-out and delivery: the cron sweep crosses every org', // apikeys
   // clone entries below
+  'src/app/api/checkout/webhook/route.ts': 'Stripe webhook: the org and event are read from the PaymentIntent metadata before any org is known (D-23)', // app
 };

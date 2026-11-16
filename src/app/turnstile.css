@@ -1,0 +1,236 @@
+/* Turnstile's one stylesheet. The design system is docs/DESIGN_SYSTEM.md (D-35); the live reference is
+   /o/<org>/design. Three layers, in this order:
+     1. primitives  raw scales (neutral, accent, type, space, radius). Nothing below uses a raw value.
+     2. semantic    what a token is FOR (surface, text, border, action, status). Dark mode remaps this layer only.
+     3. components  element styles first, so template-owned pages look right with zero classes, then the few classes.
+   Every colour pair is checked for AA in both schemes (tools/contrast.py) and again by axe in the e2e sweep. */
+
+/* ============ 1. primitives ============ */
+:root {
+  /* neutral: warm, box-office paper to ink. Steps are lightness; the hue is shared. */
+  --n-0: oklch(0.995 0.003 80);
+  --n-50: oklch(0.972 0.006 80);
+  --n-100: oklch(0.945 0.008 75);
+  --n-200: oklch(0.91 0.01 72);
+  --n-300: oklch(0.84 0.014 70);
+  --n-500: oklch(0.56 0.018 40);
+  --n-600: oklch(0.45 0.02 30);
+  --n-800: oklch(0.31 0.02 30);
+  --n-900: oklch(0.25 0.02 30);
+  --n-950: oklch(0.19 0.01 30);
+  --n-dark-surface: oklch(0.225 0.01 30);
+  --n-dark-line: oklch(0.38 0.012 30);
+  --n-dark-muted: oklch(0.76 0.012 80);
+  --n-dark-ink: oklch(0.93 0.008 80);
+  /* accent: oxblood. 700 on paper, 300 on dark. */
+  --a-700: oklch(0.44 0.13 25);
+  --a-300: oklch(0.8 0.1 30);
+
+  /* type: one scale, 1.2 ratio, rounded to whole pixels */
+  --t-xs: 13px; --t-sm: 15px; --t-base: 17px; --t-md: 20px; --t-lg: 24px; --t-xl: 30px; --t-2xl: 40px;
+  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --serif: ui-serif, Georgia, 'Times New Roman', serif;
+  --mono: ui-monospace, SFMono-Regular, Menlo, monospace;
+
+  /* space: a 4px grid */
+  --s-1: 4px; --s-2: 8px; --s-3: 12px; --s-4: 16px; --s-5: 20px; --s-6: 24px; --s-8: 32px; --s-10: 40px; --s-12: 56px;
+
+  --r-1: 8px; --r-2: 12px; --r-pill: 999px;
+  --container: 64rem;
+  --dur: 120ms;
+}
+
+/* ============ 2. semantic ============ */
+:root {
+  color-scheme: light dark;
+  --bg: var(--n-50);          /* page */
+  --sf: var(--n-0);           /* card, input, nav */
+  --sf-2: var(--n-100);       /* a quiet well inside a card: table header, code */
+  --ink: var(--n-900);        /* text */
+  --mu: var(--n-600);         /* secondary text */
+  --ln: var(--n-300);         /* rules and card borders */
+  --ln-strong: var(--n-500);  /* form control borders: 3:1 against the surface */
+  --ac: var(--a-700);         /* links, primary action, current item, focus */
+  --acf: var(--n-0);          /* text on --ac */
+  --sh-1: 0 1px 2px oklch(0.3 0.03 30 / 0.08);
+
+  /* status families. Lightness per mode here; hue per family in [data-k]. Colour is never the only signal:
+     every use pairs it with a glyph and a word. */
+  --k-bg-l: 0.955; --k-bg-c: 0.04;
+  --k-fg-l: 0.37;  --k-fg-c: 0.1;
+  --k-dot-l: 0.55; --k-dot-c: 0.12;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: var(--n-950); --sf: var(--n-dark-surface); --sf-2: oklch(0.27 0.01 30);
+    --ink: var(--n-dark-ink); --mu: var(--n-dark-muted); --ln: var(--n-dark-line); --ln-strong: oklch(0.6 0.014 40);
+    --ac: var(--a-300); --acf: var(--n-950);
+    --sh-1: 0 1px 2px #0006;
+    --k-bg-l: 0.31; --k-bg-c: 0.05;
+    --k-fg-l: 0.89; --k-fg-c: 0.08;
+    --k-dot-l: 0.72; --k-dot-c: 0.11;
+  }
+}
+
+/* A status family: good (passed, met), risk (failed, delinquent), hold (a tie: the machine stopped on purpose, a
+   person decides), info (open, neutral), done (closed, archived). Chroma multiplier --cm greys out `done`. */
+[data-k], [role='alert'], [role='status'] {
+  --cm: 1;
+  --k-bg: oklch(var(--k-bg-l) calc(var(--k-bg-c) * var(--cm)) var(--h));
+  --k-fg: oklch(var(--k-fg-l) calc(var(--k-fg-c) * var(--cm)) var(--h));
+  --k-dot: oklch(var(--k-dot-l) calc(var(--k-dot-c) * var(--cm)) var(--h));
+}
+[data-k='good'], [role='status'] { --h: 155; }
+[data-k='risk'], [role='alert'] { --h: 28; }
+[data-k='hold'] { --h: 80; }
+[data-k='info'] { --h: 245; }
+[data-k='done'] { --h: 60; --cm: 0.15; }
+
+/* ============ 3. components: elements ============ */
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: var(--t-base)/1.55 var(--sans); overflow-wrap: anywhere; -webkit-font-smoothing: antialiased; }
+
+main { max-width: var(--container); margin: 0 auto; padding: var(--s-5) var(--s-4) var(--s-12); display: flex; flex-direction: column; gap: var(--s-5); }
+@media (min-width: 640px) { main { padding: var(--s-8) var(--s-8) 64px; } }
+
+h1, h2, h3, h4, p, dl, dd, figure { margin: 0; }
+h1, h2, h3, h4 { font-family: var(--serif); text-wrap: balance; }
+h1 { font-size: var(--t-xl); line-height: 1.17; font-weight: 600; letter-spacing: -0.01em; }
+h2 { font-size: var(--t-lg); line-height: 1.25; font-weight: 600; }
+h3 { font-size: var(--t-md); line-height: 1.3; font-weight: 600; }
+h4 { font-size: var(--t-base); font-weight: 600; }
+@media (min-width: 640px) { h1 { font-size: 34px; } }
+main > h2 { margin-top: var(--s-2); }
+ul, ol { margin: 0; padding-left: 22px; }
+li + li { margin-top: var(--s-1); }
+
+a { color: var(--ac); text-underline-offset: 2px; }
+a:hover { text-decoration-thickness: 2px; }
+:focus-visible { outline: 3px solid var(--ac); outline-offset: 2px; border-radius: 4px; }
+
+/* A section inside main is a card. */
+main > section, .card {
+  background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1);
+  padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
+}
+section > h2 { margin-top: 0; font-size: var(--t-md); }
+
+/* Forms. ActionForm (template-owned) renders form > [role=alert|status]? + fieldset. */
+form { display: flex; flex-direction: column; gap: var(--s-3); }
+form > fieldset { display: flex; flex-direction: column; gap: var(--s-3); min-width: 0; align-items: flex-start; border: 0; padding: 0; margin: 0; }
+fieldset { margin: 0; min-width: 0; }
+fieldset:not(.plain):not(form > fieldset) { border: 1px solid var(--ln); border-radius: var(--r-1); padding: var(--s-3) var(--s-4); }
+legend { font-weight: 600; padding: 0 var(--s-1); }
+label { display: flex; flex-direction: column; gap: var(--s-1); font-weight: 500; max-width: 100%; }
+.choice { flex-direction: row; align-items: center; gap: 10px; min-height: 44px; font-weight: 400; }
+input, select, textarea {
+  font: inherit; color: var(--ink); background: var(--sf); border: 1px solid var(--ln-strong); border-radius: var(--r-1);
+  min-height: 44px; padding: 0 var(--s-3); max-width: 100%;
+}
+textarea { width: 100%; padding: 10px var(--s-3); font-family: var(--mono); font-size: var(--t-xs); line-height: 1.45; }
+input[type='checkbox'], input[type='radio'] { width: 20px; height: 20px; min-height: 0; padding: 0; margin: 0; accent-color: var(--ac); flex: none; }
+.hint { font-size: var(--t-sm); color: var(--mu); font-weight: 400; }
+
+/* Buttons: the default is the primary action; one per form. */
+button, .button {
+  font: 600 var(--t-sm)/1.2 var(--sans); min-height: 44px; padding: 0 var(--s-5); border-radius: var(--r-1); cursor: pointer;
+  display: inline-flex; align-items: center; justify-content: center; gap: var(--s-2); text-decoration: none; align-self: flex-start;
+  background: var(--ac); color: var(--acf); border: 1px solid var(--ac); transition: filter var(--dur);
+}
+button:hover, .button:hover { filter: brightness(1.08); }
+button:disabled { cursor: progress; opacity: 0.7; }
+.button.secondary, button.secondary { background: var(--sf); color: var(--ink); border-color: var(--ln-strong); }
+.button.ghost, button.ghost { background: none; color: var(--ac); border-color: transparent; padding: 0 var(--s-3); }
+
+/* Messages: ActionForm's error and notice. Never colour alone: a glyph leads. */
+[role='alert'], [role='status'] { padding: var(--s-3) 14px; border-radius: var(--r-1); font-size: 16px; background: var(--k-bg); color: var(--k-fg); border: 1px solid var(--k-dot); }
+[role='alert']::before { content: '▲ '; }
+[role='status']::before { content: '● '; }
+
+details > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; }
+
+/* Tables scroll inside their own box on a phone, never the page. */
+table { border-collapse: collapse; font-variant-numeric: tabular-nums; display: block; overflow-x: auto; max-width: 100%; font-size: 16px; }
+th, td { text-align: left; padding: var(--s-2) 14px var(--s-2) 0; border-bottom: 1px solid var(--ln); vertical-align: top; }
+th { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--mu); font-weight: 600; white-space: nowrap; }
+td.num, th.num { text-align: right; padding-right: 14px; }
+tbody tr:last-child td { border-bottom: 0; }
+tbody tr:hover td { background: var(--sf-2); }
+
+code, pre { font-family: var(--mono); font-size: var(--t-xs); }
+code.hash { word-break: break-all; color: var(--mu); }
+pre { overflow-x: auto; }
+main footer { font-size: var(--t-sm); color: var(--mu); }
+
+dl { display: grid; grid-template-columns: max-content 1fr; gap: var(--s-1) var(--s-4); }
+dt { color: var(--mu); font-size: var(--t-sm); font-weight: 600; }
+dd { min-width: 0; }
+
+/* ============ 3. components: classes ============ */
+
+/* Layout utilities: only these three. */
+.stack { display: flex; flex-direction: column; gap: var(--s-3); }
+.cluster { display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-2) var(--s-3); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: var(--s-3); }
+.muted { color: var(--mu); font-size: var(--t-sm); }
+.lead { font-size: var(--t-md); line-height: 1.45; color: var(--mu); max-width: 42rem; text-wrap: pretty; }
+.eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--mu); font-weight: 600; }
+
+/* Page header: eyebrow, title, lead, and the page's actions. */
+.page-head { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: var(--s-3) var(--s-6); padding-bottom: var(--s-4); border-bottom: 1px solid var(--ln); }
+.page-head > div:first-child { display: flex; flex-direction: column; gap: var(--s-2); min-width: 0; }
+.page-head .actions { display: flex; flex-wrap: wrap; gap: var(--s-2); }
+
+/* The scope note and the receipt limit: the most visible text on the page. */
+.scope { background: var(--sf); border: 1px solid var(--ln); border-left: 4px solid var(--ac); border-radius: var(--r-1); padding: var(--s-3) var(--s-4); font-size: 16px; }
+.limit { font-style: italic; color: var(--mu); }
+
+/* A notice: a status family in a block, with a glyph. */
+.notice { background: var(--k-bg); color: var(--k-fg); border: 1px solid var(--k-dot); border-radius: var(--r-1); padding: var(--s-3) var(--s-4); display: flex; flex-direction: column; gap: var(--s-1); }
+.notice > strong { font-family: var(--serif); font-size: var(--t-md); }
+.notice > strong::before { margin-right: var(--s-2); }
+.notice[data-k='good'] > strong::before { content: '✓'; }
+.notice[data-k='risk'] > strong::before { content: '✕'; }
+.notice[data-k='hold'] > strong::before { content: '◆'; }
+.notice[data-k='info'] > strong::before { content: '●'; }
+.notice[data-k='done'] > strong::before { content: '■'; }
+
+.empty { border: 1px dashed var(--ln-strong); border-radius: var(--r-2); padding: var(--s-6); display: flex; flex-direction: column; gap: var(--s-2); align-items: flex-start; color: var(--mu); }
+
+/* Stats: a figure, its label, and what it is judged against. */
+.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--s-3); }
+.stat { background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
+.stat dt { order: -1; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+.stat .fig { font: 600 var(--t-xl)/1.1 var(--serif); font-variant-numeric: tabular-nums; }
+.stat .sub { font-size: var(--t-sm); color: var(--mu); }
+.stat[data-k] { border-left: 4px solid var(--k-dot); }
+
+/* Navigation: the org bar, and the tabs inside a meeting. */
+.org-nav { background: var(--sf); border-bottom: 1px solid var(--ln); padding: 0 var(--s-4); display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px; }
+.org-nav .wordmark { font: 600 var(--t-md)/1 var(--serif); color: var(--ink); text-decoration: none; padding-right: var(--s-3); margin-right: 6px; min-height: 48px; display: inline-flex; align-items: center; gap: var(--s-2); }
+.org-nav .wordmark::before { content: ''; width: 12px; height: 12px; border-radius: 50%; background: var(--ac); }
+.org-nav .assoc { font-size: 14px; color: var(--mu); font-weight: 600; flex-basis: 100%; padding-top: var(--s-2); order: -1; }
+.org-nav a:not(.wordmark), .tabs a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: var(--ink); text-decoration: none; font-size: var(--t-sm); font-weight: 500; }
+.org-nav a[aria-current='page'], .tabs a[aria-current='page'] { font-weight: 700; box-shadow: inset 0 -3px 0 var(--ac); }
+.org-nav .end { margin-left: auto; display: flex; flex-wrap: wrap; }
+@media (min-width: 880px) { .org-nav .assoc { flex-basis: auto; order: 0; padding: 0 var(--s-3) 0 0; } }
+.tabs { display: flex; flex-wrap: wrap; border-bottom: 1px solid var(--ln); }
+.tabs a { padding: 0 var(--s-4); }
+
+/* Pills: a glyph and the word. */
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: var(--r-pill);
+  font: 600 var(--t-xs)/1 var(--sans); letter-spacing: 0.02em; white-space: nowrap; vertical-align: middle;
+  background: var(--k-bg); color: var(--k-fg); border: 1px solid var(--k-dot);
+}
+.pill[data-k='good']::before { content: '✓'; }
+.pill[data-k='risk']::before { content: '✕'; }
+.pill[data-k='hold']::before { content: '◆'; }
+.pill[data-k='info']::before { content: '●'; }
+.pill[data-k='done']::before { content: '■'; }
+
+.receipt { background: var(--sf-2); border: 1px solid var(--ln); border-radius: var(--r-1); padding: var(--s-3) 14px; }
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
