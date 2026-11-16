@@ -1,6 +1,6 @@
 # NEXT
 
-## ▶ 2026-11-15 (Sonnet 5.5): closure 4 of 4 done. Turnstile is closed.
+## ▶ 2026-11-15 (Opus 5.5): closure 4 of 4 done. Turnstile is closed.
 
 Cost review is D-36 in `docs/decisions.md`. Nothing bills: there is no Vercel project and no Neon project, CI has no `schedule` and the repo is public, there is no LLM key, Stripe is test mode only. Nothing was turned off; the restore notes are in D-36. Port 7700 is now in the global port table. All four closure deliverables are listed in `docs/RELEASE_NOTES.md`. PR #2 (`phase-2`) stays unmerged until the owner calls it.
 Nothing is queued for Turnstile. Choose the next project, or merge PR #2.
