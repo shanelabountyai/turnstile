@@ -7,6 +7,21 @@ import type { ExportTable } from '@/core/tenancy/export';
 //   { name: 'Booking', rows: (tx, orgId) => tx.booking.findMany({ where: { orgId }, select: { id: true, startsAt: true } }) },
 export const exportTables: readonly ExportTable[] = [
   ...moduleExportTables,
+  // Turnstile (D-20): the venue's own ticketing rows, every column — nothing sealed lives here. Ticket codes are the
+  // venue's door codes; `ticketSalt` on Event is what mints them, and it is the venue's too.
+  { name: 'Event', rows: (tx, orgId) => tx.event.findMany({ where: { orgId } }) },
+  { name: 'Pool', rows: (tx, orgId) => tx.pool.findMany({ where: { orgId } }) },
+  { name: 'Tier', rows: (tx, orgId) => tx.tier.findMany({ where: { orgId } }) },
+  { name: 'Section', rows: (tx, orgId) => tx.section.findMany({ where: { orgId } }) },
+  { name: 'Seat', rows: (tx, orgId) => tx.seat.findMany({ where: { orgId } }) },
+  { name: 'Hold', rows: (tx, orgId) => tx.hold.findMany({ where: { orgId } }) },
+  { name: 'Payment', rows: (tx, orgId) => tx.payment.findMany({ where: { orgId } }) },
+  { name: 'Order', rows: (tx, orgId) => tx.order.findMany({ where: { orgId } }) },
+  { name: 'Ticket', rows: (tx, orgId) => tx.ticket.findMany({ where: { orgId } }) },
+  { name: 'WaitlistEntry', rows: (tx, orgId) => tx.waitlistEntry.findMany({ where: { orgId } }) },
+  { name: 'Refund', rows: (tx, orgId) => tx.refund.findMany({ where: { orgId } }) },
+  { name: 'CommandLog', rows: (tx, orgId) => tx.commandLog.findMany({ where: { orgId } }) },
+  { name: 'Customer', rows: (tx, orgId) => tx.customer.findMany({ where: { orgId } }) },
 ];
 
 // An org-owned table left out on purpose, with the reason. INV-34 fails on any model with an orgId column that is in

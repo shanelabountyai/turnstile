@@ -8,7 +8,7 @@ import { KINDS, Reject, type Kind } from './codes';
 import { InputInvalid } from './errors';
 import { mintSeats, parseEvent, rowKey, type EventDef, type PolicyRow, type Seat, type Section, type Tier } from './event';
 import { addMinutes, daysBefore, timestamp, type Timestamp } from './time';
-import type { Command, Hold, InventoryRow, Order, Payment, Refund, Result, Summary, Ticket, WaitlistEntry } from './types';
+import type { Command, EngineState, Hold, InventoryRow, Order, Payment, Refund, Result, Summary, Ticket, WaitlistEntry } from './types';
 
 const pad = (n: number, w: number): string => String(n).padStart(w, '0');
 
@@ -43,6 +43,41 @@ export class Engine {
     const minted = mintSeats(this.ev);
     this.seats = minted.seats;
     this.rows = minted.rows;
+  }
+
+  // ------------------------------------------------------------------ hydrate (D-28)
+  /**
+   * Rebuild the engine from stored state (the cast path, task 2.4, and the recount). Rows are copied; seats are
+   * matched to the minted ones by id. Counters are the row counts (every id is minted by a counter that only grows).
+   * No rule lives here: the same commands on the same tables give the same results and commitment whether the
+   * state was reached by `run` or by `hydrate` — `inventory:eval:db` is the proof.
+   */
+  hydrate(s: EngineState): this {
+    for (const h of s.holds) this.holds.set(h.hold_id, { ...h, seats: [...h.seats] });
+    for (const p of s.payments) this.payments.set(p.payment_id, { ...p });
+    for (const o of s.orders) this.orders.set(o.order_id, { ...o, seats: [...o.seats], tickets: [...o.tickets] });
+    for (const t of s.tickets) this.tickets.set(t.ticket_id, { ...t });
+    for (const seat of s.seats) {
+      const st = this.seats.get(seat.seat_id);
+      if (!st) throw new InputInvalid('seat_id', seat.seat_id);
+      st.state = seat.state;
+      st.hold_id = seat.hold_id;
+      st.ticket_id = seat.ticket_id;
+    }
+    this.waitlist.push(...[...s.waitlist].sort((a, b) => compareStrings(a.entry_id, b.entry_id)).map((e) => ({ ...e })));
+    this.refunds.push(...[...s.refunds].sort((a, b) => compareStrings(a.refund_id, b.refund_id)).map((r) => ({ ...r })));
+    for (const r of s.results ?? []) {
+      this.results.push({ ...r });
+      this.seenCmd.add(r.cmd_id);
+    }
+    this.nOrder = this.orders.size;
+    this.nTicket = this.tickets.size;
+    this.nEntry = this.waitlist.length;
+    this.nOffer = [...this.holds.values()].filter((h) => h.kind === 'OFFER').length;
+    this.nRefund = this.refunds.length;
+    this.cancelledAt = s.cancelled_at;
+    this.now = s.now;
+    return this;
   }
 
   // ------------------------------------------------------------------ counts (D-11)

@@ -46,3 +46,10 @@ export interface Summary {
   captured_cents: number; refunded_cents: number; net_cents: number; refunds: number;
   holds: Record<string, number>; waitlist: Record<string, number>; offers_made: number; commitment: string;
 }
+
+/** Stored state for `Engine.hydrate` (D-28): the records as the tables hold them, plus the clock the log reached. */
+export interface EngineState {
+  holds: Hold[]; payments: Payment[]; orders: Order[]; tickets: Ticket[];
+  seats: { seat_id: string; state: 'OPEN' | 'HELD' | 'SOLD'; hold_id: string | null; ticket_id: string | null }[];
+  waitlist: WaitlistEntry[]; refunds: Refund[]; results?: Result[]; cancelled_at: Timestamp | null; now: Timestamp | null;
+}

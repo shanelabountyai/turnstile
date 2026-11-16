@@ -64,6 +64,18 @@ jobs:
       - run: npm run inventory:lint
       - run: npm run inventory:eval
       - run: npm run fixtures:check
+      # Phase 2 gate (docs/phase-2-tasks.md 2.7). The concurrency (cast) and signature (webhook) tests ran in vitest above.
+      # Off leg only: eval:db TRUNCATEs as the owner role, and the migrations-vs-schema diff needs only one run.
+      - name: prisma migrate diff (migrations = schema)
+        if: matrix.rls == 'off'
+        env:
+          SHADOW_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/turnstile_shadow
+        run: |
+          createdb turnstile_shadow
+          npx prisma migrate diff --from-migrations prisma/migrations --to-schema prisma/schema --exit-code
+      - name: inventory:eval:db (2,662 commands through the cast path, Stripe recorded; no Stripe secret)
+        if: matrix.rls == 'off'
+        run: npx tsx scripts/inventory-eval-db.ts
       # Production build, served — the way it ships. login.spec.ts drives a real page.
       - run: npx playwright install --with-deps chromium
       - run: npx playwright test
