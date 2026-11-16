@@ -1,5 +1,11 @@
 # NEXT
 
+## ▶ 2026-11-15 (Sonnet 5.5): closure 4 of 4 done. Turnstile is closed.
+
+Cost review is D-36 in `docs/decisions.md`. Nothing bills: there is no Vercel project and no Neon project, CI has no `schedule` and the repo is public, there is no LLM key, Stripe is test mode only. Nothing was turned off; the restore notes are in D-36. Port 7700 is now in the global port table. All four closure deliverables are listed in `docs/RELEASE_NOTES.md`. PR #2 (`phase-2`) stays unmerged until the owner calls it.
+Nothing is queued for Turnstile. Choose the next project, or merge PR #2.
+
+---
 ## ▶ 2026-11-13 (Opus 5.5): closure 3 of 4 done — LinkedIn posts in the Ledger. Next: cost review.
 
 Harvested 5 angles (waitlist head, late money, caps > room, undrainable outbox, seat guard). Shane picked 2: Ledger #170 (MarTech, late payment refunded, $76.98 at +32 min) and #171 (Scale, waitlist head never skipped), queued after Earmark #168/#169 so pillars alternate. Dropped: seat-guard story (duplicates the "tests green, still broken" theme in #147/#165/#168); caps > room (reuses the $100M anchor in #148/#153/#166). Tech source links point at `phase-2` `docs/decisions.md` (main does not have it; no WRITEUP.md exists). The Ledger page's PROJECTS list lacks `turnstile` and `earmark`, so cards show the raw id — needs a page republish if it matters.
