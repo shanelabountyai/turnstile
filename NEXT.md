@@ -1,5 +1,10 @@
 # NEXT
 
+## ▶ 2026-11-16 (Opus 5.5): PRs merged. Turnstile is closed and on `main`.
+
+Shane chose to merge. PR #2 (`phase-2` → `kickoff`) merged after CI run 43806998471 passed; then PR #1 (`kickoff` → `main`). `main` matches `phase-2` exactly (`git diff` is empty). Nothing is queued for Turnstile. Loose end, optional: the Ledger page's PROJECTS list lacks `turnstile` and `earmark`, so those cards show the raw id.
+
+---
 ## ▶ 2026-11-15 (Opus 5.5): closure 4 of 4 done. Turnstile is closed.
 
 Cost review is D-36 in `docs/decisions.md`. Nothing bills: there is no Vercel project and no Neon project, CI has no `schedule` and the repo is public, there is no LLM key, Stripe is test mode only. Nothing was turned off; the restore notes are in D-36. Port 7700 is now in the global port table. All four closure deliverables are listed in `docs/RELEASE_NOTES.md`. PR #2 (`phase-2`) stays unmerged until the owner calls it.
