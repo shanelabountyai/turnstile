@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Ledger</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="min-height: 1180px; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.55;">
+<nav aria-label="Organisation" style="background: oklch(0.995 0.003 80); border-bottom: 1px solid oklch(0.84 0.014 70); padding: 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px;">
+<a href="#" style="font: 600 20px/1 ui-serif, Georgia, serif; color: oklch(0.25 0.02 30); text-decoration: none; min-height: 48px; display: inline-flex; align-items: center; gap: 8px; padding-right: 12px;"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: oklch(0.44 0.13 25);"></span>Turnstile</a>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30); font-weight: 600; padding-right: 12px;">The Foundry Hall</span>
+<a href="Event.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Event</a>
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Buy</a>
+<a href="Box.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Box office</a>
+<a href="Door.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Door</a>
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 700; box-shadow: inset 0 -3px 0 oklch(0.44 0.13 25);">Ledger</a>
+</nav>
+<main style="max-width: 64rem; margin: 0 auto; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px;">
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-bottom: 16px; border-bottom: 1px solid oklch(0.84 0.014 70);">
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+<span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">End of night · Stripe test mode</span>
+<h1 style="margin: 0; font: 600 34px/1.17 ui-serif, Georgia, serif; letter-spacing: -0.01em;">Ledger</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.45; color: oklch(0.45 0.02 30); max-width: 42rem;">Captured minus refunded equals net, to the cent. Every figure is a sum of stored payments and refunds.</p>
+</div>
+<a href="#" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); display: inline-flex; align-items: center; text-decoration: none;">Download CSV</a>
+</header>
+
+<div style="display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px;">
+<div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 16px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Captured</span><span style="font: 600 30px/1.1 ui-serif, Georgia, serif; font-variant-numeric: tabular-nums;">$46,181.32</span><span style="font-size: 15px; color: oklch(0.45 0.02 30); font-variant-numeric: tabular-nums;">4,618,132¢ · 451 orders and 1 late payment</span></div>
+<div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 16px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Refunded</span><span style="font: 600 30px/1.1 ui-serif, Georgia, serif; font-variant-numeric: tabular-nums;">$1,376.82</span><span style="font-size: 15px; color: oklch(0.45 0.02 30); font-variant-numeric: tabular-nums;">137,682¢ · 47 tickets ($1,299.84) + 1 late payment ($76.98)</span></div>
+<div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-top: 4px solid oklch(0.55 0.12 155); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 16px; display: flex; flex-direction: column; gap: 4px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Net</span><span style="font: 600 30px/1.1 ui-serif, Georgia, serif; font-variant-numeric: tabular-nums;">$44,804.50</span><span style="font-size: 15px; color: oklch(0.45 0.02 30); font-variant-numeric: tabular-nums;">✓ 4,618,132 − 137,682 = 4,480,450¢</span></div>
+</div>
+
+<div style="display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; font-variant-numeric: tabular-nums;">
+<div style="background: oklch(0.945 0.008 75); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 12px 14px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Tickets issued</span><br><strong style="font-size: 20px;">1,051</strong></div>
+<div style="background: oklch(0.945 0.008 75); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 12px 14px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Live</span><br><strong style="font-size: 20px;">1,004</strong></div>
+<div style="background: oklch(0.945 0.008 75); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 12px 14px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Refunded</span><br><strong style="font-size: 20px;">47</strong></div>
+<div style="background: oklch(0.945 0.008 75); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 12px 14px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Checked in</span><br><strong style="font-size: 20px;">802</strong></div>
+</div>
+
+<section aria-labelledby="ord-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline;">
+<h2 id="ord-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Per order</h2>
+<span style="font-size: 15px; color: oklch(0.45 0.02 30);">Showing 6 of 452 rows</span>
+</div>
+<div style="overflow-x: auto;">
+<table style="border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 16px;">
+<thead><tr>
+<th scope="col" style="text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Order</th>
+<th scope="col" style="text-align: left; padding: 8px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Tickets</th>
+<th scope="col" style="text-align: right; padding: 8px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Captured</th>
+<th scope="col" style="text-align: right; padding: 8px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Refunded</th>
+<th scope="col" style="text-align: right; padding: 8px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Net</th>
+<th scope="col" style="text-align: left; padding: 8px 0; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Status</th>
+</tr></thead>
+<tbody>
+<sc-for list="{{ orders }}" as="o" hint-placeholder-count="6">
+<tr>
+<td style="padding: 10px 14px 10px 0; border-bottom: 1px solid oklch(0.84 0.014 70); font-family: ui-monospace, Menlo, monospace; font-size: 14px;">{{ o.id }}</td>
+<td style="padding: 10px 14px; border-bottom: 1px solid oklch(0.84 0.014 70);">{{ o.what }}</td>
+<td style="padding: 10px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); text-align: right;">{{ o.cap }}</td>
+<td style="padding: 10px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); text-align: right;">{{ o.ref }}</td>
+<td style="padding: 10px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); text-align: right; font-weight: 600;">{{ o.net }}</td>
+<td style="padding: 10px 0; border-bottom: 1px solid oklch(0.84 0.014 70);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; white-space: nowrap; background: {{ o.bg }}; color: {{ o.fg }}; border: 1px solid {{ o.dot }};">{{ o.pill }}</span></td>
+</tr>
+</sc-for>
+</tbody>
+</table>
+</div>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const fam = {
+      good: ['oklch(0.955 0.04 155)', 'oklch(0.37 0.1 155)', 'oklch(0.55 0.12 155)', '✓ '],
+      done: ['oklch(0.955 0.006 60)', 'oklch(0.37 0.015 60)', 'oklch(0.55 0.018 60)', '■ ']
+    };
+    const k = (f, w) => ({ bg: fam[f][0], fg: fam[f][1], dot: fam[f][2], pill: fam[f][3] + w });
+    const orders = [
+      Object.assign({ id: 'ORD-00001', what: '2 × Early bird', cap: '$57.00', ref: '—', net: '$57.00' }, k('good', 'Paid')),
+      Object.assign({ id: 'ORD-00002', what: '2 × Advance', cap: '$76.98', ref: '$17.49', net: '$59.49' }, k('done', '1 ticket half-refunded')),
+      Object.assign({ id: 'ORD-00003', what: '2 × Balcony · A-D-06, A-D-07', cap: '$127.00', ref: '—', net: '$127.00' }, k('good', 'Paid')),
+      Object.assign({ id: 'ORD-00067', what: '2 × Advance', cap: '$76.98', ref: '$34.98', net: '$42.00' }, k('done', '2 tickets half-refunded')),
+      Object.assign({ id: 'ORD-00076', what: '3 × Advance', cap: '$115.47', ref: '$38.49', net: '$76.98' }, k('done', '1 ticket fully refunded')),
+      Object.assign({ id: 'pi_fixture_00058', what: 'No order · paid after the hold ended', cap: '$76.98', ref: '$76.98', net: '$0.00' }, k('done', 'Refunded in full'))
+    ];
+    return { orders: orders };
+  }
+}
+</script>
+</body>
+</html>

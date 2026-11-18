@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Door</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1000px; box-sizing: border-box; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.5; display: flex; flex-direction: column;">
+<header style="background: oklch(0.995 0.003 80); border-bottom: 1px solid oklch(0.84 0.014 70); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+<span style="font: 600 20px/1 ui-serif, Georgia, serif; display: inline-flex; align-items: center; gap: 8px;"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: oklch(0.44 0.13 25);"></span>Door</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 245); color: oklch(0.37 0.1 245); border: 1px solid oklch(0.55 0.12 245);">● Doors open 7:00 PM</span>
+</header>
+<main style="padding: 16px; display: flex; flex-direction: column; gap: 14px;">
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; font-variant-numeric: tabular-nums;">
+<div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 12px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Checked in</span><br><strong style="font: 600 24px/1.2 ui-serif, Georgia, serif;">{{ inCount }}</strong></div>
+<div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 12px;"><span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Live tickets</span><br><strong style="font: 600 24px/1.2 ui-serif, Georgia, serif;">1,004</strong></div>
+</div>
+
+<form style="display: flex; flex-direction: column; gap: 10px;">
+<label style="display: flex; flex-direction: column; gap: 4px; font-weight: 600;">Ticket code
+<input type="text" value="{{ code }}" autocomplete="off" style="font: 20px ui-monospace, Menlo, monospace; min-height: 56px; padding: 0 12px; border-radius: 8px; border: 1px solid oklch(0.56 0.018 40); background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); width: 100%; box-sizing: border-box;">
+</label>
+<button type="button" onClick="{{ scanCurrent }}" style="min-height: 64px; border-radius: 12px; font: 700 20px/1 system-ui, sans-serif; background: oklch(0.44 0.13 25); color: oklch(0.995 0.003 80); border: 1px solid oklch(0.44 0.13 25); cursor: pointer;">Check in</button>
+</form>
+
+<sc-if value="{{ hasResult }}" hint-placeholder-val="{{ true }}">
+<div aria-live="assertive" style="background: {{ r.bg }}; color: {{ r.fg }}; border: 3px solid {{ r.dot }}; border-radius: 14px; padding: 18px 16px; display: flex; flex-direction: column; gap: 8px;">
+<strong style="font: 700 34px/1 system-ui, sans-serif; letter-spacing: 0.02em;">{{ r.head }}</strong>
+<span style="font-size: 18px; font-weight: 600;">{{ r.say }}</span>
+<span style="font: 13px ui-monospace, Menlo, monospace;">{{ r.code }}</span>
+</div>
+</sc-if>
+
+<section aria-labelledby="demo-h" style="border-top: 1px dashed oklch(0.84 0.014 70); padding-top: 12px; display: flex; flex-direction: column; gap: 8px;">
+<h2 id="demo-h" style="margin: 0; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Prototype · scan a fixture ticket</h2>
+<button type="button" onClick="{{ pickGood }}" style="min-height: 44px; border-radius: 8px; font: 600 15px/1.2 system-ui, sans-serif; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); text-align: left; padding: 0 12px; cursor: pointer;">Balcony A-D-06 (scan twice)</button>
+<button type="button" onClick="{{ pickRefunded }}" style="min-height: 44px; border-radius: 8px; font: 600 15px/1.2 system-ui, sans-serif; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); text-align: left; padding: 0 12px; cursor: pointer;">Refunded Advance ticket</button>
+<button type="button" onClick="{{ pickTypo }}" style="min-height: 44px; border-radius: 8px; font: 600 15px/1.2 system-ui, sans-serif; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); text-align: left; padding: 0 12px; cursor: pointer;">A screenshot with a typo</button>
+<button type="button" onClick="{{ pickEarly }}" style="min-height: 44px; border-radius: 8px; font: 600 15px/1.2 system-ui, sans-serif; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); text-align: left; padding: 0 12px; cursor: pointer;">Any ticket at 6:45 PM</button>
+</section>
+<p style="margin: 0; font-size: 14px; color: oklch(0.45 0.02 30);">Refusals are checked in this order: unknown, refunded, doors not open, already scanned. The count above is a placeholder in this mockup.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { code: '699901335e4a7faef798', early: false, scanned: false, result: null };
+  }
+  renderVals() {
+    const s = this.state;
+    const fam = {
+      good: ['oklch(0.955 0.04 155)', 'oklch(0.37 0.1 155)', 'oklch(0.55 0.12 155)'],
+      risk: ['oklch(0.955 0.04 28)', 'oklch(0.37 0.1 28)', 'oklch(0.55 0.12 28)']
+    };
+    const res = (f, head, say, code) => ({ bg: fam[f][0], fg: fam[f][1], dot: fam[f][2], head: head, say: say, code: code });
+    const scan = () => {
+      const c = s.code;
+      let r;
+      if (c === '699901335e4a7faef798') {
+        if (s.early) r = res('risk', '✕ DO NOT ADMIT', 'Doors are not open yet; they open at 2027-03-20 19:00:00.', 'DOORS_NOT_OPEN');
+        else if (s.scanned) r = res('risk', '✕ DO NOT ADMIT', 'Already scanned: this ticket was first checked in at 2027-03-20 19:44:45.', 'ALREADY_CHECKED_IN');
+        else r = res('good', '✓ ADMIT', 'Admit. Ticket T-00005 is checked in. Balcony A-D-06.', 'CHECKED_IN');
+      } else if (c === '13eb43bc7622268eb93a') {
+        r = res('risk', '✕ DO NOT ADMIT', 'Ticket T-00146 was refunded and is not valid for entry.', 'TICKET_REFUNDED');
+      } else {
+        r = res('risk', '✕ DO NOT ADMIT', 'No ticket for this event matches “' + c + '”. Do not admit.', 'TICKET_UNKNOWN');
+      }
+      const nowScanned = s.scanned || (r.code === 'CHECKED_IN');
+      this.setState({ result: r, scanned: nowScanned });
+    };
+    return {
+      code: s.code,
+      hasResult: !!s.result,
+      r: s.result || res('good', '', '', ''),
+      inCount: s.scanned ? '[count] + 1' : '[count]',
+      scanCurrent: scan,
+      pickGood: () => this.setState({ code: '699901335e4a7faef798', early: false, result: null }),
+      pickRefunded: () => this.setState({ code: '13eb43bc7622268eb93a', early: false, result: null }),
+      pickTypo: () => this.setState({ code: '699901335e4a7faef79B', early: false, result: null }),
+      pickEarly: () => this.setState({ code: '699901335e4a7faef798', early: true, result: null })
+    };
+  }
+}
+</script>
+</body>
+</html>

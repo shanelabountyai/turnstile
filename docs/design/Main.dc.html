@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Buy</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="min-height: 1180px; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.55;">
+<nav aria-label="Organisation" style="background: oklch(0.995 0.003 80); border-bottom: 1px solid oklch(0.84 0.014 70); padding: 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px;">
+<a href="#" style="font: 600 20px/1 ui-serif, Georgia, serif; color: oklch(0.25 0.02 30); text-decoration: none; min-height: 48px; display: inline-flex; align-items: center; gap: 8px; padding-right: 12px;"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: oklch(0.44 0.13 25);"></span>Turnstile</a>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30); font-weight: 600; padding-right: 12px;">The Foundry Hall</span>
+<a href="Event.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Event</a>
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 700; box-shadow: inset 0 -3px 0 oklch(0.44 0.13 25);">Buy</a>
+<a href="Box.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Box office</a>
+<a href="Door.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Door</a>
+<a href="Ledger.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Ledger</a>
+</nav>
+<main style="max-width: 64rem; margin: 0 auto; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px;">
+<header style="display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; padding-bottom: 16px; border-bottom: 1px solid oklch(0.84 0.014 70);">
+<div style="display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+<span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Synthetic Night (fixture) · Sat, Mar 20, 2027 · doors 7:00 PM</span>
+<h1 style="margin: 0; font: 600 34px/1.17 ui-serif, Georgia, serif; letter-spacing: -0.01em;">Buy tickets</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.45; color: oklch(0.45 0.02 30); max-width: 42rem;">Every count below is worked out from sold and held tickets when the page loads. Nothing is reserved until you have a hold.</p>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap;">
+<button type="button" onClick="{{ reset }}" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); cursor: pointer;">Restart the flow</button>
+</div>
+</header>
+
+<div style="display: flex; flex-wrap: wrap; gap: 20px; align-items: flex-start;">
+<div style="flex: 999 1 560px; min-width: 0; display: flex; flex-direction: column; gap: 20px;">
+
+<section aria-labelledby="floor-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="floor-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Floor · general admission</h2>
+<div style="overflow-x: auto;">
+<table style="border-collapse: collapse; width: 100%; font-variant-numeric: tabular-nums; font-size: 16px;">
+<thead><tr>
+<th scope="col" style="text-align: left; padding: 8px 14px 8px 0; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Tier</th>
+<th scope="col" style="text-align: right; padding: 8px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Price + fee</th>
+<th scope="col" style="text-align: left; padding: 8px 0; border-bottom: 1px solid oklch(0.84 0.014 70); font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30);">Can you buy it?</th>
+</tr></thead>
+<tbody>
+<tr>
+<td style="padding: 10px 14px 10px 0; border-bottom: 1px solid oklch(0.84 0.014 70);">Early bird</td>
+<td style="padding: 10px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); text-align: right;">$25.00 + $3.50</td>
+<td style="padding: 10px 0; border-bottom: 1px solid oklch(0.84 0.014 70);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.006 60); color: oklch(0.37 0.015 60); border: 1px solid oklch(0.55 0.018 60);">■ Off sale since Jan 16</span></td>
+</tr>
+<tr>
+<td style="padding: 10px 14px 10px 0; border-bottom: 1px solid oklch(0.84 0.014 70);">Advance</td>
+<td style="padding: 10px 14px; border-bottom: 1px solid oklch(0.84 0.014 70); text-align: right;">$34.99 + $3.50</td>
+<td style="padding: 10px 0; border-bottom: 1px solid oklch(0.84 0.014 70);"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 28); color: oklch(0.37 0.1 28); border: 1px solid oklch(0.55 0.12 28);">✕ Tier sold out</span> <span style="font-size: 15px; color: oklch(0.45 0.02 30);">0 of 400 left</span></td>
+</tr>
+<tr>
+<td style="padding: 10px 14px 10px 0;">Door</td>
+<td style="padding: 10px 14px; text-align: right;">$45.00 + $3.50</td>
+<td style="padding: 10px 0;"><span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 28); color: oklch(0.37 0.1 28); border: 1px solid oklch(0.55 0.12 28);">✕ Pool sold out</span> <span style="font-size: 15px; color: oklch(0.45 0.02 30);">87 remaining · 0 available</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p style="margin: 0; font-size: 15px; color: oklch(0.45 0.02 30); font-style: italic;">Door tickets still have 87 of their allotment, but the floor holds 800 and all 800 are sold. A tier can only sell what the pool has left.</p>
+</section>
+
+<section aria-labelledby="balc-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 20px; display: flex; flex-direction: column; gap: 14px;">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px;">
+<h2 id="balc-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Balcony · reserved, $60.00 + $3.50</h2>
+<span style="font-size: 15px; color: oklch(0.45 0.02 30);">12 remaining · 12 available across sections A–C</span>
+</div>
+<div style="display: flex; flex-wrap: wrap; gap: 12px; align-items: flex-end;">
+<label style="display: flex; flex-direction: column; gap: 4px; font-weight: 500; font-size: 15px;">Section
+<select style="font: inherit; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid oklch(0.56 0.018 40); background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30);"><option>Section A</option><option>Section B</option><option selected="selected">Section C</option></select>
+</label>
+<label style="display: flex; flex-direction: column; gap: 4px; font-weight: 500; font-size: 15px;">Seats together
+<select style="font: inherit; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid oklch(0.56 0.018 40); background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30);"><option>1</option><option>2</option><option>3</option><option selected="selected">4</option></select>
+</label>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30); padding-bottom: 10px;">Legend: <strong>□</strong> open · <strong>■</strong> sold or held · sample seat state</span>
+</div>
+<ol aria-label="Section C rows" style="margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 6px;">
+<sc-for list="{{ rows }}" as="r" hint-placeholder-count="6">
+<li style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+<span style="width: 60px; font: 600 14px/1 ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">C-{{ r.row }}</span>
+<span style="display: flex; gap: 4px; flex-wrap: wrap;">
+<sc-for list="{{ r.seats }}" as="s" hint-placeholder-count="12">
+<span title="{{ s.label }}" style="width: 30px; height: 30px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font: 600 12px/1 ui-monospace, Menlo, monospace; background: {{ s.bg }}; color: {{ s.fg }}; border: 1px solid {{ s.bd }};">{{ s.n }}</span>
+</sc-for>
+</span>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30);">{{ r.note }}</span>
+</li>
+</sc-for>
+</ol>
+
+<sc-if value="{{ isPick }}" hint-placeholder-val="{{ true }}">
+<div style="background: oklch(0.955 0.04 80); color: oklch(0.37 0.1 80); border: 1px solid oklch(0.55 0.12 80); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px;">
+<strong style="font: 600 20px/1.3 ui-serif, Georgia, serif;">◆ No block of 4 fits in Section C</strong>
+<span>Section C has 6 open seats, but no four sit together. We won't split your group or leave a single seat stranded between two sold ones.</span>
+<span style="display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px;">
+<button type="button" onClick="{{ join }}" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.44 0.13 25); color: oklch(0.995 0.003 80); border: 1px solid oklch(0.44 0.13 25); cursor: pointer;">Join the Section C waitlist for 4</button>
+<button type="button" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); cursor: pointer;">Try 2 seats instead</button>
+</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isWaiting }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background: oklch(0.955 0.04 245); color: oklch(0.37 0.1 245); border: 1px solid oklch(0.55 0.12 245); border-radius: 8px; padding: 12px 16px; display: flex; flex-direction: column; gap: 6px;">
+<strong style="font: 600 20px/1.3 ui-serif, Georgia, serif;">● You're on the Section C waitlist for 4</strong>
+<span>You're first in line (sample position). When four seats together come back in Section C, the offer goes to the first person in line whose group fits. Nobody behind you is offered seats ahead of you.</span>
+<span style="font-size: 15px;">We'll email you. An offer stays open for 24 hours.</span>
+<button type="button" onClick="{{ offer }}" style="align-self: flex-start; margin-top: 4px; font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40); cursor: pointer;">Prototype: four seats come back</button>
+</div>
+</sc-if>
+
+<sc-if value="{{ isOffer }}" hint-placeholder-val="{{ false }}">
+<div style="background: oklch(0.955 0.04 80); color: oklch(0.37 0.1 80); border: 2px solid oklch(0.55 0.12 80); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+<strong style="font: 600 20px/1.3 ui-serif, Georgia, serif;">◆ Offer: 4 seats together, C-B-05 to C-B-08</strong>
+<span>A refund put these back in the pool and you were first in line. They're held for you until the timer runs out, then they go to the next person.</span>
+<span style="font: 600 30px/1.1 ui-serif, Georgia, serif; font-variant-numeric: tabular-nums;" aria-live="polite">{{ offerClock }} <span style="font: 500 15px/1 system-ui, sans-serif;">left to accept</span></span>
+<span style="font-size: 15px;">4 × ($60.00 + $3.50 fee) = <strong>$254.00</strong></span>
+<span style="display: flex; flex-wrap: wrap; gap: 8px;">
+<button type="button" onClick="{{ accept }}" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.44 0.13 25); color: oklch(0.995 0.003 80); border: 1px solid oklch(0.44 0.13 25); cursor: pointer;">Accept and go to checkout</button>
+<button type="button" onClick="{{ reset }}" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 12px; border-radius: 8px; background: none; color: oklch(0.44 0.13 25); border: 1px solid transparent; cursor: pointer;">Decline the offer</button>
+</span>
+</div>
+</sc-if>
+
+<sc-if value="{{ isHeld }}" hint-placeholder-val="{{ false }}">
+<form style="display: flex; flex-direction: column; gap: 12px; border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 14px 16px;">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline;">
+<strong style="font: 600 20px/1.3 ui-serif, Georgia, serif;">Checkout · Stripe test mode</strong>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 80); color: oklch(0.37 0.1 80); border: 1px solid oklch(0.55 0.12 80); font-variant-numeric: tabular-nums;">◆ Held for you · {{ holdClock }}</span>
+</div>
+<label style="display: flex; flex-direction: column; gap: 4px; font-weight: 500;">Card (test cards only)
+<input type="text" value="4242 4242 4242 4242" style="font: inherit; min-height: 44px; padding: 0 12px; border-radius: 8px; border: 1px solid oklch(0.56 0.018 40); background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); max-width: 22rem;">
+</label>
+<span style="font-size: 15px; color: oklch(0.45 0.02 30);">If your bank takes longer than 30 minutes to confirm, the hold ends and you get a full refund with the reason. You are never charged for seats you didn't get.</span>
+<button type="button" onClick="{{ pay }}" style="align-self: flex-start; font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; background: oklch(0.44 0.13 25); color: oklch(0.995 0.003 80); border: 1px solid oklch(0.44 0.13 25); cursor: pointer;">Pay $254.00</button>
+</form>
+</sc-if>
+
+<sc-if value="{{ isDone }}" hint-placeholder-val="{{ false }}">
+<div role="status" style="background: oklch(0.955 0.04 155); color: oklch(0.37 0.1 155); border: 1px solid oklch(0.55 0.12 155); border-radius: 8px; padding: 14px 16px; display: flex; flex-direction: column; gap: 8px;">
+<strong style="font: 600 20px/1.3 ui-serif, Georgia, serif;">✓ Paid · 4 tickets issued</strong>
+<span>Show any ticket code at the door. Each code works once.</span>
+<ul style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;">
+<li style="background: oklch(0.945 0.008 75); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 10px 14px;"><strong>C-B-05</strong><br><code style="font: 13px ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">[ticket code]</code></li>
+<li style="background: oklch(0.945 0.008 75); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 10px 14px;"><strong>C-B-06</strong><br><code style="font: 13px ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">[ticket code]</code></li>
+<li style="background: oklch(0.945 0.008 75); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 10px 14px;"><strong>C-B-07</strong><br><code style="font: 13px ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">[ticket code]</code></li>
+<li style="background: oklch(0.945 0.008 75); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 10px 14px;"><strong>C-B-08</strong><br><code style="font: 13px ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">[ticket code]</code></li>
+</ul>
+</div>
+</sc-if>
+</section>
+</div>
+
+<aside aria-labelledby="sum-h" style="flex: 1 1 280px; min-width: 0; background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="sum-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Where you are</h2>
+<ol style="margin: 0; padding-left: 22px; display: flex; flex-direction: column; gap: 6px; font-size: 16px;">
+<li style="font-weight: {{ w1 }};">Pick seats</li>
+<li style="font-weight: {{ w2 }};">Wait for a block of 4</li>
+<li style="font-weight: {{ w3 }};">Accept the offer (24 h)</li>
+<li style="font-weight: {{ w4 }};">Pay while held (10 min)</li>
+<li style="font-weight: {{ w5 }};">Tickets</li>
+</ol>
+<div style="background: oklch(0.945 0.008 75); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 12px 14px; font-size: 15px; display: flex; flex-direction: column; gap: 4px;">
+<strong>Refund policy</strong>
+<span>30+ days before: full refund, fee included</span>
+<span>7–29 days: half the ticket price, fee kept</span>
+<span>Under 7 days: no refund</span>
+</div>
+<p style="margin: 0; font-size: 15px; color: oklch(0.45 0.02 30); font-style: italic;">Up to 8 tickets per order.</p>
+</aside>
+</div>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    this.state = { step: 'pick', offerSecs: 86381, holdSecs: 599 };
+  }
+  componentDidMount() {
+    this.timer = setInterval(() => {
+      const s = this.state;
+      if (s.step === 'offer' && s.offerSecs > 0) this.setState({ offerSecs: s.offerSecs - 1 });
+      if (s.step === 'held' && s.holdSecs > 0) this.setState({ holdSecs: s.holdSecs - 1 });
+    }, 1000);
+  }
+  componentWillUnmount() { clearInterval(this.timer); }
+  renderVals() {
+    const step = this.state.step;
+    const two = (n) => String(n).padStart(2, '0');
+    const o = this.state.offerSecs, h = this.state.holdSecs;
+    const offerClock = two(Math.floor(o / 3600)) + ':' + two(Math.floor((o % 3600) / 60)) + ':' + two(o % 60);
+    const holdClock = two(Math.floor(h / 60)) + ':' + two(h % 60) + ' left';
+    const open = { A: [], B: [3], C: [7, 8], D: [1], E: [], F: [11, 12] };
+    const mine = (row, n) => row === 'B' && n >= 5 && n <= 8 && (step === 'offer' || step === 'held' || step === 'done');
+    const rows = ['A', 'B', 'C', 'D', 'E', 'F'].map((row) => {
+      const seats = [];
+      for (let n = 1; n <= 12; n++) {
+        const isOpen = open[row].indexOf(n) >= 0;
+        const isMine = mine(row, n);
+        seats.push({
+          n: n,
+          label: 'C-' + row + '-' + two(n) + (isMine ? ' · offered to you' : isOpen ? ' · open' : ' · sold or held'),
+          bg: isMine ? 'oklch(0.955 0.04 80)' : isOpen ? 'oklch(0.995 0.003 80)' : 'oklch(0.91 0.01 72)',
+          fg: isMine ? 'oklch(0.37 0.1 80)' : isOpen ? 'oklch(0.25 0.02 30)' : 'oklch(0.45 0.02 30)',
+          bd: isMine ? 'oklch(0.55 0.12 80)' : isOpen ? 'oklch(0.56 0.018 40)' : 'oklch(0.84 0.014 70)'
+        });
+      }
+      const count = open[row].length;
+      const note = row === 'B' && step !== 'pick' && step !== 'waiting' ? '4 together, offered to you' : count === 0 ? 'full' : count === 1 ? '1 open' : count + ' open, together';
+      return { row: row, seats: seats, note: note };
+    });
+    const go = (s) => () => this.setState({ step: s, offerSecs: 86381, holdSecs: 599 });
+    const order = ['pick', 'waiting', 'offer', 'held', 'done'];
+    const idx = order.indexOf(step);
+    const wt = (i) => (i === idx ? '700' : '400');
+    return {
+      rows: rows,
+      isPick: step === 'pick', isWaiting: step === 'waiting', isOffer: step === 'offer', isHeld: step === 'held', isDone: step === 'done',
+      offerClock: offerClock, holdClock: holdClock,
+      join: go('waiting'), offer: go('offer'), accept: go('held'), pay: go('done'), reset: go('pick'),
+      w1: wt(0), w2: wt(1), w3: wt(2), w4: wt(3), w5: wt(4)
+    };
+  }
+}
+</script>
+</body>
+</html>

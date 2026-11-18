@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Payment refunded</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="width: 390px; min-height: 1000px; box-sizing: border-box; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.55; display: flex; flex-direction: column;">
+<header style="background: oklch(0.995 0.003 80); border-bottom: 1px solid oklch(0.84 0.014 70); padding: 10px 16px; display: flex; justify-content: space-between; align-items: center;">
+<span style="font: 600 20px/1 ui-serif, Georgia, serif; display: inline-flex; align-items: center; gap: 8px;"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: oklch(0.44 0.13 25);"></span>Turnstile</span>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30); font-weight: 600;">The Foundry Hall</span>
+</header>
+<main style="padding: 20px 16px 40px; display: flex; flex-direction: column; gap: 16px;">
+<div style="display: flex; flex-direction: column; gap: 6px;">
+<span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Synthetic Night (fixture) · Mar 20, 2027</span>
+<h1 style="margin: 0; font: 600 30px/1.17 ui-serif, Georgia, serif;">Your order</h1>
+</div>
+
+<div style="background: oklch(0.955 0.006 60); color: oklch(0.31 0.02 30); border: 2px solid oklch(0.55 0.018 60); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+<strong style="font: 600 22px/1.25 ui-serif, Georgia, serif;">■ Payment received. No tickets issued. Full refund.</strong>
+<span>Your bank confirmed the payment 31 minutes after checkout started. We hold seats for 30 minutes while a payment clears, so the hold had already ended and the seats went back on sale.</span>
+<span>You were never charged for tickets you didn't get. The whole amount is on its way back to your card.</span>
+</div>
+
+<section aria-labelledby="ref-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 10px;">
+<h2 id="ref-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Refund receipt</h2>
+<dl style="margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 14px; font-size: 16px; font-variant-numeric: tabular-nums;">
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">You tried to buy</dt><dd style="margin: 0;">2 × Advance</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Paid</dt><dd style="margin: 0;">$76.98</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Refunded</dt><dd style="margin: 0; font-weight: 700;">$76.98, fees included</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Reason</dt><dd style="margin: 0;">Paid after the hold ended</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Refunded on</dt><dd style="margin: 0;">Dec 10, 2026 · 10:32 AM</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Payment</dt><dd style="margin: 0;"><code style="font: 13px ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">pi_fixture_00058</code></dd>
+</dl>
+<p style="margin: 0; font-size: 15px; color: oklch(0.45 0.02 30); font-style: italic;">Your bank decides when the refund shows on your statement.</p>
+</section>
+
+<a href="Main.dc.html" style="min-height: 52px; border-radius: 8px; font: 600 16px/1.2 system-ui, sans-serif; background: oklch(0.44 0.13 25); color: oklch(0.995 0.003 80); border: 1px solid oklch(0.44 0.13 25); display: flex; align-items: center; justify-content: center; text-decoration: none;">See what's on sale now</a>
+<p style="margin: 0; font-size: 14px; color: oklch(0.45 0.02 30);">Keep the payment reference above if you contact the box office.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":1000}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
