@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Event</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="min-height: 1180px; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.55;">
+<nav aria-label="Organisation" style="background: oklch(0.995 0.003 80); border-bottom: 1px solid oklch(0.84 0.014 70); padding: 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px;">
+<a href="#" style="font: 600 20px/1 ui-serif, Georgia, serif; color: oklch(0.25 0.02 30); text-decoration: none; min-height: 48px; display: inline-flex; align-items: center; gap: 8px; padding-right: 12px;"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: oklch(0.44 0.13 25);"></span>Turnstile</a>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30); font-weight: 600; padding-right: 12px;">The Foundry Hall</span>
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 700; box-shadow: inset 0 -3px 0 oklch(0.44 0.13 25);">Event</a>
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Buy</a>
+<a href="Box.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Box office</a>
+<a href="Door.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Door</a>
+<a href="Ledger.dc.html" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Ledger</a>
+</nav>
+<main style="max-width: 64rem; margin: 0 auto; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px;">
+<header style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid oklch(0.84 0.014 70);">
+<span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Event · end state of the frozen fixture</span>
+<h1 style="margin: 0; font: 600 34px/1.17 ui-serif, Georgia, serif; letter-spacing: -0.01em;">Synthetic Night (fixture)</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.45; color: oklch(0.45 0.02 30); max-width: 42rem;">Sat, Mar 20, 2027 · doors 7:00 PM · starts 8:00 PM · America/Chicago</p>
+</header>
+
+<div style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-left: 4px solid oklch(0.44 0.13 25); border-radius: 8px; padding: 12px 16px; font-size: 16px;"><strong>How "available" is worked out:</strong> available = the smaller of what the tier has left and what its pool has left. Sold and held tickets count against both; a refunded ticket goes back to both. Nobody edits these numbers.</div>
+
+<h2 style="margin: 8px 0 0; font: 600 24px/1.25 ui-serif, Georgia, serif;">Pools</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<sc-for list="{{ pools }}" as="p" hint-placeholder-count="2">
+<article style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-top: 4px solid {{ p.dot }}; border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 16px 20px; display: flex; flex-direction: column; gap: 8px; min-width: 0;">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap;">
+<h3 style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">{{ p.name }}</h3>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: {{ p.bg }}; color: {{ p.fg }}; border: 1px solid {{ p.dot }};">{{ p.pill }}</span>
+</div>
+<span style="font: 600 30px/1.1 ui-serif, Georgia, serif; font-variant-numeric: tabular-nums;">{{ p.avail }} <span style="font: 500 15px/1 system-ui, sans-serif; color: oklch(0.45 0.02 30);">available of {{ p.cap }}</span></span>
+<span style="font-size: 15px; color: oklch(0.45 0.02 30); font-variant-numeric: tabular-nums;">{{ p.math }}</span>
+</article>
+</sc-for>
+</div>
+
+<h2 style="margin: 8px 0 0; font: 600 24px/1.25 ui-serif, Georgia, serif;">Tiers</h2>
+<div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px;">
+<sc-for list="{{ tiers }}" as="t" hint-placeholder-count="4">
+<article style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 16px 20px; display: flex; flex-direction: column; gap: 10px; min-width: 0;">
+<div style="display: flex; justify-content: space-between; align-items: baseline; gap: 8px; flex-wrap: wrap;">
+<h3 style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">{{ t.name }} <span style="font: 500 15px/1 system-ui, sans-serif; color: oklch(0.45 0.02 30);">{{ t.pool }} · {{ t.price }}</span></h3>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: {{ t.bg }}; color: {{ t.fg }}; border: 1px solid {{ t.dot }};">{{ t.pill }}</span>
+</div>
+<dl style="margin: 0; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 4px 12px; font-variant-numeric: tabular-nums;">
+<div><dt style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Allotment</dt><dd style="margin: 0; font-weight: 600;">{{ t.allot }}</dd></div>
+<div><dt style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Sold</dt><dd style="margin: 0; font-weight: 600;">{{ t.sold }}</dd></div>
+<div><dt style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Remaining</dt><dd style="margin: 0; font-weight: 600;">{{ t.rem }}</dd></div>
+<div><dt style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Available</dt><dd style="margin: 0; font-weight: 700;">{{ t.avail }}</dd></div>
+</dl>
+<details style="font-size: 15px; color: oklch(0.45 0.02 30);">
+<summary style="cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 600; color: oklch(0.25 0.02 30);">Why {{ t.avail }} available</summary>
+<span style="font-variant-numeric: tabular-nums;">{{ t.why }}</span>
+</details>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30);">On sale {{ t.window }}</span>
+</article>
+</sc-for>
+</div>
+
+<section aria-labelledby="rules-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="rules-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Rules <span style="font: 500 15px/1 system-ui, sans-serif; color: oklch(0.45 0.02 30);">read-only · set in event.json</span></h2>
+<dl style="margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 16px; font-size: 16px;">
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Cart hold</dt><dd style="margin: 0;">10 minutes</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Payment must land within</dt><dd style="margin: 0;">30 minutes, or the payment is refunded in full</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Waitlist offer open for</dt><dd style="margin: 0;">24 hours; an unanswered offer is dropped</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Waitlist order</dt><dd style="margin: 0;">First in line is never skipped</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Single seats</dt><dd style="margin: 0;">A hold may not leave one seat stranded between two sold ones (row ends excepted)</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Per order</dt><dd style="margin: 0;">Up to 8 tickets · $3.50 service fee each</dd>
+<dt style="color: oklch(0.45 0.02 30); font-weight: 600; font-size: 15px;">Refunds</dt><dd style="margin: 0;">30+ days: 100%, fee refunded · 7–29 days: 50%, fee kept · under 7 days: none</dd>
+</dl>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    const fam = {
+      good: ['oklch(0.955 0.04 155)', 'oklch(0.37 0.1 155)', 'oklch(0.55 0.12 155)', '✓ '],
+      risk: ['oklch(0.955 0.04 28)', 'oklch(0.37 0.1 28)', 'oklch(0.55 0.12 28)', '✕ '],
+      done: ['oklch(0.955 0.006 60)', 'oklch(0.37 0.015 60)', 'oklch(0.55 0.018 60)', '■ '],
+      info: ['oklch(0.955 0.04 245)', 'oklch(0.37 0.1 245)', 'oklch(0.55 0.12 245)', '● ']
+    };
+    const k = (f, word) => ({ bg: fam[f][0], fg: fam[f][1], dot: fam[f][2], pill: fam[f][3] + word });
+    const pools = [
+      Object.assign({ name: 'Floor · general admission', cap: '800', avail: '0', math: '800 capacity − 800 sold − 0 held = 0 left · 30 refunds returned to the pool along the way' }, k('risk', 'Pool sold out')),
+      Object.assign({ name: 'Balcony · reserved', cap: '216', avail: '12', math: '216 seats − 204 sold − 0 held = 12 left · 17 refunded seats returned' }, k('good', 'Seats available'))
+    ];
+    const tiers = [
+      Object.assign({ name: 'Early bird', pool: 'Floor', price: '$25.00', allot: '200', sold: '187', rem: '13', avail: '0', why: 'Tier: 200 − 187 sold = 13 left. It went off sale Jan 16, so it sells nothing; refunded Early tickets went back to the floor pool.', window: 'Dec 1, 2026 10:00 AM – Jan 16, 2027' }, k('done', 'Off sale')),
+      Object.assign({ name: 'Advance', pool: 'Floor', price: '$34.99', allot: '400', sold: '400', rem: '0', avail: '0', why: 'Tier: 400 − 400 sold = 0 left. Pool: 0 left. The smaller is 0, and the tier is the reason.', window: 'Dec 1, 2026 10:00 AM – Mar 20, 2027 5:00 PM' }, k('risk', 'Tier sold out')),
+      Object.assign({ name: 'Door', pool: 'Floor', price: '$45.00', allot: '300', sold: '213', rem: '87', avail: '0', why: 'Tier: 300 − 213 sold = 87 left. Pool: 800 − 800 sold = 0 left. The smaller is 0, so the pool is the reason, not the tier.', window: 'Mar 20, 2027 5:00 PM – 8:00 PM' }, k('risk', 'Pool sold out')),
+      Object.assign({ name: 'Balcony', pool: 'Balcony', price: '$60.00', allot: '216', sold: '204', rem: '12', avail: '12', why: 'Tier: 216 − 204 sold = 12 left. Pool: 216 − 204 = 12 left. 12 available, but only in blocks the single-seat rule allows.', window: 'Dec 1, 2026 10:00 AM – Mar 20, 2027 8:00 PM' }, k('good', 'Available'))
+    ];
+    return { pools: pools, tiers: tiers };
+  }
+}
+</script>
+</body>
+</html>

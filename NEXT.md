@@ -1,5 +1,14 @@
 # NEXT
 
+## ▶ 2026-11-19 (Opus 5.5, scheduled design pass, branch `design/impl`): Claude Design built in. PR open, not merged.
+
+Built: the six artboards in `docs/design/` (Event, Buy, Buy late payment, Box office, Ledger, Door) and two gap designs drawn first (`Events.dc.html`, `Design.dc.html`) into the real screens, inside `docs/DESIGN_SYSTEM.md` (no new token, font, image or dependency). Three independent reviews (design, UX, a11y) ran against a production build; accepted findings are DUX-1..13 in the PRD and D-37..D-43 in `docs/decisions.md`, fixed on the branch.
+Gate (local, cloud sandbox, Postgres 16 started by hand, migrations applied with psql because the Prisma schema engine download is 403): lint 0 · typecheck clean · inventory:lint OK · inventory:eval match (2,662, commitment d4d64203…61d43) · fixtures:check OK · design:contrast OK 0 pairs under floor · vitest 54 files, 460 passed, 33 skipped, 4 failed (all in template-owned `inv-34-export.test.ts`, failing identically before any change: sandbox only, CI decides) · inventory:eval:db match, 2,662 in 61 s · e2e 34 tests: full run 30 passed / 4 failed (axe heading-order on the receipt, duplicate pager landmark), fixed, rerun of a11y+buy+door+ledger 19 passed · axe 0 violations on 8 pages × light/dark × 1280/390 · foundation:check-modules OK (with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true`). Not run here: `prisma migrate diff` (schema engine), `foundation:drift` (needs the template tag; no template-owned path changed, checked by path).
+Left / follow-ups: searchable order picker on Box office refunds (701 options); orphan refusal names no seat; seat rows wrap to 6+6 at 390 px (44 px targets); tier display names (event.json has ids only); Door.dc's sans verdict style not used.
+Shane's hand steps: open the Design canvas https://claude.ai/artifact/4rzCmhQZReXpfGftuiM792 and add `Events.dc.html` and `Design.dc.html` if wanted; review the PR; merge or not.
+
+---
+
 ## ▶ 2026-11-16 (Opus 5.5): PRs merged. Turnstile is closed and on `main`.
 
 Shane chose to merge. PR #2 (`phase-2` → `kickoff`) merged after CI run 43806998471 passed; then PR #1 (`kickoff` → `main`). `main` matches `phase-2` exactly (`git diff` is empty). Nothing is queued for Turnstile. Loose end, optional: the Ledger page's PROJECTS list lacks `turnstile` and `earmark`, so those cards show the raw id.

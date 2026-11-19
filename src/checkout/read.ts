@@ -28,16 +28,24 @@ export interface EventView {
   }[];
   sections: { section: string; pool: string; rows: { row: string; seats: { seat: string; num: number; state: 'OPEN' | 'HELD' | 'SOLD' }[] }[] }[];
   /** Live entries per target. `position` is 1-based FIFO by (joined_at, entry_id) among WAITING; 1 is the head. */
-  waitlists: { target: string; waiting: { entry: string; customer: string; qty: number; joinedAt: Timestamp; position: number }[]; offered: { entry: string; customer: string; qty: number; offer: string; expiresAt: Timestamp }[] }[];
+  waitlists: { target: string; waiting: { entry: string; customer: string; qty: number; joinedAt: Timestamp; position: number }[]; offered: { entry: string; customer: string; qty: number; offer: string; expiresAt: Timestamp }[]; seatsWanted: number }[];
+  /** Design pass (D-37): live waiting parties and the seats they want, over every target. */
+  waiting: { parties: number; seats: number };
   /** Every hold and offer. `deadline` is the cart expiry (HELD) or the payment timeout (PAYING); `secondsLeft` counts to it from asOf, for a display-only countdown (D-34). */
-  holds: { hold: string; kind: 'HOLD' | 'OFFER'; customer: string; tier: string; qty: number; seats: string[]; state: string; amountCents: number; paymentId: string | null; order: string | null; deadline: Timestamp | null; secondsLeft: number | null }[];
-  orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
-  ledger: { capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number; toArrive: number };
+  holds: { hold: string; kind: 'HOLD' | 'OFFER'; customer: string; tier: string; qty: number; seats: string[]; state: string; priceCents: number; feeCents: number; amountCents: number; paymentId: string | null; order: string | null; deadline: Timestamp | null; secondsLeft: number | null }[];
+  orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; /** what the customer paid: gross + fees (design pass, UX review) */ paidCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
+  ledger: {
+    capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number; toArrive: number;
+    /** Design pass (D-37), straight from `summary()`: the counts the Ledger and Box office artboards show. */
+    orders: number; ticketsIssued: number; ticketsRefunded: number; offersMade: number; waitlist: Record<string, number>;
+  };
   /**
    * Task 3.7: one line per captured payment, in payment order. Late money (PAID_AFTER_TIMEOUT / _CANCEL) has no order and
    * is refunded in full, so the lines, not the orders, add up to the ledger: Σ captured, Σ refunded, Σ net = `ledger`.
    */
-  payments: { payment: string; order: string | null; customer: string; tier: string; qty: number; capturedCents: number; refundedCents: number; netCents: number; late: string | null }[];
+  payments: { payment: string; order: string | null; customer: string; tier: string; qty: number; capturedCents: number; refundedCents: number; netCents: number; late: string | null;
+    /** Design pass (D-37): when the payment started and the last refund against it, for the buyer's receipt. */
+    startedAt: Timestamp; endedAt: Timestamp | null; refundedAt: Timestamp | null }[];
 }
 
 /** Pure projection of an engine at `asOf`. Exported for the fixture test (no database). */
@@ -47,9 +55,10 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
   const s = e.summary();
   const byTarget = new Map<string, EventView['waitlists'][number]>();
   const waiting = e.waitlist.filter((w) => w.state === 'WAITING').sort((a, b) => compareStrings(a.joined_at, b.joined_at) || compareStrings(a.entry_id, b.entry_id));
-  const list = (t: string) => byTarget.get(t) ?? byTarget.set(t, { target: t, waiting: [], offered: [] }).get(t)!;
+  const list = (t: string) => byTarget.get(t) ?? byTarget.set(t, { target: t, waiting: [], offered: [], seatsWanted: 0 }).get(t)!;
   for (const w of waiting) { const l = list(w.target); l.waiting.push({ entry: w.entry_id, customer: w.customer, qty: w.qty, joinedAt: w.joined_at, position: l.waiting.length + 1 }); }
   for (const w of e.waitlist) if (w.state === 'OFFERED') list(w.target).offered.push({ entry: w.entry_id, customer: w.customer, qty: w.qty, offer: w.offer_id!, expiresAt: e.holds.get(w.offer_id!)!.expires_at });
+  for (const l of byTarget.values()) l.seatsWanted = l.waiting.reduce((n, x) => n + x.qty, 0);
 
   const deadline = (h: { state: string; expires_at: Timestamp; pay_timeout_at: Timestamp | null }) => (h.state === 'HELD' ? h.expires_at : h.state === 'PAYING' ? h.pay_timeout_at : null);
   return {
@@ -70,14 +79,15 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
       rows: sec.rows.map((row) => ({ row, seats: e.rows.get(rowKey(sec.section_id, row))!.map((id) => { const st = e.seats.get(id)!; return { seat: id, num: st.num, state: st.state }; }) })),
     })),
     waitlists: [...byTarget.values()].sort((a, b) => compareStrings(a.target, b.target)),
+    waiting: { parties: waiting.length, seats: waiting.reduce((n, w) => n + w.qty, 0) },
     orders: [...e.orders.values()].sort((a, b) => compareStrings(a.order_id, b.order_id)).map((o) => ({
-      order: o.order_id, customer: o.customer, tier: o.tier, qty: o.qty, seats: o.seats, grossCents: o.gross_cents, feesCents: o.fees_cents,
+      order: o.order_id, customer: o.customer, tier: o.tier, qty: o.qty, seats: o.seats, grossCents: o.gross_cents, feesCents: o.fees_cents, paidCents: o.gross_cents + o.fees_cents,
       refundedCents: o.tickets.reduce((n, t) => n + e.tickets.get(t)!.refunded_cents, 0), confirmedAt: o.confirmed_at, viaOffer: o.via_offer, tickets: o.tickets,
       codes: o.tickets.map((t) => e.tickets.get(t)!.code), states: o.tickets.map((t) => e.tickets.get(t)!.state),
     })),
     holds: [...e.holds.values()].sort((a, b) => compareStrings(b.created_at, a.created_at) || compareStrings(b.hold_id, a.hold_id)).map((h) => {
       const d = deadline(h);
-      return { hold: h.hold_id, kind: h.kind, customer: h.customer, tier: h.tier, qty: h.qty, seats: h.seats, state: h.state, amountCents: h.qty * (h.price_cents + h.fee_cents),
+      return { hold: h.hold_id, kind: h.kind, customer: h.customer, tier: h.tier, qty: h.qty, seats: h.seats, state: h.state, priceCents: h.price_cents, feeCents: h.fee_cents, amountCents: h.qty * (h.price_cents + h.fee_cents),
         paymentId: h.payment_id, order: h.order_id, deadline: d, secondsLeft: d && Math.max(0, toSeconds(d) - toSeconds(asOf)) };
     }),
     payments: [...e.payments.values()].filter((p) => p.state.startsWith('SUCCEEDED')).sort((a, b) => compareStrings(a.payment_id, b.payment_id)).map((p) => {
@@ -85,9 +95,11 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
       const rs = e.refunds.filter((r) => r.payment_id === p.payment_id);
       const refunded = rs.reduce((n, r) => n + r.amount_cents, 0);
       return { payment: p.payment_id, order: h.order_id, customer: h.customer, tier: h.tier, qty: h.qty, capturedCents: p.amount_cents, refundedCents: refunded,
-        netCents: p.amount_cents - refunded, late: rs.find((r) => !r.order_id)?.reason ?? null };
+        netCents: p.amount_cents - refunded, late: rs.find((r) => !r.order_id)?.reason ?? null,
+        startedAt: p.started_at, endedAt: p.ended_at, refundedAt: rs.reduce<Timestamp | null>((t, r) => (t === null || compareStrings(r.at, t) > 0 ? r.at : t), null) };
     }),
-    ledger: { capturedCents: s.captured_cents, refundedCents: s.refunded_cents, netCents: s.net_cents, refunds: s.refunds, ticketsLive: s.tickets_live, checkedIn: s.checked_in, toArrive: s.tickets_live - s.checked_in },
+    ledger: { capturedCents: s.captured_cents, refundedCents: s.refunded_cents, netCents: s.net_cents, refunds: s.refunds, ticketsLive: s.tickets_live, checkedIn: s.checked_in, toArrive: s.tickets_live - s.checked_in,
+      orders: s.orders, ticketsIssued: s.tickets_issued, ticketsRefunded: s.tickets_refunded, offersMade: s.offers_made, waitlist: s.waitlist },
   };
 }
 

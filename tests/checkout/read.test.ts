@@ -67,6 +67,21 @@ describe('eventView on the fixture end state (seed 20261109)', () => {
     expect(waiting).toHaveLength(engine.waitlist.filter((w) => w.state === 'WAITING').length);
     for (const w of v.waitlists) expect(w.waiting.map((x) => x.position)).toEqual(w.waiting.map((_, i) => i + 1));
   });
+
+  it('design pass (D-37): display counts come from summary() and the waiting entries, not from a screen', () => {
+    expect([v.ledger.orders, v.ledger.ticketsIssued, v.ledger.ticketsRefunded, v.ledger.offersMade])
+      .toEqual([want.orders, want.tickets_issued, want.tickets_refunded, want.offers_made]);
+    expect([v.ledger.ticketsIssued, v.ledger.ticketsRefunded, v.ledger.offersMade]).toEqual([1051, 47, 5]);
+    expect(v.waiting.parties).toBe(24);
+    expect(v.waiting.seats).toBe(v.waitlists.reduce((n, w) => n + w.seatsWanted, 0));
+    for (const w of v.waitlists) expect(w.seatsWanted).toBe(w.waiting.reduce((n, x) => n + x.qty, 0));
+    const late = v.payments.filter((p) => p.late);
+    expect(late).toHaveLength(1);
+    expect(late[0]!.refundedAt).not.toBeNull();
+    expect(late[0]!.startedAt < late[0]!.refundedAt!).toBe(true);
+    for (const h of v.holds) expect(h.amountCents).toBe(h.qty * (h.priceCents + h.feeCents));
+    for (const o of v.orders) expect(o.paidCents).toBe(v.payments.find((p) => p.order === o.order)!.capturedCents); // paid = captured, fees included (UX review)
+  });
 });
 
 // The golden base event (as in cast.test.ts): FLOOR 10 under EARLY 4 · ADV 6 · DOOR 5; BALCONY one row of 12.
@@ -112,7 +127,7 @@ describe('readEvent (database)', () => {
     const v = await readEvent(orgId, eventId, T('2026-12-02T10:09:59'));
     expect(v.tiers.find((t) => t.tier === 'ADV')).toMatchObject({ held: 6, available: 0, soldOut: 'SOLD_OUT_POOL' });
     expect(v.tiers.find((t) => t.tier === 'BALC')).toMatchObject({ available: 12, soldOut: null });
-    expect(v.waitlists).toEqual([{ target: 'ADV', waiting: [{ entry: expect.any(String), customer: 'C-w', qty: 2, joinedAt: '2026-12-02T10:00:01', position: 1 }], offered: [] }]);
+    expect(v.waitlists).toEqual([{ target: 'ADV', waiting: [{ entry: expect.any(String), customer: 'C-w', qty: 2, joinedAt: '2026-12-02T10:00:01', position: 1 }], offered: [], seatsWanted: 2 }]);
   });
 
   it('at the expiry second the view frees the holds and offers the head, and writes nothing (D-31)', async () => {
