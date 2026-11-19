@@ -1,4 +1,4 @@
-import { test } from '@playwright/test';
+import { expect, test } from '@playwright/test';
 import { loadFixtureEvent } from '@/checkout/load';
 import { db } from '@/core/db';
 import { castFixture } from '../scripts/cast-fixture';
@@ -24,15 +24,25 @@ test.afterAll(() => db.$disconnect());
 const base = `/o/acme/events/${EVENT}`;
 const pages: [string, string, string | RegExp][] = [
   ['design system', '/o/acme/design', 'Turnstile design system'],
-  ['events list', '/o/acme/events', 'All events'],
+  ['events list', '/o/acme/events', 'One card per event'],
   ['event', base, 'Rules'],
   ['buy', `${base}/buy?as=C-0001`, /Event clock/],
+  ['buy, late payment refunded (C-0010, PAID_AFTER_TIMEOUT)', `${base}/buy?as=C-0010`, 'Payment received. No tickets issued. Full refund.'],
   ['box office', `${base}/box`, /Event clock/],
   ['door', `${base}/door`, /Event clock/],
   ['ledger', `${base}/ledger`, /Event clock/],
 ];
 
 for (const [what, path, mustSee] of pages) {
+  // Design pass (D-37): the same pages at the artboards' phone width too.
+  test(`axe at 390 px, light and dark: ${what}`, async ({ page }) => {
+    await page.setViewportSize({ width: 390, height: 900 });
+    await signIn(page);
+    await page.goto(path);
+    await expectAccessible(page, `${what} (390 px)`, mustSee);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth), `${what}: no sideways page scroll at 390 px`).toBeLessThanOrEqual(390);
+  });
+
   test(`axe, light and dark: ${what}`, async ({ page }) => {
     await signIn(page);
     await page.goto(path);

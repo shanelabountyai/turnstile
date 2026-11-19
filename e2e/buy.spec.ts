@@ -15,11 +15,13 @@ test('hold → pay → signed webhook → tickets; an expired hold shows its cod
   await setClock(page, '2026-12-01T10:05:30');
 
   await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0001`);
-  await expect(page.getByRole('heading', { name: 'Buy · acting as C-0001' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Buy tickets · acting as C-0001' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Event screens' }).getByRole('link', { name: 'Buy' })).toHaveAttribute('aria-current', 'page');
   const hold = await holdGa(page, 'ADV', 2);
   await page.getByTestId(`hold-${hold}`).getByRole('button', { name: 'Pay' }).click();
   await expect(page.getByTestId('result')).toContainText(`OK PAYING · pi_rec_${hold} 7698`); // 2 × (3,499 + 350) ¢
   await expect(page.getByTestId('paying')).toContainText('Recorded Stripe');
+  await expect(page.getByRole('complementary', { name: 'Where you are' }).locator('[aria-current="step"]')).toHaveText(/^Pay while held/);
 
   expect(await paySucceeded(page, ids, hold)).toMatchObject({ status: 'OK', code: 'CONFIRMED' });
 
@@ -45,4 +47,10 @@ test('hold → pay → signed webhook → tickets; an expired hold shows its cod
   await page.getByLabel('A-A-03 open').check();
   await page.getByRole('button', { name: 'Hold seats in A' }).click();
   await expect(page.getByTestId('result')).toContainText('REJECT ORPHAN_SEAT');
+  // Design pass (D-37): the refusal is in words first, and the section tabs switch the rows shown.
+  await expect(page.locator('.notice').filter({ has: page.getByTestId('result') })).toContainText('stranded between two taken ones');
+  await page.getByRole('navigation', { name: 'Balcony sections' }).getByRole('link', { name: /^Section B/ }).click();
+  await expect(page.getByLabel('B-A-01 open')).toBeVisible();
+  await expect(page.getByLabel('A-A-01 open')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Hold seats in B' })).toBeVisible();
 });
