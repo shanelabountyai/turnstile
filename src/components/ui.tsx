@@ -46,9 +46,9 @@ export function Stat({ label, value, sub, k }: { label: string; value: React.Rea
 export const Stats = ({ children }: { children: React.ReactNode }) => <div className="stats">{children}</div>;
 
 /** A block message in a status family, headed by a glyph and a title. */
-export function Notice({ k, title, children }: { k: PillKind; title: string; children?: React.ReactNode }) {
+export function Notice({ k, title, children, verdict }: { k: PillKind; title: string; children?: React.ReactNode; verdict?: boolean }) {
   return (
-    <aside className="notice" data-k={k}>
+    <aside className={verdict ? 'notice verdict' : 'notice'} data-k={k}>
       <strong>{title}</strong>
       {children && <div>{children}</div>}
     </aside>
@@ -68,4 +68,15 @@ export function EmptyState({ children, action }: { children: React.ReactNode; ac
 /** A link that looks like a button. `secondary` for anything that is not the page's one main action. */
 export function LinkButton({ href, variant, children }: { href: string; variant?: 'secondary' | 'ghost'; children: React.ReactNode }) {
   return <Link className={`button${variant ? ` ${variant}` : ''}`} href={href}>{children}</Link>;
+}
+
+/** The event's five screens (design pass, D-37): a second row under the org bar, the current one marked. */
+export type EventTab = 'event' | 'buy' | 'box' | 'door' | 'ledger';
+const TABS: [EventTab, string, string][] = [['event', '', 'Event'], ['buy', '/buy', 'Buy'], ['box', '/box', 'Box office'], ['door', '/door', 'Door'], ['ledger', '/ledger', 'Ledger']];
+export function EventTabs({ base, current }: { base: string; current: EventTab }) {
+  return (
+    <nav aria-label="Event screens" className="tabs event-tabs">
+      {TABS.map(([k, path, word]) => <Link key={k} href={`${base}${path}`} aria-current={k === current ? 'page' : undefined}>{word}</Link>)}
+    </nav>
+  );
 }

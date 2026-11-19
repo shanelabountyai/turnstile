@@ -111,7 +111,7 @@ a:hover { text-decoration-thickness: 2px; }
 :focus-visible { outline: 3px solid var(--ac); outline-offset: 2px; border-radius: 4px; }
 
 /* A section inside main is a card. */
-main > section, .card {
+main > section, .split > section, .split > .col > section, .card {
   background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1);
   padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
 }
@@ -232,5 +232,71 @@ dd { min-width: 0; }
 .pill[data-k='done']::before { content: '■'; }
 
 .receipt { background: var(--sf-2); border: 1px solid var(--ln); border-radius: var(--r-1); padding: var(--s-3) 14px; }
+
+/* ============ 3. components: the design pass (D-37) ============
+   Compositions of the tokens above for the Claude Design artboards (docs/design/). No new token, no new colour. */
+
+/* The event's five screens as a second row under the org bar. */
+.event-tabs { background: var(--sf); padding: 0 var(--s-4); }
+
+/* A page with a main column and a side card that drops below it on a phone. */
+.split { display: flex; flex-wrap: wrap; gap: var(--s-5); align-items: flex-start; }
+.split > .col { flex: 999 1 34rem; min-width: 0; display: flex; flex-direction: column; gap: var(--s-5); }
+.split > .side { flex: 1 1 17rem; }
+.split > section { flex: 1 1 22rem; }
+.steps li[aria-current='step'] { font-weight: 700; }
+.steps li[aria-current='step']::marker { color: var(--ac); }
+
+/* A big figure outside a stat card: a countdown, an amount, a count. */
+.fig-lg { font: 600 var(--t-xl)/1.1 var(--serif); font-variant-numeric: tabular-nums; }
+
+/* Four labelled figures in a row inside a card (allotment, sold, remaining, available). */
+dl.figs { grid-template-columns: repeat(auto-fit, minmax(5.5rem, 1fr)); gap: var(--s-2) var(--s-3); }
+dl.figs > div { display: flex; flex-direction: column; gap: 2px; }
+dl.figs dt { font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
+dl.figs dd { font: 600 var(--t-md)/1.2 var(--serif); font-variant-numeric: tabular-nums; }
+
+/* Seats in a row, rows as lists (P0-10, owner call: no drawn map). Each seat is a real checkbox in a 44px label. */
+.seat-rows { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.seat-rows > li { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) 10px; }
+.seat-rows .row-id { min-width: 4.5rem; font: 600 14px/1 var(--mono); color: var(--mu); }
+.seats { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.seat {
+  position: relative; flex-direction: row; gap: 0; width: 44px; height: 44px; border-radius: 6px; justify-content: center; align-items: center;
+  font: 600 var(--t-xs)/1 var(--mono); background: var(--sf); color: var(--ink); border: 1px solid var(--ln-strong); cursor: pointer;
+}
+.seat input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: inherit; }
+.seat:focus-within { outline: 3px solid var(--ac); outline-offset: 2px; }
+.seat:has(input:checked) { background: var(--k-bg); color: var(--k-fg); border: 2px solid var(--k-dot); }
+.seat:has(input:checked)::before { content: '✓'; }
+.seat:has(input:disabled) { background: var(--sf-2); color: var(--mu); border-color: var(--ln); text-decoration: line-through; cursor: not-allowed; }
+
+/* Ticket codes after payment. */
+.tickets { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(12rem, 1fr)); gap: var(--s-2); }
+.tickets > li { margin: 0; background: var(--sf-2); color: var(--ink); border: 1px solid var(--ln); border-radius: var(--r-1); padding: 10px 14px; }
+.tickets code { color: var(--mu); }
+
+/* The door's answer: readable at arm's length. */
+.notice.verdict { border-width: 2px; border-radius: var(--r-2); padding: var(--s-4); }
+.notice.verdict > strong { font-size: var(--t-xl); line-height: 1.1; }
+.wide input:not([type='hidden']), .wide button { width: 100%; align-self: stretch; }
+.wide label { width: 100%; }
+.cluster { flex-direction: row; max-width: 100%; }
+form > fieldset > * { max-width: 100%; }
+form.cluster, .cluster:has(> label) { align-items: flex-end; }
+fieldset.plain { border: 0; padding: 0; }
+caption { text-align: left; padding-bottom: var(--s-2); }
+label, label > select, label > input { min-width: 0; }
+select { text-overflow: ellipsis; }
+.pill { max-width: 100%; white-space: normal; line-height: 1.2; }
+th, td { overflow-wrap: normal; }
+td.num, th.num { white-space: nowrap; }
+/* On a phone the org bar and the event tabs are one row each that scrolls sideways inside itself, never the page. */
+@media (max-width: 639px) {
+  .org-nav, .event-tabs { flex-wrap: nowrap; overflow-x: auto; white-space: nowrap; }
+  .org-nav .assoc { flex-basis: auto; order: 0; padding: 0 var(--s-3) 0 0; }
+  .org-nav .end { margin-left: 0; flex-wrap: nowrap; }
+}
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
