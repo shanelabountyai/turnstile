@@ -33,7 +33,7 @@ export interface EventView {
   waiting: { parties: number; seats: number };
   /** Every hold and offer. `deadline` is the cart expiry (HELD) or the payment timeout (PAYING); `secondsLeft` counts to it from asOf, for a display-only countdown (D-34). */
   holds: { hold: string; kind: 'HOLD' | 'OFFER'; customer: string; tier: string; qty: number; seats: string[]; state: string; priceCents: number; feeCents: number; amountCents: number; paymentId: string | null; order: string | null; deadline: Timestamp | null; secondsLeft: number | null }[];
-  orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
+  orders: { order: string; customer: string; tier: string; qty: number; seats: string[]; grossCents: number; feesCents: number; /** what the customer paid: gross + fees (design pass, UX review) */ paidCents: number; refundedCents: number; confirmedAt: Timestamp; viaOffer: boolean; tickets: string[]; codes: string[]; states: string[] }[];
   ledger: {
     capturedCents: number; refundedCents: number; netCents: number; refunds: number; ticketsLive: number; checkedIn: number; toArrive: number;
     /** Design pass (D-37), straight from `summary()`: the counts the Ledger and Box office artboards show. */
@@ -81,7 +81,7 @@ export function eventView(e: Engine, asOf: Timestamp, logAt: Timestamp | null = 
     waitlists: [...byTarget.values()].sort((a, b) => compareStrings(a.target, b.target)),
     waiting: { parties: waiting.length, seats: waiting.reduce((n, w) => n + w.qty, 0) },
     orders: [...e.orders.values()].sort((a, b) => compareStrings(a.order_id, b.order_id)).map((o) => ({
-      order: o.order_id, customer: o.customer, tier: o.tier, qty: o.qty, seats: o.seats, grossCents: o.gross_cents, feesCents: o.fees_cents,
+      order: o.order_id, customer: o.customer, tier: o.tier, qty: o.qty, seats: o.seats, grossCents: o.gross_cents, feesCents: o.fees_cents, paidCents: o.gross_cents + o.fees_cents,
       refundedCents: o.tickets.reduce((n, t) => n + e.tickets.get(t)!.refunded_cents, 0), confirmedAt: o.confirmed_at, viaOffer: o.via_offer, tickets: o.tickets,
       codes: o.tickets.map((t) => e.tickets.get(t)!.code), states: o.tickets.map((t) => e.tickets.get(t)!.state),
     })),

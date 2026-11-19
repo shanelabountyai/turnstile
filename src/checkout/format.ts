@@ -106,3 +106,15 @@ export function tierState(t: TierLike, asOf: string): { k: PillKind; word: strin
 
 /** Whole minutes from one axis timestamp to a later one ("31 minutes after checkout started"). */
 export const minutesFrom = (from: Timestamp, to: Timestamp) => minutesBetween(toSeconds(from), toSeconds(to));
+
+/** One page of a long list, for the ledger (design pass): 1-based `page`, clamped; `size` rows a page. */
+export function pageOf<T>(items: T[], page: number, size: number): { rows: T[]; page: number; pages: number; from: number; to: number; total: number } {
+  const pages = Math.max(1, Math.ceil(items.length / size));
+  const p = Math.min(Math.max(1, Number.isInteger(page) ? page : 1), pages);
+  const start = (p - 1) * size;
+  const rows = items.slice(start, start + size);
+  return { rows, page: p, pages, from: rows.length ? start + 1 : 0, to: start + rows.length, total: items.length };
+}
+
+/** Days before the show, in words; a negative count means the show has started (R-3 keeps the integer). */
+export const daysWords = (days: number) => (days < 0 ? 'after the show started' : days === 1 ? '1 day before the show' : `${days} days before the show`);

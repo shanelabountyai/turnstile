@@ -3,7 +3,7 @@
 import type { PillKind } from '@/components/pill';
 
 const SAY: Record<string, string> = {
-  HELD: 'Held for you. Pay before the timer runs out, or the seats go back on sale.',
+  HELD: 'Held for you. Pay before the timer runs out, or the tickets go back on sale.',
   RELEASED: 'Released. The tickets are back on sale.',
   PAYING: 'Payment started. The tickets are issued when the payment is confirmed.',
   WAITLISTED: 'You are on the waitlist.',

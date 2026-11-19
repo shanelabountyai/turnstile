@@ -2,7 +2,7 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { eventNow } from '@/checkout/clock';
 import { stripePublishableKey } from '@/checkout/env';
-import { axis, day, duration, minutesFrom, refundWindows, stamp, tierState, time } from '@/checkout/format';
+import { axis, day, duration, minutesFrom, refundWindows, saleState, stamp, tierState, time } from '@/checkout/format';
 import { dollars, eventByKey, readEvent } from '@/checkout/read';
 import { stripeGateway } from '@/checkout/stripe';
 import { codeKind, sayCode } from '@/checkout/words';
@@ -12,7 +12,8 @@ import { env } from '@/core/env';
 import { ActionForm } from '@/core/ui/action-form';
 import { Countdown } from '@/components/countdown';
 import { StripePay } from '@/components/stripe-pay';
-import { EmptyState, EventTabs, Notice, PageHeader, Pill, Section } from '@/components/ui';
+import { Announce } from '@/components/announce';
+import { EmptyState, EventTabs, Notice, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
 import { holdTickets, joinWaitlist, leaveWaitlist, payHold, releaseHold } from './actions';
 
 // Task 3.4, design pass (D-37, artboards docs/design/Main.dc.html and BuyPhone.dc.html): buy as a chosen fixture
@@ -23,10 +24,17 @@ import { holdTickets, joinWaitlist, leaveWaitlist, payHold, releaseHold } from '
 
 // The code the engine gives a command against a hold that has ended this way (requireHeld); other states read as themselves.
 const ENDED: Record<string, string> = { EXPIRED: 'HOLD_EXPIRED', RELEASED: 'HOLD_RELEASED' };
+// The same states in words for the pill (design pass, review: word first, code after).
+const ENDED_WORDS: Record<string, string> = {
+  EXPIRED: 'Expired', RELEASED: 'Released', PAY_TIMEOUT: 'Payment timed out', PAY_FAILED: 'Payment failed', CANCELLED: 'Cancelled',
+  OFFER_EXPIRED: 'Offer expired', OFFER_DECLINED: 'Offer declined',
+};
 const LATE: Record<string, { why: string; reason: string }> = {
-  PAID_AFTER_TIMEOUT: { why: 'so the hold had already ended and the seats went back on sale', reason: 'Paid after the hold ended' },
+  PAID_AFTER_TIMEOUT: { why: 'so the hold had already ended and the tickets went back on sale', reason: 'Paid after the hold ended' },
   PAID_AFTER_CANCEL: { why: 'and the event had been cancelled in the meantime', reason: 'Paid after the event was cancelled' },
 };
+
+export const metadata = { title: 'Buy tickets · Turnstile' };
 
 export default async function BuyScreen({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ as?: string; r?: string; section?: string }> }) {
   const ctx = await requireOrg((await params).org);
@@ -61,6 +69,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const secrets = new Map(await Promise.all(live.filter((h) => h.state === 'PAYING' && h.paymentId && pk).map(async (h) => [h.hold, await stripe.clientSecret(h.paymentId!)] as const)));
   const hidden = me && <><input type="hidden" name="event" value={ev.eventKey} /><input type="hidden" name="customer" value={me.customerId} /></>;
   const said = result && sayCode(result.code);
+  const sales = saleState(v);
 
   // Where the customer is, for the step list: the latest thing that happened to them, read off the view.
   const step = live.some((h) => h.kind === 'OFFER' && h.state === 'HELD') ? 'offer'
@@ -71,14 +80,29 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
     ['pick', 'Pick tickets or seats'],
     ['wait', 'Wait on the waitlist, if nothing fits'],
     ['offer', `Accept the offer (${duration(rules.offer_ttl_minutes)})`],
-    ['pay', `Pay while held (${duration(rules.hold_ttl_minutes)})`],
+    ['pay', `Pay while held (${duration(rules.hold_ttl_minutes)}; the payment then has ${duration(rules.payment_timeout_minutes)})`],
     ['tickets', 'Tickets'],
   ];
+
+  const picker = (
+        <Section id="as" title="Acting as" aside={<span className="muted">Staff only (D-32)</span>}>
+            <form method="get" className="cluster">
+              <label>Customer{' '}
+                <select name="as" defaultValue={q.as ?? ''} required>
+                  <option value="" disabled>Pick one</option>
+                  {customers.map((c) => <option key={c.customerId} value={c.customerId}>{c.customerId} · {c.name}</option>)}
+                </select>
+              </label>
+              <button type="submit" className="secondary">Act as</button>
+            </form>
+            <p className="hint">Staff act as a synthetic customer; there is no public sign-up. Times are the event clock ({v.event.timezoneLabel}); <Link href={`${base}#clock`}>change it on the event page</Link>.</p>
+          </Section>
+  );
 
   return (
     <>
       <EventTabs base={base} current="buy" />
-      <main>
+      <main id="main">
         <PageHeader
           eyebrow={`${v.event.name} · ${day(v.event.startsAt)} · doors ${time(v.event.doorsAt)}`}
           title={me ? <>Buy tickets · acting as {me.customerId}</> : 'Buy tickets'}
@@ -87,36 +111,34 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
         />
 
         {result && (
-          <Notice k={codeKind(result.status, result.code)} title={said ?? `${result.kind} → ${result.code}`}>
-            <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
-          </Notice>
+          <>
+            <Notice k={codeKind(result.status, result.code)} title={said ?? `${result.kind} → ${result.code}`}>
+              <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
+            </Notice>
+            <Announce assertive={result.status !== 'OK'} text={said ?? `${result.kind}: ${result.code}`} />
+          </>
         )}
 
-        <Section id="as" title="Acting as" aside={<span className="muted">Staff only (D-32)</span>}>
-          <form method="get" className="cluster">
-            <label>Customer{' '}
-              <select name="as" defaultValue={me?.customerId ?? ''} required>
-                <option value="" disabled>Pick one</option>
-                {customers.map((c) => <option key={c.customerId} value={c.customerId}>{c.customerId} · {c.name}</option>)}
-              </select>
-            </label>
-            <button type="submit" className="secondary">Act as</button>
-          </form>
-          <p className="hint">Staff act as a synthetic customer; there is no public sign-up. Times are the event clock ({v.event.timezoneLabel}); <Link href={`${base}#clock`}>change it on the event page</Link>.</p>
-        </Section>
+        {!me && picker}
 
         {!me && <EmptyState>Pick a customer above to see what they can buy.</EmptyState>}
 
         {me && hidden && (
           <div className="split">
             <div className="col">
+              {sales[1] !== 'On sale' && (
+                <Notice k={sales[0]} title={sales[1]}>
+                  Sales run {stamp(v.event.salesOpenAt)} to {stamp(v.event.salesCloseAt)}. A hold or a waitlist join now is refused by the engine and the refusal is shown here.
+                </Notice>
+              )}
               {late.map((x) => (
                 <Notice key={x.payment} k="done" title="Payment received. No tickets issued. Full refund.">
                   <div className="stack" data-testid={`late-${x.payment}`}>
                     <p>
-                      Your bank confirmed the payment {x.endedAt && <>{minutesFrom(x.startedAt, x.endedAt)} minutes </>}after checkout started. We hold seats for {duration(rules.payment_timeout_minutes)} while
+                      Your bank confirmed the payment {x.endedAt && <>{minutesFrom(x.startedAt, x.endedAt)} minutes </>}after checkout started. We hold tickets for {duration(rules.payment_timeout_minutes)} while
                       a payment clears, {(LATE[x.late!] ?? LATE.PAID_AFTER_TIMEOUT!).why}. You were never charged for tickets you didn&rsquo;t get: the whole amount is refunded.
                     </p>
+                    <h2>Refund receipt</h2>
                     <dl className="receipt">
                       <dt>You tried to buy</dt><dd>{x.qty} × {x.tier}</dd>
                       <dt>Paid</dt><dd>{dollars(x.capturedCents)}</dd>
@@ -126,6 +148,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                       <dt>Payment</dt><dd><code>{x.payment}</code></dd>
                     </dl>
                     <p className="hint">Test mode: the refund is recorded against the Stripe test PaymentIntent. Keep the payment reference if you contact the box office.</p>
+                    <p><a className="button" href="#ga">See what&rsquo;s on sale now</a></p>
                   </div>
                 </Notice>
               ))}
@@ -163,7 +186,8 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                     })}
                     {ended.map((h) => (
                       <li key={h.hold} data-testid={`hold-${h.hold}`} className="cluster">
-                        <Pill k="done">{ENDED[h.state] ?? h.state}</Pill>
+                        <Pill k="done">{ENDED_WORDS[h.state] ?? h.state}</Pill>
+                        <code className="muted">{ENDED[h.state] ?? h.state}</code>
                         <span>{h.kind === 'OFFER' ? 'Offer' : 'Hold'} {h.hold}</span>
                         <span className="muted">{h.tier} · {h.seats.length ? h.seats.join(' ') : h.qty}</span>
                       </li>
@@ -179,7 +203,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                     <div key={o.order} data-testid={`order-${o.order}`} className="stack">
                       <p className="cluster">
                         <Pill k={o.refundedCents > 0 ? 'done' : 'good'}>{o.refundedCents > 0 ? `Paid · ${dollars(o.refundedCents)} refunded` : 'Paid'}</Pill>
-                        <span>{o.order}{o.viaOffer && ' (waitlist)'} · {o.qty} × {o.tier} · {dollars(o.grossCents)}</span>
+                        <span>{o.order}{o.viaOffer && ' (waitlist)'} · {o.qty} × {o.tier} · {dollars(o.paidCents)} paid, fees included</span>
                       </p>
                       <ul className="tickets">
                         {o.tickets.map((t, i) => (
@@ -192,7 +216,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
               )}
 
               <Section id="ga" title="Floor · general admission">
-                <table>
+                <ScrollTable label="Floor tiers">
                   <caption className="hint">What each tier can sell now</caption>
                   <thead><tr><th scope="col">Tier</th><th scope="col" className="num">{'Price + fee'}</th><th scope="col">Can you buy it?</th></tr></thead>
                   <tbody>
@@ -201,7 +225,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                       return <tr key={t.tier}><td>{t.tier}</td><td className="num">{dollars(t.priceCents)} + {dollars(rules.service_fee_cents)}</td><td><Pill k={st.k}>{st.word}</Pill> <span className="muted">{st.line}</span></td></tr>;
                     })}
                   </tbody>
-                </table>
+                </ScrollTable>
                 {ga.filter((t) => t.onSale && t.soldOut === 'SOLD_OUT_POOL' && t.remaining > 0).map((t) => {
                   const pl = poolOf.get(t.pool)!;
                   return <p key={t.tier} className="limit">{t.tier} tickets still have {t.remaining} of their allotment, but the {pl.pool} pool holds {pl.capacity} and has none left ({pl.sold} sold, {pl.held} held). A tier can only sell what the pool has left.</p>;
@@ -240,7 +264,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                       <ol className="seat-rows" aria-label={`Section ${section.section} rows`}>
                         {section.rows.map((r) => (
                           <li key={r.row}>
-                            <span className="row-id">Row {r.row}</span>
+                            <span className="row-head"><span className="row-id">Row {r.row}</span><span className="muted">{r.seats.filter((st) => st.state === 'OPEN').length} open</span></span>
                             <span className="seats" role="group" aria-label={`Section ${section.section} row ${r.row}`}>
                               {r.seats.map((st) => (
                                 <label key={st.seat} className="seat" data-k="hold" title={`${st.seat} ${st.state.toLowerCase()}`}>
@@ -249,7 +273,6 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                                 </label>
                               ))}
                             </span>
-                            <span className="muted">{r.seats.filter((st) => st.state === 'OPEN').length} open</span>
                           </li>
                         ))}
                       </ol>
@@ -274,7 +297,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                     {lists.map((w) => (
                       <li key={w.target} className="stack">
                         {w.waiting.map((x) => (
-                          <div key={x.entry} role="status" data-testid={`entry-${x.entry}`} className="stack">
+                          <div key={x.entry} data-testid={`entry-${x.entry}`} className="notice" data-k="info">
                             <strong>You&rsquo;re on the {w.target} waitlist for {x.qty} · position {x.position}{x.position === 1 && ' (next to be offered)'}</strong>
                             <span>When {x.qty} come back for {w.target}, the offer goes to the first person in line whose group fits. Nobody behind you is offered seats ahead of you. An offer stays open for {duration(rules.offer_ttl_minutes)}.</span>
                             <span className="hint">Entry {x.entry}. Offer notices stop in the outbox in this build; nothing is emailed.</span>
@@ -316,6 +339,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
             </aside>
           </div>
         )}
+        {me && picker}
       </main>
     </>
   );

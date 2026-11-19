@@ -5,10 +5,12 @@ const KINDS: [PillKind, string][] = [['good', 'Available'], ['risk', 'Pool sold 
 
 // The live reference for docs/DESIGN_SYSTEM.md: every component the screens use, drawn by the real stylesheet. Static
 // text only, placeholders in brackets (gap artboard docs/design/Design.dc.html, D-37).
+export const metadata = { title: 'Design system · Turnstile' };
+
 export default async function Design({ params }: { params: Promise<{ org: string }> }) {
   await requireOrg((await params).org);
   return (
-    <main>
+    <main id="main">
       <PageHeader eyebrow="Design system" title="Turnstile design system" lead="Every component the five screens use, drawn by the real stylesheet. No new tokens: the design-pass parts below are compositions of existing ones." />
       <Section id="status" title="Status families · word, glyph, colour">
         <p className="cluster">{KINDS.map(([k, w]) => <Pill key={k} k={k}>{w}</Pill>)}</p>

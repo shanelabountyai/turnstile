@@ -6,7 +6,8 @@ import { eventByKey, readEvent } from '@/checkout/read';
 import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { ActionForm } from '@/core/ui/action-form';
-import { EventTabs, Notice, PageHeader, Pill, Stat, Stats } from '@/components/ui';
+import { Announce } from '@/components/announce';
+import { EventTabs, Notice, PageHeader, Pill, Stat } from '@/components/ui';
 import { scanTicket } from './actions';
 
 // Task 3.6, design pass (D-37, artboard docs/design/Door.dc.html, 390 px first): the door. One scan = one CHECK_IN
@@ -22,6 +23,8 @@ const SAY: Record<string, (detail: string) => string> = {
   ALREADY_CHECKED_IN: (d) => `Already scanned: this ticket was first checked in at ${axis(d)}.`,
 };
 
+export const metadata = { title: 'Door · Turnstile' };
+
 export default async function Door({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ r?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const p = await params;
@@ -36,7 +39,7 @@ export default async function Door({ params, searchParams }: { params: Promise<{
   return (
     <>
       <EventTabs base={base} current="door" />
-      <main>
+      <main id="main">
         <PageHeader
           eyebrow={v.event.name}
           title="Door"
@@ -44,25 +47,28 @@ export default async function Door({ params, searchParams }: { params: Promise<{
           lead={<>Doors open {axis(v.event.doorsAt)} ({v.event.timezoneLabel}); <Link href={`${base}#clock`}>change the event clock on the event page</Link>.</>}
         />
 
-        <Stats>
-          <Stat label="Checked in" value={<span data-testid="checked-in">{count(v.ledger.checkedIn)}</span>} k="good" sub="✓ admitted so far" />
-          <Stat label="Live tickets" value={<span data-testid="live">{count(v.ledger.ticketsLive)}</span>} sub={`issued, not refunded · ${count(v.ledger.toArrive)} still to arrive`} />
-        </Stats>
+        <div className="stats pair">
+          <Stat label="Checked in" value={<span data-testid="checked-in">{count(v.ledger.checkedIn)}</span>} k="good" sub="✓ admitted" />
+          <Stat label="Live tickets" value={<span data-testid="live">{count(v.ledger.ticketsLive)}</span>} sub={`${count(v.ledger.toArrive)} to arrive`} />
+        </div>
 
         <section aria-labelledby="scan" className="wide">
           <h2 id="scan">Scan</h2>
+          {result && (
+            <>
+            <Notice k={ok ? 'good' : 'risk'} title={ok ? 'ADMIT' : 'DO NOT ADMIT'} verdict>
+              <p data-testid="result">{(SAY[result.code] ?? ((d: string) => d))(result.detail)} · at {axis(result.at)}</p>
+              <code>{result.code}</code>
+            </Notice>
+            <Announce assertive text={`${ok ? 'Admit' : 'Do not admit'}. ${(SAY[result.code] ?? ((d: string) => d))(result.detail)}`} />
+            </>
+          )}
           <ActionForm action={scanTicket.bind(null, ctx.slug)}>
             <input type="hidden" name="event" value={ev.eventKey} />
             <label>Ticket code <input name="code" autoComplete="off" autoFocus required /></label>
             <button type="submit">Check in</button>
           </ActionForm>
           <p className="hint">The 20-character code on the ticket, or its ticket number. Refusals are checked in this order: unknown, refunded, doors not open, already scanned.</p>
-          {result && (
-            <Notice k={ok ? 'good' : 'risk'} title={ok ? 'ADMIT' : 'DO NOT ADMIT'} verdict>
-              <p data-testid="result">{(SAY[result.code] ?? ((d: string) => d))(result.detail)} · at {axis(result.at)}</p>
-              <code>{result.code}</code>
-            </Notice>
-          )}
         </section>
       </main>
     </>

@@ -4,7 +4,7 @@ import { axis, count, date, day, duration, refundWords, tierState, time } from '
 import { dollars, eventByKey, percent, readEvent, type EventView } from '@/checkout/read';
 import { requireOrg } from '@/core/authz/guards';
 import { ActionForm } from '@/core/ui/action-form';
-import { EventTabs, PageHeader, Pill, Section } from '@/components/ui';
+import { EventTabs, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
 import { setEventClock } from './actions';
 
 // Task 3.3, design pass (D-37, artboard docs/design/Event.dc.html): the event as of now (D-31 read model, D-34 server
@@ -17,6 +17,8 @@ const SOLD_OUT: Record<NonNullable<TierView['soldOut']>, { short: string; why: s
   SOLD_OUT_POOL: { short: 'pool sold out', why: 'The pool is the reason, not the tier: this tier still has allotment, but nothing is left in the pool to sell from.' },
   SOLD_OUT_TIER: { short: 'tier sold out', why: 'The tier is the reason: it has used its allotment. The shared pool may still have room for other tiers.' },
 };
+
+export const metadata = { title: 'Event · Turnstile' };
 
 export default async function EventScreen({ params }: { params: Promise<{ org: string; event: string }> }) {
   const ctx = await requireOrg((await params).org);
@@ -32,7 +34,7 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
   return (
     <>
       <EventTabs base={base} current="event" />
-      <main>
+      <main id="main">
         <PageHeader
           eyebrow={`Event · ${v.event.venue}`}
           title={v.event.name}
@@ -44,7 +46,7 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
 
         <h2 id="pools">Pools</h2>
         <p className="hint">A pool is the room itself. Tiers sell from it, and their allotments add up to more than it holds, so the pool runs out first.</p>
-        <div className="grid">
+        <div className="grid pair">
           {v.pools.map((x) => (
             <article key={x.pool} className="card" aria-labelledby={`pool-${x.pool}`} data-testid={`pool-${x.pool}`}>
               <div className="cluster" style={{ justifyContent: 'space-between' }}>
@@ -98,7 +100,7 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
             <dt>Per order</dt><dd>Up to {r.max_tickets_per_order} tickets · {dollars(r.service_fee_cents)} service fee each</dd>
             <dt>If cancelled</dt><dd>{percent(r.cancellation_refund_bps)} refunded, fees included</dd>
           </dl>
-          <table>
+          <ScrollTable label="Refund windows">
             <caption>Refund windows</caption>
             <thead><tr><th scope="col">Requested at least</th><th scope="col">Refund</th><th scope="col">Service fee</th><th scope="col">In words</th></tr></thead>
             <tbody>
@@ -106,7 +108,7 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
                 <tr key={row.min_days_before}><td>{row.min_days_before} days before</td><td>{percent(row.refund_bps)}</td><td>{row.fee_refunded ? 'refunded' : 'kept'}</td><td>{refundWords(row.refund_bps, row.fee_refunded)}</td></tr>
               ))}
             </tbody>
-          </table>
+          </ScrollTable>
         </Section>
 
         <Section id="clock" title="Event clock" aside={<span className="muted">Staff only</span>}>

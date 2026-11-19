@@ -1,9 +1,10 @@
 import { notFound } from 'next/navigation';
 import { eventNow } from '@/checkout/clock';
-import { axis, count } from '@/checkout/format';
+import { axis, count, pageOf } from '@/checkout/format';
 import { dollars, eventByKey, readEvent, type EventView } from '@/checkout/read';
 import { requireOrg } from '@/core/authz/guards';
-import { EventTabs, LinkButton, PageHeader, Pill, Section, Stat, Stats, type PillKind } from '@/components/ui';
+import Link from 'next/link';
+import { EventTabs, LinkButton, PageHeader, Pill, ScrollTable, Section, Stat, Stats, type PillKind } from '@/components/ui';
 
 // Task 3.7, design pass (D-37, artboard docs/design/Ledger.dc.html): the ledger. Captured, refunded and net come from
 // the engine's summary; one line per captured payment (late money has no order), and the CSV is the same lines. No
@@ -20,7 +21,9 @@ function status(x: Line, o: Ord | undefined): [PillKind, string] {
   return ['done', `${n} of ${x.qty} tickets refunded`];
 }
 
-export default async function Ledger({ params }: { params: Promise<{ org: string; event: string }> }) {
+export const metadata = { title: 'Ledger · Turnstile' };
+
+export default async function Ledger({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ page?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const p = await params;
   const ev = await eventByKey(ctx.orgId, p.event);
@@ -30,11 +33,34 @@ export default async function Ledger({ params }: { params: Promise<{ org: string
   const orderOf = new Map(v.orders.map((o) => [o.order, o]));
   const late = v.payments.filter((x) => x.late);
   const l = v.ledger;
+  const pg = pageOf(v.payments, Number.parseInt((await searchParams).page ?? '1', 10), 50);
+  const pager = (where: string) => pg.pages > 1 && (
+    <nav aria-label={`Ledger pages, ${where}`} className="cluster">
+      {pg.page > 1 && <Link className="button secondary" href={`${base}/ledger?page=${pg.page - 1}#payments`}>Previous 50</Link>}
+      <span className="muted">Lines {pg.from}–{pg.to} of {count(pg.total)} · page {pg.page} of {pg.pages}</span>
+      {pg.page < pg.pages && <Link className="button secondary" href={`${base}/ledger?page=${pg.page + 1}#payments`}>Next 50</Link>}
+    </nav>
+  );
+
+  const row = (x: Line) => {
+    const o = x.order ? orderOf.get(x.order) : undefined;
+    const [k, word] = status(x, o);
+    return (
+      <tr key={x.payment} data-testid={`pay-${x.payment}`}>
+        <td>{x.order ?? <code>{x.payment}</code>}</td>
+        <td>{x.order ? <>{x.qty} × {x.tier}{o && o.seats.length > 0 && <> · {o.seats.join(', ')}</>}</> : <>No order · {x.qty} × {x.tier}</>}</td>
+        <td>{x.customer}</td>
+        <td className="num">{dollars(x.capturedCents)}</td><td className="num">{x.refundedCents ? dollars(x.refundedCents) : '—'}</td><td className="num">{dollars(x.netCents)}</td>
+        <td><Pill k={k}>{word}</Pill></td>
+      </tr>
+    );
+  };
+  const head = <thead><tr><th scope="col">Order</th><th scope="col">Tickets</th><th scope="col">Customer</th><th scope="col" className="num">Captured</th><th scope="col" className="num">Refunded</th><th scope="col" className="num">Net</th><th scope="col">Status</th></tr></thead>;
 
   return (
     <>
       <EventTabs base={base} current="ledger" />
-      <main>
+      <main id="main">
         <PageHeader
           eyebrow={`${v.event.name} · Stripe test mode, synthetic customers`}
           title="Ledger"
@@ -57,25 +83,22 @@ export default async function Ledger({ params }: { params: Promise<{ org: string
 
         <Section id="payments" title="Per payment" aside={<span className="muted">{count(v.payments.length)} lines</span>}>
           {v.payments.length === 0 ? <p>No payments captured yet.</p> : (
-            <table>
-              <caption className="hint">One line per captured payment; late money has no order</caption>
-              <thead><tr><th scope="col">Order</th><th scope="col">Tickets</th><th scope="col">Customer</th><th scope="col" className="num">Captured</th><th scope="col" className="num">Refunded</th><th scope="col" className="num">Net</th><th scope="col">Status</th></tr></thead>
-              <tbody>
-                {v.payments.map((x) => {
-                  const o = x.order ? orderOf.get(x.order) : undefined;
-                  const [k, word] = status(x, o);
-                  return (
-                    <tr key={x.payment} data-testid={`pay-${x.payment}`}>
-                      <td>{x.order ?? <code>{x.payment}</code>}</td>
-                      <td>{x.order ? <>{x.qty} × {x.tier}{o && o.seats.length > 0 && <> · {o.seats.join(', ')}</>}</> : <>No order · {x.qty} × {x.tier}</>}</td>
-                      <td>{x.customer}</td>
-                      <td className="num">{dollars(x.capturedCents)}</td><td className="num">{x.refundedCents ? dollars(x.refundedCents) : '—'}</td><td className="num">{dollars(x.netCents)}</td>
-                      <td><Pill k={k}>{word}</Pill></td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+            <>
+              {late.length > 0 && (
+                <ScrollTable label="Late money">
+                  <caption>Late money: paid after the hold ended or the event was cancelled, refunded in full</caption>
+                  {head}
+                  <tbody>{late.map(row)}</tbody>
+                </ScrollTable>
+              )}
+              {pager('top')}
+              <ScrollTable label="Ledger lines">
+                <caption className="hint">One line per captured payment, in payment order; the CSV has every line</caption>
+                {head}
+                <tbody>{pg.rows.map(row)}</tbody>
+              </ScrollTable>
+              {pager('bottom')}
+            </>
           )}
         </Section>
       </main>

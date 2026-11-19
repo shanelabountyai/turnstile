@@ -80,6 +80,7 @@ describe('eventView on the fixture end state (seed 20261109)', () => {
     expect(late[0]!.refundedAt).not.toBeNull();
     expect(late[0]!.startedAt < late[0]!.refundedAt!).toBe(true);
     for (const h of v.holds) expect(h.amountCents).toBe(h.qty * (h.priceCents + h.feeCents));
+    for (const o of v.orders) expect(o.paidCents).toBe(v.payments.find((p) => p.order === o.order)!.capturedCents); // paid = captured, fees included (UX review)
   });
 });
 

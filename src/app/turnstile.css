@@ -115,7 +115,7 @@ main > section, .split > section, .split > .col > section, .card {
   background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1);
   padding: var(--s-5); display: flex; flex-direction: column; gap: var(--s-3); min-width: 0;
 }
-section > h2 { margin-top: 0; font-size: var(--t-md); }
+section > h2, section > .cluster > h2, .side > h2 { margin-top: 0; font-size: var(--t-md); }
 
 /* Forms. ActionForm (template-owned) renders form > [role=alert|status]? + fieldset. */
 form { display: flex; flex-direction: column; gap: var(--s-3); }
@@ -200,7 +200,7 @@ dd { min-width: 0; }
 .empty { border: 1px dashed var(--ln-strong); border-radius: var(--r-2); padding: var(--s-6); display: flex; flex-direction: column; gap: var(--s-2); align-items: flex-start; color: var(--mu); }
 
 /* Stats: a figure, its label, and what it is judged against. */
-.stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: var(--s-3); }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: var(--s-3); }
 .stat { background: var(--sf); border: 1px solid var(--ln); border-radius: var(--r-2); box-shadow: var(--sh-1); padding: var(--s-4); display: flex; flex-direction: column; gap: var(--s-1); min-width: 0; }
 .stat dt { order: -1; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; }
 .stat .fig { font: 600 var(--t-xl)/1.1 var(--serif); font-variant-numeric: tabular-nums; }
@@ -258,7 +258,8 @@ dl.figs dd { font: 600 var(--t-md)/1.2 var(--serif); font-variant-numeric: tabul
 
 /* Seats in a row, rows as lists (P0-10, owner call: no drawn map). Each seat is a real checkbox in a 44px label. */
 .seat-rows { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 6px; }
-.seat-rows > li { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: var(--s-1) 10px; }
+.seat-rows > li { margin: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.seat-rows .row-head { display: flex; gap: var(--s-3); align-items: baseline; }
 .seat-rows .row-id { min-width: 4.5rem; font: 600 14px/1 var(--mono); color: var(--mu); }
 .seats { display: flex; flex-wrap: wrap; gap: var(--s-1); }
 .seat {
@@ -277,6 +278,7 @@ dl.figs dd { font: 600 var(--t-md)/1.2 var(--serif); font-variant-numeric: tabul
 .tickets code { color: var(--mu); }
 
 /* The door's answer: readable at arm's length. */
+.notice h2 { font-size: var(--t-md); color: inherit; }
 .notice.verdict { border-width: 2px; border-radius: var(--r-2); padding: var(--s-4); }
 .notice.verdict > strong { font-size: var(--t-xl); line-height: 1.1; }
 .wide input:not([type='hidden']), .wide button { width: 100%; align-self: stretch; }
@@ -297,6 +299,13 @@ td.num, th.num { white-space: nowrap; }
   .org-nav .assoc { flex-basis: auto; order: 0; padding: 0 var(--s-3) 0 0; }
   .org-nav .end { margin-left: 0; flex-wrap: nowrap; }
 }
+.table-wrap { max-width: 100%; overflow-x: auto; }
+.table-wrap > table { display: table; overflow: visible; }
+.table-wrap:focus-visible { outline-offset: 0; }
+.skip { position: absolute; left: var(--s-2); top: -100px; z-index: 10; background: var(--sf); color: var(--ac); padding: var(--s-2) var(--s-3); border: 1px solid var(--ac); border-radius: var(--r-1); }
+.skip:focus { top: var(--s-2); }
+.grid.pair { grid-template-columns: repeat(auto-fill, minmax(min(100%, 22rem), 1fr)); }
+.stats.pair { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
 
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

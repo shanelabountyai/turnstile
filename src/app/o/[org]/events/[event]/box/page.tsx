@@ -1,13 +1,14 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { eventNow } from '@/checkout/clock';
-import { axis, count, day, refundWords, stamp, tierState, time } from '@/checkout/format';
+import { axis, count, day, daysWords, refundWords, saleState, stamp, tierState, time } from '@/checkout/format';
 import { dollars, eventByKey, percent, previewRefund, readEvent } from '@/checkout/read';
 import { codeKind, sayCode } from '@/checkout/words';
 import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { ActionForm } from '@/core/ui/action-form';
-import { EmptyState, EventTabs, Notice, PageHeader, Pill, Section, Stat, Stats } from '@/components/ui';
+import { Announce } from '@/components/announce';
+import { EmptyState, EventTabs, Notice, PageHeader, Pill, ScrollTable, Section, Stat, Stats } from '@/components/ui';
 import type { Command } from '@/inventory/types';
 import { holdTickets } from '../buy/actions';
 import { confirmRefund } from './actions';
@@ -19,6 +20,9 @@ import { confirmRefund } from './actions';
 // staff confirm the cast.
 
 const list = (x: string | string[] | undefined) => (x === undefined ? [] : Array.isArray(x) ? x : [x]);
+const TICKET: Record<string, string> = { ISSUED: 'valid', CHECKED_IN: 'used at the door, cannot be refunded', REFUNDED: 'already refunded' };
+
+export const metadata = { title: 'Box office · Turnstile' };
 
 export default async function BoxOffice({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ order?: string; t?: string | string[]; r?: string }> }) {
   const ctx = await requireOrg((await params).org);
@@ -46,8 +50,14 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
   const poolLimited = ga.filter((t) => t.onSale && t.soldOut === 'SOLD_OUT_POOL' && t.remaining > 0);
   const poolOf = new Map(v.pools.map((x) => [x.pool, x]));
   const wl = v.ledger.waitlist;
+  const sales = saleState(v);
+  const sectionIds = new Set(v.sections.map((s) => s.section));
+  const targetName = (t: string) => (sectionIds.has(t) ? `Balcony · Section ${t}` : `Floor · tier ${t}`);
+  // Every balcony section gets a line, waiting or not; floor tiers only while someone waits for them.
+  const lines = [...v.sections.map((s) => v.waitlists.find((w) => w.target === s.section) ?? { target: s.section, waiting: [], offered: [], seatsWanted: 0 }),
+    ...v.waitlists.filter((w) => !sectionIds.has(w.target))];
   const customerSelect = (
-    <label>Customer at the window{' '}
+    <label>Customer at the window (floor){' '}
       <select name="customer" defaultValue="" required>
         <option value="" disabled>Pick one</option>
         {customers.map((c) => <option key={c.customerId} value={c.customerId}>{c.customerId} · {c.name}</option>)}
@@ -58,7 +68,7 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
   return (
     <>
       <EventTabs base={base} current="box" />
-      <main>
+      <main id="main">
         <PageHeader
           eyebrow={`Box office · ${day(v.asOf)} · ${time(v.asOf)}`}
           title="Window sales"
@@ -79,6 +89,7 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
 
         <div className="split">
           <Section id="sale" title="Sell at the window">
+            {sales[1] !== 'On sale' && <Notice k={sales[0]} title={sales[1]}>Sales run {stamp(v.event.salesOpenAt)} to {stamp(v.event.salesCloseAt)}; a window hold now is refused (the engine decides).</Notice>}
             {poolLimited.map((t) => {
               const pl = poolOf.get(t.pool)!;
               return (
@@ -98,11 +109,11 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
                 </label>
                 <label>Quantity <input name="qty" type="number" min={1} max={rules.max_tickets_per_order} defaultValue={2} required /></label>
               </div>
-              <button type="submit">Hold and take payment</button>
+              <button type="submit">Hold, then take payment on Buy</button>
             </ActionForm>
-            <p className="hint">The hold is cast as the customer and opens on the Buy screen, where it is paid; a refusal is shown there in words.</p>
+            <p className="hint">The hold is cast as the customer and opens on the Buy screen, where it is paid; a refusal is shown there in words. The Box office tab brings you back.</p>
             <form method="get" action={`${base}/buy`} className="cluster" style={{ alignItems: 'flex-end' }}>
-              <label>Customer{' '}
+              <label>Customer for balcony seats{' '}
                 <select name="as" defaultValue="" required>
                   <option value="" disabled>Pick one</option>
                   {customers.map((c) => <option key={c.customerId} value={c.customerId}>{c.customerId} · {c.name}</option>)}
@@ -114,9 +125,12 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
 
           <Section id="refund" title="Refund a ticket">
             {result && (
-              <Notice k={codeKind(result.status, result.code)} title={sayCode(result.code) ?? `${result.kind} → ${result.code}`}>
-                <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
-              </Notice>
+              <>
+                <Notice k={codeKind(result.status, result.code)} title={sayCode(result.code) ?? `${result.kind} → ${result.code}`}>
+                  <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
+                </Notice>
+                <Announce assertive={result.status !== 'OK'} text={sayCode(result.code) ?? `${result.kind}: ${result.code}`} />
+              </>
             )}
             <form method="get" action={`${base}/box#refund`} className="cluster" style={{ alignItems: 'flex-end' }}>
               <label>Order{' '}
@@ -132,11 +146,11 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
               <form method="get" action={`${base}/box#refund`} className="stack">
                 <input type="hidden" name="order" value={order.order} />
                 <fieldset>
-                  <legend>{order.order} · {order.customer} · paid {dollars(order.grossCents)}</legend>
+                  <legend>{order.order} · {order.customer} · paid {dollars(order.paidCents)}</legend>
                   {order.tickets.map((t, i) => (
                     <label key={t} className="choice">
                       <input type="checkbox" name="t" value={t} defaultChecked={picked.includes(t)} disabled={order.states[i] !== 'ISSUED'} />
-                      {t}{order.seats[i] && ` · ${order.seats[i]}`} · {order.states[i]}
+                      {t}{order.seats[i] && ` · ${order.seats[i]}`} · {TICKET[order.states[i]!] ?? order.states[i]}
                     </label>
                   ))}
                 </fieldset>
@@ -148,11 +162,11 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
               <div className="stack" data-testid="preview">
                 <dl>
                   <dt>Order</dt><dd>{order.order} · {order.customer} · {order.tier}</dd>
-                  <dt>Paid</dt><dd>{dollars(order.grossCents)} for {order.qty}, fees included</dd>
-                  <dt>When</dt><dd>{stamp(preview.result.at)} · {preview.daysBefore} days before the show</dd>
+                  <dt>Paid</dt><dd>{dollars(order.paidCents)} for {order.qty}, fees included</dd>
+                  <dt>When</dt><dd>{stamp(preview.result.at)} · {daysWords(preview.daysBefore)}</dd>
                   <dt>Window</dt><dd>{refundWords(preview.refundBps, preview.feeRefunded)}</dd>
                 </dl>
-                <p className="hint">As of {axis(preview.result.at)}: {preview.daysBefore} days before the start, so the window is {percent(preview.refundBps)} of the price{preview.feeRefunded ? ' plus the fee' : ', fee kept'}.</p>
+                <p className="hint">As of {axis(preview.result.at)}: {preview.daysBefore < 0 ? 'the show has started' : <>{preview.daysBefore} days before the start</>}, so the window is {percent(preview.refundBps)} of the price{preview.feeRefunded ? ' plus the fee' : ', fee kept'}.</p>
                 {preview.result.status === 'REJECT' ? (
                   <Notice k="risk" title={sayCode(preview.result.code) ?? preview.result.code}><span data-testid="preview-code">{preview.result.code}{preview.result.detail && ` · ${preview.result.detail}`}</span></Notice>
                 ) : (
@@ -162,11 +176,11 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
                       <span className="fig-lg" data-testid="preview-total">{dollars(preview.totalCents)}</span>
                       <span className="hint">Price × {percent(preview.refundBps)} per ticket, rounded down to the cent{preview.feeRefunded ? ', plus the fee' : ''}. The seat goes back to its pool.</span>
                     </div>
-                    <table>
+                    <ScrollTable label={`Refund lines for ${order.order}`}>
                       <caption>Refund for {order.order}</caption>
                       <thead><tr><th scope="col">Ticket</th><th scope="col" className="num">Price</th><th scope="col" className="num">Fee</th><th scope="col" className="num">Refund</th></tr></thead>
                       <tbody>{preview.lines.map((l) => <tr key={l.ticket}><td>{l.ticket}{l.seat && ` · ${l.seat}`}</td><td className="num">{dollars(l.priceCents)}</td><td className="num">{dollars(l.feeCents)}</td><td className="num">{dollars(l.amountCents)}</td></tr>)}</tbody>
-                    </table>
+                    </ScrollTable>
                     <ActionForm action={confirmRefund.bind(null, ctx.slug)}>
                       <input type="hidden" name="event" value={ev.eventKey} />
                       <input type="hidden" name="order" value={order.order} />
@@ -183,21 +197,21 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
         <Section id="waitlist" title="Waitlists">
           {v.waitlists.length === 0 ? <EmptyState>Nobody is waiting.</EmptyState> : (
             <>
-              <table>
+              <ScrollTable label="Waitlist summary">
                 <caption className="hint">Each line in FIFO order; the first in line blocks it until their group fits</caption>
                 <thead><tr><th scope="col">Waiting for</th><th scope="col" className="num">Parties</th><th scope="col" className="num">Seats wanted</th><th scope="col">First in line</th></tr></thead>
                 <tbody>
-                  {v.waitlists.map((w) => (
+                  {lines.map((w) => (
                     <tr key={w.target}>
-                      <td>{w.target}</td><td className="num">{w.waiting.length}</td><td className="num">{w.seatsWanted}</td>
+                      <td>{targetName(w.target)}</td><td className="num">{w.waiting.length}</td><td className="num">{w.seatsWanted}</td>
                       <td>{w.waiting[0] ? <>{w.waiting[0].entry} · wants {w.waiting[0].qty} · <span className="muted">blocks the line until {w.waiting[0].qty} fit</span></> : w.offered.length ? <Pill k="hold">offer out</Pill> : 'Nobody waiting'}</td>
                     </tr>
                   ))}
                 </tbody>
-              </table>
+              </ScrollTable>
               {v.waitlists.map((w) => (
-                <table key={w.target} data-testid={`waitlist-${w.target}`}>
-                  <caption>{w.target}: {w.waiting.length} waiting{w.offered.length > 0 && `, ${w.offered.length} offered`}</caption>
+                <ScrollTable key={w.target} label={`Line for ${targetName(w.target)}`} testid={`waitlist-${w.target}`}>
+                  <caption>{targetName(w.target)}: {w.waiting.length} waiting{w.offered.length > 0 && `, ${w.offered.length} offered`}</caption>
                   <thead><tr><th scope="col">Position</th><th scope="col">Entry</th><th scope="col">Customer</th><th scope="col" className="num">Qty</th><th scope="col">Since</th></tr></thead>
                   <tbody>
                     {w.offered.map((x) => (
@@ -207,7 +221,7 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
                       <tr key={x.entry} data-testid={`entry-${x.entry}`}><td>{x.position}{x.position === 1 && <> <Pill k="info">head</Pill></>}</td><td>{x.entry}</td><td>{x.customer}</td><td className="num">{x.qty}</td><td>{axis(x.joinedAt)}</td></tr>
                     ))}
                   </tbody>
-                </table>
+                </ScrollTable>
               ))}
             </>
           )}

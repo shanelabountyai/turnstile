@@ -38,6 +38,8 @@ test('door: DOORS_NOT_OPEN, TICKET_REFUNDED, CHECKED_IN, ALREADY_CHECKED_IN with
   await expect(ok).toContainText(`Admit. Ticket ${good!.ticketId} is checked in.`);
   await expect(page.getByText('ADMIT', { exact: true })).toBeVisible(); // design pass (D-37): the verdict, word first
   const first = (await ok.textContent())!.match(/at (\S+ \S+)$/)![1];
+  // A hand-typed code in capitals finds the same ticket (D-40): the engine answers, here ALREADY_CHECKED_IN.
+  await expect(await scan(page, good!.code.toUpperCase())).toContainText(`first checked in at ${first}`);
   await expect(page.getByTestId('checked-in')).toHaveText('1');
   await expect(await scan(page, good!.code)).toContainText(`first checked in at ${first}`);
   await expect(await scan(page, 'not-a-real-code')).toContainText('No ticket for this event matches “not-a-real-code”');

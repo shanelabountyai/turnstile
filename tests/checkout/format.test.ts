@@ -31,3 +31,16 @@ describe('format', () => {
     expect(refundWords(2500, false)).toBe('25% of the ticket price, fee kept');
   });
 });
+
+describe('format: paging and day words (design pass, review fixes)', () => {
+  it('pages clamp and count from 1', async () => {
+    const { pageOf, daysWords } = await import('@/checkout/format');
+    const xs = Array.from({ length: 452 }, (_, i) => i);
+    expect(pageOf(xs, 1, 50)).toMatchObject({ page: 1, pages: 10, from: 1, to: 50, total: 452 });
+    expect(pageOf(xs, 10, 50)).toMatchObject({ page: 10, from: 451, to: 452 });
+    expect(pageOf(xs, 99, 50).page).toBe(10);
+    expect(pageOf(xs, Number.NaN, 50).page).toBe(1);
+    expect(pageOf([], 1, 50)).toMatchObject({ page: 1, pages: 1, from: 0, to: 0 });
+    expect([daysWords(-1), daysWords(0), daysWords(1), daysWords(24)]).toEqual(['after the show started', '0 days before the show', '1 day before the show', '24 days before the show']);
+  });
+});

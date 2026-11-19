@@ -13,6 +13,7 @@ export default async function OrgLayout({ children, params }: { children: React.
   const base = `/o/${ctx.slug}`;
   return (
     <>
+      <a className="skip" href="#main">Skip to content</a>
       <nav className="org-nav" aria-label="Organisation">
         <Link className="wordmark" href={`${base}/events`}>Turnstile</Link>
         <span className="assoc">{org.name}</span>

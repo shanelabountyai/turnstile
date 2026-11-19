@@ -9,13 +9,15 @@ import { EmptyState, LinkButton, PageHeader, Pill } from '@/components/ui';
 
 // Design pass (D-37, gap artboard docs/design/Events.dc.html): one card per event, each read through the read model on
 // its own event clock (D-31, D-35), with the pools' counts and the five screens. One event per org in this build.
+export const metadata = { title: 'Events · Turnstile' };
+
 export default async function Events({ params }: { params: Promise<{ org: string }> }) {
   const ctx = await requireOrg((await params).org);
   const org = await db.org.findUniqueOrThrow({ where: { id: ctx.orgId }, select: { name: true } });
   const events = await withOrg({ orgId: ctx.orgId }, (tx) => tx.event.findMany({ where: { orgId: ctx.orgId }, orderBy: { startsAt: 'asc' }, select: { id: true, eventKey: true, timezoneLabel: true, clockOffsetSeconds: true } }));
   const views = await Promise.all(events.map(async (e) => ({ e, v: await readEvent(ctx.orgId, e.id, eventNow(new Date(), e)) })));
   return (
-    <main>
+    <main id="main">
       <PageHeader eyebrow={`${org.name} · synthetic fixture data`} title="Events" lead="One card per event. Counts are worked out from sold and held tickets on the event clock when the page loads." />
       {views.length === 0 ? (
         <EmptyState action={<code>npm run turnstile:load -- --org {ctx.slug}</code>}>No event is loaded in this organisation yet. Load the fixture event and its synthetic customers from a terminal:</EmptyState>

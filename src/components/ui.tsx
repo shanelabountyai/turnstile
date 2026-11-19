@@ -48,10 +48,10 @@ export const Stats = ({ children }: { children: React.ReactNode }) => <div class
 /** A block message in a status family, headed by a glyph and a title. */
 export function Notice({ k, title, children, verdict }: { k: PillKind; title: string; children?: React.ReactNode; verdict?: boolean }) {
   return (
-    <aside className={verdict ? 'notice verdict' : 'notice'} data-k={k}>
+    <div className={verdict ? 'notice verdict' : 'notice'} data-k={k}>
       <strong>{title}</strong>
       {children && <div>{children}</div>}
-    </aside>
+    </div>
   );
 }
 
@@ -78,5 +78,17 @@ export function EventTabs({ base, current }: { base: string; current: EventTab }
     <nav aria-label="Event screens" className="tabs event-tabs">
       {TABS.map(([k, path, word]) => <Link key={k} href={`${base}${path}`} aria-current={k === current ? 'page' : undefined}>{word}</Link>)}
     </nav>
+  );
+}
+
+/**
+ * A table that may scroll sideways on a phone, in a named region that takes keyboard focus so it can be scrolled
+ * without a mouse (WCAG 2.1.1; axe scrollable-region-focusable). Design pass, a11y review.
+ */
+export function ScrollTable({ label, children, testid }: { label: string; children: React.ReactNode; testid?: string }) {
+  return (
+    <div className="table-wrap" role="region" aria-label={label} tabIndex={0}>
+      <table data-testid={testid}>{children}</table>
+    </div>
   );
 }
