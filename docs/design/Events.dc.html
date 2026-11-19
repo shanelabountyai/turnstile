@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Events</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="min-height: 1180px; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.55;">
+<nav aria-label="Organisation" style="background: oklch(0.995 0.003 80); border-bottom: 1px solid oklch(0.84 0.014 70); padding: 0 16px; display: flex; flex-wrap: wrap; align-items: center; gap: 0 2px;">
+<a href="#" style="font: 600 20px/1 ui-serif, Georgia, serif; color: oklch(0.25 0.02 30); text-decoration: none; min-height: 48px; display: inline-flex; align-items: center; gap: 8px; padding-right: 12px;"><span aria-hidden="true" style="width: 12px; height: 12px; border-radius: 50%; background: oklch(0.44 0.13 25);"></span>Turnstile</a>
+<span style="font-size: 14px; color: oklch(0.45 0.02 30); font-weight: 600; padding-right: 12px;">[org name]</span>
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 700; box-shadow: inset 0 -3px 0 oklch(0.44 0.13 25);">Events</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Members</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Audit log</a>
+<span style="margin-left: auto; display: flex; flex-wrap: wrap;">
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Your orgs</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 10px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 500;">Account</a>
+</span>
+</nav>
+<main style="max-width: 64rem; margin: 0 auto; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px;">
+<header style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid oklch(0.84 0.014 70);">
+<span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">[org name] · synthetic fixture data</span>
+<h1 style="margin: 0; font: 600 34px/1.17 ui-serif, Georgia, serif; letter-spacing: -0.01em;">Events</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.45; color: oklch(0.45 0.02 30); max-width: 42rem;">One card per event. Counts are worked out from sold and held tickets on the event clock when the page loads.</p>
+</header>
+
+<sc-for list="{{ events }}" as="e" hint-placeholder-count="1">
+<article aria-labelledby="ev-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; box-shadow: 0 1px 2px oklch(0.3 0.03 30 / 0.08); padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 8px;">
+<h2 id="ev-h" style="margin: 0; font: 600 24px/1.25 ui-serif, Georgia, serif;"><a href="Event.dc.html">{{ e.name }}</a></h2>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 245); color: oklch(0.37 0.1 245); border: 1px solid oklch(0.55 0.12 245);">● {{ e.state }}</span>
+</div>
+<p style="margin: 0; color: oklch(0.45 0.02 30); font-size: 15px;">{{ e.venue }} · {{ e.when }} · event clock {{ e.asOf }}</p>
+<ul style="margin: 0; padding: 0; list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(13rem, 1fr)); gap: 12px;">
+<sc-for list="{{ e.pools }}" as="p" hint-placeholder-count="2">
+<li style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-left: 4px solid {{ p.dot }}; border-radius: 12px; padding: 12px 16px; display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">{{ p.name }}</span>
+<span style="font: 600 30px/1.1 ui-serif, Georgia, serif; font-variant-numeric: tabular-nums;">{{ p.left }}</span>
+<span style="font-size: 15px; color: oklch(0.45 0.02 30);">{{ p.word }} · left of {{ p.cap }}</span>
+</li>
+</sc-for>
+</ul>
+<nav aria-label="{{ e.name }}" style="display: flex; flex-wrap: wrap; gap: 8px;">
+<a href="Event.dc.html" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; display: inline-flex; align-items: center; text-decoration: none; background: oklch(0.44 0.13 25); color: oklch(0.995 0.003 80); border: 1px solid oklch(0.44 0.13 25);">Open event</a>
+<a href="Main.dc.html" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; display: inline-flex; align-items: center; text-decoration: none; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40);">Buy</a>
+<a href="Box.dc.html" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; display: inline-flex; align-items: center; text-decoration: none; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40);">Box office</a>
+<a href="Door.dc.html" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; display: inline-flex; align-items: center; text-decoration: none; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40);">Door</a>
+<a href="Ledger.dc.html" style="font: 600 15px/1.2 system-ui, sans-serif; min-height: 44px; padding: 0 20px; border-radius: 8px; display: inline-flex; align-items: center; text-decoration: none; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40);">Ledger</a>
+</nav>
+</article>
+</sc-for>
+
+<section aria-labelledby="empty-h" style="display: flex; flex-direction: column; gap: 8px;">
+<h2 id="empty-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">State: no event loaded</h2>
+<div style="border: 1px dashed oklch(0.56 0.018 40); border-radius: 12px; padding: 24px; display: flex; flex-direction: column; gap: 8px; color: oklch(0.45 0.02 30);">
+<p style="margin: 0;">No event is loaded in this organisation yet. Load the fixture event and its synthetic customers from a terminal:</p>
+<code style="font: 13px ui-monospace, Menlo, monospace; color: oklch(0.25 0.02 30);">npm run turnstile:load -- --org [org slug]</code>
+</div>
+</section>
+<p style="margin: 0; font-size: 15px; color: oklch(0.45 0.02 30); font-style: italic;">One event per organisation in this build (PRD non-goal: multi-event scheduling). The list is ready for more.</p>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() {
+    // Placeholders only: the build fills these from readEvent per event (D-31).
+    const pool = (name, word, dot) => ({ name: name, left: '[left]', cap: '[capacity]', word: word, dot: dot });
+    return {
+      events: [{
+        name: '[event name]', venue: '[venue]', when: '[day, date] · doors [time]', asOf: '[event clock]', state: '[On sale | Sales open … | Sales closed | Cancelled]',
+        pools: [pool('[pool] · GA', '[✕ Pool sold out | ✓ Seats available]', 'oklch(0.55 0.12 28)'), pool('[pool] · reserved', '[✓ Seats available]', 'oklch(0.55 0.12 155)')]
+      }]
+    };
+  }
+}
+</script>
+</body>
+</html>

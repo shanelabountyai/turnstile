@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Turnstile — Design reference</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<style>
+body{margin:0}
+a{color:oklch(0.44 0.13 25)}a:hover{color:oklch(0.36 0.12 25)}
+</style>
+</helmet>
+<div style="min-height: 1180px; background: oklch(0.972 0.006 80); color: oklch(0.25 0.02 30); font-family: system-ui, -apple-system, 'Segoe UI', sans-serif; font-size: 17px; line-height: 1.55;">
+<main style="max-width: 64rem; margin: 0 auto; padding: 32px 32px 64px; display: flex; flex-direction: column; gap: 20px;">
+<header style="display: flex; flex-direction: column; gap: 8px; padding-bottom: 16px; border-bottom: 1px solid oklch(0.84 0.014 70);">
+<span style="font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Design system · /o/[org]/design</span>
+<h1 style="margin: 0; font: 600 34px/1.17 ui-serif, Georgia, serif;">Turnstile design system</h1>
+<p style="margin: 0; font-size: 20px; line-height: 1.45; color: oklch(0.45 0.02 30); max-width: 42rem;">Every component the five screens use, drawn by the real stylesheet. No new tokens: the additions below are compositions of existing ones.</p>
+</header>
+
+<section aria-labelledby="st-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="st-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Status families · word, glyph, colour</h2>
+<p style="margin: 0; display: flex; flex-wrap: wrap; gap: 8px;">
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 155); color: oklch(0.37 0.1 155); border: 1px solid oklch(0.55 0.12 155);">✓ Available</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 28); color: oklch(0.37 0.1 28); border: 1px solid oklch(0.55 0.12 28);">✕ Pool sold out</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 80); color: oklch(0.37 0.1 80); border: 1px solid oklch(0.55 0.12 80);">◆ Held for you</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.04 245); color: oklch(0.37 0.1 245); border: 1px solid oklch(0.55 0.12 245);">● On sale</span>
+<span style="display: inline-flex; align-items: center; gap: 6px; padding: 2px 10px; min-height: 26px; border-radius: 999px; font: 600 13px/1 system-ui, sans-serif; background: oklch(0.955 0.006 60); color: oklch(0.37 0.015 60); border: 1px solid oklch(0.55 0.018 60);">■ Off sale</span>
+</p>
+</section>
+
+<section aria-labelledby="nav-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="nav-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Event tabs (new composition of .tabs)</h2>
+<nav aria-label="Event" style="display: flex; flex-wrap: wrap; border-bottom: 1px solid oklch(0.84 0.014 70);">
+<a href="#" aria-current="page" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px; font-weight: 700; box-shadow: inset 0 -3px 0 oklch(0.44 0.13 25);">Event</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px;">Buy</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px;">Box office</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px;">Door</a>
+<a href="#" style="display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; color: oklch(0.25 0.02 30); text-decoration: none; font-size: 15px;">Ledger</a>
+</nav>
+<p style="margin: 0; font-size: 15px; color: oklch(0.45 0.02 30);">The artboards put these links in the org bar; the build puts them in a second row under it, because the org bar also carries members, audit and account links.</p>
+</section>
+
+<section aria-labelledby="seat-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="seat-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Seats in a row (rows as lists, P0-10)</h2>
+<div style="display: flex; gap: 4px; flex-wrap: wrap; align-items: center;">
+<span style="width: 60px; font: 600 14px/1 ui-monospace, Menlo, monospace; color: oklch(0.45 0.02 30);">Row [r]</span>
+<span title="open" style="width: 44px; height: 44px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font: 600 13px/1 ui-monospace, Menlo, monospace; background: oklch(0.995 0.003 80); color: oklch(0.25 0.02 30); border: 1px solid oklch(0.56 0.018 40);">1</span>
+<span title="chosen" style="width: 44px; height: 44px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font: 600 13px/1 ui-monospace, Menlo, monospace; background: oklch(0.955 0.04 80); color: oklch(0.37 0.1 80); border: 2px solid oklch(0.55 0.12 80);">✓2</span>
+<span title="sold or held" style="width: 44px; height: 44px; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; font: 600 13px/1 ui-monospace, Menlo, monospace; background: oklch(0.91 0.01 72); color: oklch(0.45 0.02 30); border: 1px solid oklch(0.84 0.014 70); text-decoration: line-through;">3</span>
+</div>
+<p style="margin: 0; font-size: 15px; color: oklch(0.45 0.02 30);">Each seat is a real checkbox inside a 44 px label. Open: outlined. Chosen: hold family and a ✓. Sold or held: filled, struck through and disabled. The seat id and state are in its accessible name.</p>
+</section>
+
+<section aria-labelledby="door-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="door-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Door verdict</h2>
+<div style="display: flex; flex-wrap: wrap; gap: 12px;">
+<div style="flex: 1 1 240px; background: oklch(0.955 0.04 155); color: oklch(0.37 0.1 155); border: 2px solid oklch(0.55 0.12 155); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+<strong style="font: 600 30px/1.1 ui-serif, Georgia, serif;">✓ ADMIT</strong><span>Ticket [ticket] is checked in.</span><code style="font: 13px ui-monospace, Menlo, monospace;">CHECKED_IN</code>
+</div>
+<div style="flex: 1 1 240px; background: oklch(0.955 0.04 28); color: oklch(0.37 0.1 28); border: 2px solid oklch(0.55 0.12 28); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 6px;">
+<strong style="font: 600 30px/1.1 ui-serif, Georgia, serif;">✕ DO NOT ADMIT</strong><span>Already scanned: first checked in at [time].</span><code style="font: 13px ui-monospace, Menlo, monospace;">ALREADY_CHECKED_IN</code>
+</div>
+</div>
+</section>
+
+<section aria-labelledby="rc-h" style="background: oklch(0.995 0.003 80); border: 1px solid oklch(0.84 0.014 70); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 12px;">
+<h2 id="rc-h" style="margin: 0; font: 600 20px/1.3 ui-serif, Georgia, serif;">Receipt figure and steps</h2>
+<div style="background: oklch(0.945 0.008 75); border: 1px solid oklch(0.84 0.014 70); border-radius: 8px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px;">
+<span style="font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; color: oklch(0.45 0.02 30); font-weight: 600;">Customer gets back</span>
+<span style="font: 600 30px/1.1 ui-serif, Georgia, serif;">[amount]</span>
+<span style="font-size: 15px; color: oklch(0.45 0.02 30);">[price]¢ × [window %], rounded down to the cent.</span>
+</div>
+<ol style="margin: 0; padding-left: 22px; font-size: 16px;"><li>Pick seats</li><li style="font-weight: 700;" aria-current="step">Pay while held (current step, bold)</li><li>Tickets</li></ol>
+</section>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":1180}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

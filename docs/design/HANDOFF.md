@@ -33,3 +33,12 @@ Design each gap as a new `docs/design/<Name>.dc.html` in the same look before bu
 ## Placeholders
 
 Figures come from the frozen fixture end state; the Section C seat layout and Dev's place in line are labelled sample states.
+
+## Gap designs added by the design pass (2026-11-19)
+
+| File | Screen | Frame |
+| --- | --- | --- |
+| `Events.dc.html` | Events list `/o/[org]/events`: one card per event with pool counts and links to the five screens; empty state with the load command | 1280×1180 |
+| `Design.dc.html` | Design reference `/o/[org]/design`: status families, event tabs, seat squares, door verdict, receipt figure and steps | 1280×1180 |
+
+Further screens found in the code but not on any artboard (staff-only controls): the event clock on the Event page (D-35), the "acting as" customer picker on Buy (D-32), and the order picker on Box office refunds. They keep their current markup in the new look; the Design reference shows their parts. Values in both gap artboards are `[placeholders]`.
