@@ -101,6 +101,24 @@ Turnstile treats the event as one ordered stream of commands evaluated by a pure
 - [ ] **Door:** check-in by code with the four refusals spelled out; live count
 - [ ] **Ledger:** captured, refunded, net; per order; exportable CSV
 
+## Design, UX and accessibility requirements (design pass, 2026-11-19)
+
+Added from the three reviews of the built UI (design fidelity, UX, accessibility); decisions D-37..D-43. Each is checked where noted.
+
+- **DUX-1** Every amount labelled "paid" or "fees included" is gross + fees, equal to the captured payment (UX must-fix 1). *Check:* `read.test.ts` paidCents = captured for all 451 orders.
+- **DUX-2** The door finds a ticket whatever the case of the typed code (UX must-fix 2, D-40). *Check:* `door.spec` scans the code in capitals.
+- **DUX-3** A refund preview after the start says "after the show started", never a negative day count (UX must-fix 3). *Check:* `format.test` daysWords.
+- **DUX-4** Outside the sales window Buy and Box office say so ("Sales closed", "Sales open …") before any form; the engine still refuses the command (UX must-fix 4).
+- **DUX-5** On a 390 px phone the door verdict is visible without scrolling after a scan, above the scan field (design must-fix 1, UX should-fix 5).
+- **DUX-6** A late payment shows the buyer a refund receipt: what they tried to buy, paid, refunded with fees, reason in words with its code, when, and the payment reference (design must-fix 2; PRD persona Marisol). *Check:* `a11y.spec` premise on `/buy?as=C-0010`.
+- **DUX-7** Ended holds read as words first (Expired, Payment timed out …) with the code after; GA holds talk about tickets, not seats (design must-fix 2, UX should-fix 10, 11).
+- **DUX-8** No page scrolls sideways at 390 px; tables that need more room scroll inside a named, keyboard-focusable region (a11y should-fix 3). *Check:* `a11y.spec` 390 px tests assert `scrollWidth ≤ 390` and axe `scrollable-region-focusable`.
+- **DUX-9** A command result (buy, box office, door) is announced by a live region when the page loads after the redirect (a11y must-fix 1, WCAG 4.1.3).
+- **DUX-10** Each page has its own title ("Door · Turnstile") and a skip link to the main content (a11y must-fix 2, should-fix 4; WCAG 2.4.2, 2.4.1).
+- **DUX-11** The hold countdown is not live every second; it is announced once at two minutes left and once at zero (a11y should-fix 5, D-39).
+- **DUX-12** The ledger shows 50 lines a page with late money pinned above; the CSV keeps every line (design should-fix 3, UX should-fix 9).
+- **DUX-13** Axe reports 0 violations on every Turnstile page in light and dark at desktop and 390 px. *Check:* `e2e/a11y.spec.ts`.
+
 ## Nice-to-Have (P1)
 
 Signed ticket codes (HMAC) and a QR image · Stripe dispute webhook recorded as a `Refund` with reason `DISPUTE` · `SKIP_TO_FIT` waitlist rule as data with its own goldens · price changes with price locked at hold time proven · accessible-seat flags · multi-event calendar · transfer to another customer as a new ticket and a voided one · second fixture with a cancelled event · reserved-seat map SVG from the section data.
