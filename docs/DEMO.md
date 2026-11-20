@@ -2,6 +2,8 @@
 
 A 10-minute walk through an invented 1,016-seat hall's ticketing engine. **Synthetic data only, Stripe test mode only, no claim about any venue's policy, ticketing law or fire code.** Every command below was run once on 2026-11-12 (local Mac, Postgres 17, port 7700) before this file was committed.
 
+> **Hosted demo (2026-11-20):** not deployed yet. The steps to put this on Vercel are in [`DEPLOY.md`](DEPLOY.md), and the short walk for a visitor is the README's "Try the live demo". This file stays the presenter's local script.
+
 ## Before you start (once)
 
 ```bash
