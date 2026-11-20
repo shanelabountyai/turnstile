@@ -1,5 +1,36 @@
 # NEXT
 
+## ▶ 2026-11-20 (Fable 5.2, scheduled deploy-prep run, branch `deploy/vercel`): ready to deploy, **not deployed**. Draft PR "Turnstile: deploy prep for Vercel (not deployed)", not merged.
+
+**Nothing was deployed and no account was touched.** No Vercel project, database or Stripe object was created, read or changed; no variable was set anywhere; no Stripe network call was made. **Merging the PR starts CI and nothing else**, because no Vercel project is linked. Once one is, every push to `main` that changes a non-doc file is a Production build that migrates and seeds.
+
+Built (D-44 to D-50 in `docs/decisions.md`):
+- `scripts/vercel-build.mjs` + `npm run vercel-build` (Earmark's, plus two steps): on a Production build, environment check → `prisma migrate deploy` with `MIGRATE_URL` → demo seed → `next build`. Preview builds are skipped (`vercel.json`, Earmark D-56).
+- `scripts/deploy-env.ts`: the build is refused with a list of names when one of the **11 variables** is missing or wrong, including a live Stripe key and the published fixture webhook secret. Values are never printed.
+- `src/proxy.ts` + `src/checkout/gate.ts`: the shared demo password (core's gate) in front of everything except `/api/cron`, `/api/checkout/webhook` and `/api/v1/**`. **Found:** nothing called the gate before, so a public `DEMO_MODE=1` URL would have signed anyone in as an owner. `FOUNDATION_PATCHES.md` (new) excuses `src/proxy.ts`.
+- `scripts/seed-hosted.ts`: demo accounts + the fixture event into `acme` and `globex`, write-once, clock at sales open on a fresh load.
+- `e2e/hosted-demo.spec.ts`: the README walk in one session on a production build; `docs/DEPLOY.md`; README "Try the live demo" (says plainly it is not live; `<PRODUCTION_URL>` placeholder).
+
+Gate (cloud sandbox; Postgres 16 started by hand; both databases migrated with `psql`, because the Prisma schema engine download is refused): `npm ci` **fails as written** at `postinstall` (`prisma generate`, 403 from binaries.prisma.sh), passes with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true` · lint 0 · typecheck clean · inventory:lint OK (12 engine files, 6 screen files) · inventory:eval match (2,662, commitment `d4d64203…61d43`) · fixtures:check OK · design:contrast OK, 0 pairs under floor · `npm test` 57 files, 476 passed, 33 skipped, **4 failed** (all in template-owned `inv-34-export.test.ts`; the same 4 failed on untouched `main` in this sandbox: 54 files, 460 passed, 33 skipped, 4 failed) · `npm run build` rc 0 · `npm run test:e2e` **36 passed, 0 failed**; again behind the gate (`E2E_DEMO_ACCESS_PASSWORD` set) 36 passed. `foundation:drift --base 4938406` clean. CI decides.
+
+Not verified (no access, by rule): anything on Vercel, Neon or Stripe. `prisma migrate deploy` could not run here (CI runs it on Postgres 17). The Stripe card form and a real test payment have never been run by anyone (EVAL O-8): the walk's payments use the recorded double and a fixture-signed webhook. Vercel's Ignored Build Step on a redeploy; Neon's pooler with the cast path's advisory locks; that Neon's owner role bypasses RLS (a one-line check is in DEPLOY.md).
+
+Open for Shane: **D-49**: the walk's last step (clock to show night) is one-way, so each demo org is spent about an hour after someone finishes; two orgs, then a two-minute reset in Neon's SQL editor. Options (leave / reset button / nightly reset / drop the door step) are in D-49. Also noticed, not changed: a member who presses **Set clock** gets the app's error page instead of a refusal message (`AuthzError` thrown by the action; Earmark's D-57 is the same family); `docs/RELEASE_NOTES.md` has a stale "Cost review pending" row; the README's clone line says v1.6.1 while `FOUNDATION_VERSION` is v1.7.0; `CLAUDE.md`'s command list does not have `vercel-build` yet.
+
+Shane's hand steps, in order (detail in `docs/DEPLOY.md`):
+1. You: read the PR, check CI is green on its head commit, merge it (this deploys nothing).
+2. You: Neon: create project `turnstile` (Postgres 17), suspend timeout at the minimum; copy the owner's pooled and direct connection strings; run the one-line `rolbypassrls` check. No role to create (RLS is off).
+3. You: Stripe, test mode: copy the publishable and secret test keys.
+4. You: Vercel: import the repo, decide the address; let the first build fail (it lists what is missing).
+5. You: Stripe, test mode: create the webhook endpoint at `<PRODUCTION_URL>/api/checkout/webhook` for `payment_intent.succeeded` and `payment_intent.payment_failed`; copy its signing secret.
+6. You: set the 11 variables in Vercel, Production only (names in DEPLOY.md).
+7. You: redeploy; read the four steps in the build log.
+8. You: smoke check: password prompt, `/api/health`, `/demo`, then the README walk once, including the first real Stripe test payment; record the PaymentIntent and Refund ids in `docs/EVAL.md` (O-8).
+9. You: put the address into `README.md` and `docs/DEPLOY.md`; decide how the password reaches a hiring manager.
+10. You: decide D-49; add the cost row that supersedes D-36.
+
+---
+
 ## ▶ 2026-11-19 (Opus 5.5, scheduled design pass, branch `design/impl`): Claude Design built in. PR open, not merged.
 
 Built: the six artboards in `docs/design/` (Event, Buy, Buy late payment, Box office, Ledger, Door) and two gap designs drawn first (`Events.dc.html`, `Design.dc.html`) into the real screens, inside `docs/DESIGN_SYSTEM.md` (no new token, font, image or dependency). Three independent reviews (design, UX, a11y) ran against a production build; accepted findings are DUX-1..13 in the PRD and D-37..D-43 in `docs/decisions.md`, fixed on the branch.
