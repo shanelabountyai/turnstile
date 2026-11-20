@@ -4,6 +4,61 @@
 
 > Cloned from saas-foundation v1.6.1. Port 7700. Upgrade with `npm run foundation:status`; template-owned paths are listed in the template's plan §3.2.
 
+## Try the live demo (about ten minutes)
+
+**The site is not live yet.** There is no deployment: no Vercel project, no hosted database, no address. The repository
+is ready for one, and the owner's steps are in [`docs/DEPLOY.md`](docs/DEPLOY.md). Until then, `<PRODUCTION_URL>` below is
+a placeholder, and the same walk runs locally from the Quickstart with [`docs/DEMO.md`](docs/DEMO.md).
+
+Once it is live: open **`<PRODUCTION_URL>/demo`**. The site asks for a shared password first (HTTP Basic, any username;
+the owner gives it out). `/demo` then lists six seeded accounts: pick one to sign in, no email or password. Everything is
+invented data. Payments are Stripe **test mode**: no real card works and no money moves. No email is sent.
+
+| Account | Who | Used in |
+|---|---|---|
+| `owner@acme.demo.test` | owner of the venue's org; may also move the event clock | every step |
+| `owner@globex.demo.test` | the same event in a second org with its own clock | the whole walk again, if `acme` is spent (see step 7) |
+
+1. **Sign in and find the event.** Pick `owner@acme.demo.test` → **Acme Studio** → **Events** → **Synthetic Night
+   (fixture)**. *You should see* two pools (a floor of 800, a balcony of 216) and four tiers, each with *remaining* and
+   *available*, and the line **How “available” is worked out**: the smaller of what the tier has left and what its
+   pool has left, worked out when the page loads and stored nowhere. The floor's tier allotments add up to more than the floor holds, on purpose.
+2. **Hold two floor tickets.** **Buy** → *Acting as* `C-0001` → **Act as**. Tier `ADV`, Quantity `2` → **Hold tickets**.
+   *You should see* `OK HELD` and a ten-minute countdown. The countdown is display only; the server decides the expiry
+   to the second.
+3. **Pay with a Stripe test card.** **Pay $76.98** (2 × $34.99 + 2 × $3.50 fee). In the Stripe form use card
+   `4242 4242 4242 4242`, any future expiry, any CVC → **Pay with Stripe (test mode)**. You come back to the Buy page;
+   refresh until **Your tickets** shows one order with two ticket codes. The tickets are issued only when Stripe's signed
+   webhook arrives, so a few seconds' wait is the design. Copy both codes.
+4. **Two balcony seats, and the seat you cannot strand.** Change *Acting as* to `C-0002`. In a balcony row, tick two
+   open seats with **one open seat between them** → **Hold seats in A**. *You should see* it refused: `ORPHAN_SEAT`,
+   the seat in the middle would be stranded between two taken ones. Now tick two open seats **side by side**, hold them,
+   and pay $127.00 (2 × $60.00 + 2 × $3.50) the same way. Copy one of the two codes.
+5. **Refund one ticket at the box office.** **Box office** → *Refund a ticket* → the order of `C-0001` → **Open order** → tick
+   one ticket → **Preview refund**. *You should see* the days before the show, the window that applies, and the amount:
+   more than 30 days out it is the full $38.49, fee included. **Refund $38.49**: the recorded refund equals the preview
+   to the cent, and the ticket goes back into the pool.
+6. **The ledger.** **Ledger**. *You should see* captured, refunded and net, one line per captured payment, and
+   captured − refunded = net. If you are the first visitor since a reset: $203.98, $38.49, $165.49. **Download CSV**
+   holds the same lines in integer cents.
+7. **The door.** **Door** → paste the balcony code → **Check in**. *You should see* **DO NOT ADMIT**: doors are not
+   open yet, they open at 2027-03-20 19:00. Now the one-way step: **Event** → *Event clock* → set it to
+   `2027-03-20 19:00:05` → **Set clock**. Back on **Door**, the same code says **ADMIT**; scan it again and it is refused
+   with the time of the first scan; of your two floor codes one is admitted and the refunded one is refused as refunded.
+
+**Step 7 uses the demo up.** The event clock cannot be moved back past the last command, and sales close an hour after
+doors, so once someone has done step 7 in an org, the Buy screen there says *Sales closed* for everyone after them.
+If `acme` already says so, do the walk as `owner@globex.demo.test` in **Globex Labs**; if both do, the demo needs the
+owner's reset (`docs/DEPLOY.md`, "Resetting the demo"). The database is shared and is not reset between visitors, so
+counts and ledger totals include what earlier visitors bought.
+
+**What was checked, and where.** Steps 1 to 7 run as one browser session in `e2e/hosted-demo.spec.ts`, against a
+production build on a database holding only what a deploy puts there (2026-11-20, 36 e2e tests passed with and without
+the password gate). In that test Stripe is the repository's recorded double and the webhook is signed with the fixture
+secret: **step 3's card form and a real Stripe test payment have not been run by anyone yet** (it is the owner's first
+smoke check, `docs/EVAL.md` O-8). Nothing here has been run against a live site, because there is none. What the
+engine's numbers do and do not prove is in the banner at the top.
+
 A Next.js 16 + Prisma 7 + Postgres template with the parts every multi-tenant app rebuilds: magic-link sign-in with TOTP,
 orgs and roles, one authorization path, an append-only audit log, share links, cron, and optional billing (Stripe) and
 notifications (SMS). Its safety rules are executable: `tests/invariants/` holds INV-01 to INV-28, and CI fails if one breaks.
