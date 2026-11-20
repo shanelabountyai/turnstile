@@ -40,6 +40,28 @@ async function scan(page: Page, code: string) {
   return page.getByTestId('result');
 }
 
+// Not every /demo account can make the one-way clock move (D-49): a member sells like anyone, and the clock refuses them.
+test('a demo member can hold and release a ticket, and is refused the event clock', async ({ page }) => {
+  await page.goto('/demo');
+  await page.getByRole('button', { name: 'member@acme.demo.test' }).click();
+  await page.getByRole('link', { name: 'Acme Studio' }).click();
+  await page.goto(`/o/acme/events/${EVENT}`);
+  const before = await page.getByTestId('event-clock').textContent();
+  if (axisNow(new Date(), 'America/Chicago') < '2026-12-01T10:00:00') {
+    await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0003`);
+    const hold = await holdGa(page, 'ADV', 1);
+    await page.getByTestId(`hold-${hold}`).getByRole('button', { name: 'Release' }).click();
+    await expect(page.getByTestId('result')).toContainText('OK RELEASED');
+    await page.goto(`/o/acme/events/${EVENT}`);
+  }
+  await page.getByLabel('Set the event clock to').fill('2027-03-20T19:00:05');
+  await page.getByRole('button', { name: 'Set clock' }).click();
+  // The action refuses (org.update). A member is shown the app's error page for it, which is not pretty (noted in NEXT.md).
+  await expect(page.getByText(/^Error id:/)).toBeVisible();
+  await page.goto(`/o/acme/events/${EVENT}`);
+  await expect(page.getByTestId('event-clock')).toHaveText(new RegExp(`^${before!.slice(0, 13)}`)); // same hour: the clock did not jump to show night
+});
+
 test('the live-demo walk on a freshly deployed database: sign in, buy GA and a reserved pair, refund, ledger, door', async ({ page }) => {
   // 1. Demo sign-in, by clicking through from /demo as a visitor would.
   await page.goto('/demo');
