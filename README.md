@@ -58,7 +58,7 @@ the password gate). In that test Stripe is the repository's recorded double and 
 secret: **step 3's card form and a real Stripe test payment have not been run by anyone yet** (it is the owner's first
 smoke check, `docs/EVAL.md` O-8). Until it is recorded there, the honest wording is: Stripe boundary tested against
 recorded payloads and a fixture signing secret. The live site's pages have not been clicked through by the owner yet
-(2026-11-21); the deployment itself built and is serving (Vercel deployment `dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub`, READY).
+(2026-11-21); the deployment is READY on Vercel (`dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub`); the site itself was not fetched by the closeout run.
 What the engine's numbers do and do not prove is in the banner at the top.
 
 A Next.js 16 + Prisma 7 + Postgres template with the parts every multi-tenant app rebuilds: magic-link sign-in with TOTP,

@@ -2,8 +2,8 @@
 
 **Turnstile is live (2026-11-21)** at **https://turnstile.labintelligence.co**, behind the shared demo password (D-46).
 Vercel project `turnstile`, Neon database, Stripe **test mode**. Production deployment `dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub`
-(commit `9d8b434`, READY, built 2026-11-21 12:35 CT, read from Vercel's API on 2026-11-21). Its build log, as reported by the
-owner's preflight: `deploy-env` OK, 25 migrations applied, `seed-hosted` loaded the six demo accounts and 216 seats + 700
+(commit `9d8b434`, READY, built 2026-11-21 12:35 CT, read from Vercel's API on 2026-11-21). Its build log, as reported by the owner in the
+scheduled closeout brief (2026-11-21; this run did not read the build log itself): `deploy-env` OK, 25 migrations applied, `seed-hosted` loaded the six demo accounts and 216 seats + 700
 customers in each of `acme` and `globex`. Two earlier Production builds of the same commit ended in ERROR (12:23 and 12:31
 CT), as step 4 expects while variables are missing.
 
@@ -11,7 +11,9 @@ This file was written by a cloud run on 2026-11-20 as the order of work, and upd
 (steps 9 and 10 below). Every step that touches Vercel, Neon or Stripe is the owner's and is marked **You:**. Decisions
 behind it: D-44 to D-50 and D-51 to D-53 in `docs/decisions.md`.
 
-**Status of the steps (2026-11-21):** 1 to 7 done by the owner (the deployment above is the evidence). **8 not yet
+**Status of the steps (2026-11-21):** 1 to 4, 6 and 7 done by the owner (the READY Production
+deployment above shows a project, a database the build could migrate, and variables that passed `deploy-env`). Step 5 (the
+Stripe webhook endpoint, its URL and events) is **not verified**: a READY build does not show it, and Stripe was not called. **8 not yet
 reported done** (the smoke check and the first real Stripe test payment, EVAL O-8). 9 done by the closeout run (this
 file and the README carry the address). 10 recorded as D-52 (Vercel read; Neon not readable from a cloud session).
 
