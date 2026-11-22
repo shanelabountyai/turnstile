@@ -10,7 +10,7 @@ import { castCommand } from '@/checkout/cast';
 import { applyWebhook, payStart, requestRefund, settleRefunds } from '@/checkout/checkout';
 import { axisNow } from '@/checkout/clock';
 import { loadFixtureEvent } from '@/checkout/load';
-import { StripeRecorded } from '@/checkout/stripe';
+import { StripeProviderError, StripeRecorded } from '@/checkout/stripe';
 import { SIGNATURE_TOLERANCE_SECONDS, signStripePayload, verifyStripeSignature, webhookCommand } from '@/checkout/webhook';
 import { timestamp } from '@/inventory/time';
 import type { Command } from '@/inventory/types';
@@ -99,7 +99,7 @@ describe('checkout over the cast path with StripeRecorded', () => {
     expect(out.status).toBe(200);
     expect(out.result).toMatchObject({ cmd_id: 'evt_fixture_succeeded_00001', code: 'PAID_AFTER_TIMEOUT', detail: 'R-00001 5700' });
     expect(await db.ticket.count({ where: { eventId } })).toBe(0);
-    expect(stripe.calls.at(-1)).toEqual({ kind: 'refund', refundId: 'R-00001', paymentIntentId: 'pi_fixture_00001', amountCents: 5700 });
+    expect(stripe.calls.at(-1)).toEqual({ kind: 'refund', refundId: 'R-00001', paymentIntentId: 'pi_fixture_00001', amountCents: 5700, eventId });
     expect((await db.refund.findUniqueOrThrow({ where: { eventId_refundId: { eventId, refundId: 'R-00001' } } })).stripeRefundId).toBe('re_rec_R-00001');
     expect((await db.commandLog.findUniqueOrThrow({ where: { eventId_cmdId: { eventId, cmdId: 'evt_fixture_succeeded_00001' } } })).stripeEventId).toBe('evt_fixture_succeeded_00001');
   });
@@ -127,10 +127,32 @@ describe('checkout over the cast path with StripeRecorded', () => {
     expect(await rows()).toEqual([{ refundId: 'R-00002', stripeRefundId: 're_rec_R-00002' }, { refundId: 'R-00003', stripeRefundId: 're_rec_R-00003' }]);
     expect(stripe.calls.filter((c) => c.kind === 'refund' && c.refundId === 'R-00002')).toHaveLength(2);
   });
+  it('a declined card releases the hold and cancels its PaymentIntent; a later success for it seats no one (D-56, review CODE-2)', async () => {
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-20', at: '2026-12-01T12:00:00', kind: 'HOLD', customer: 'C-0004', ref: 'H-00004', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-21', at: '2026-12-01T12:01:00', kind: 'PAY_START', customer: 'C-0004', ref: 'H-00004' }), stripe)).code).toBe('PAYING');
+    const orders = await db.order.count({ where: { eventId } });
+    const failed = await hook(body('failed', { id: 'evt_fail_4', pi: 'pi_rec_H-00004' }), '2026-12-01T12:02:00', stripe);
+    expect(failed.result?.code).toBe('PAYMENT_FAILED_RELEASED');
+    expect(stripe.calls.at(-1)).toEqual({ kind: 'cancel', eventId, paymentIntentId: 'pi_rec_H-00004' });
+    const late = await hook(body('succeeded', { id: 'evt_ok_4', pi: 'pi_rec_H-00004' }), '2026-12-01T12:03:00', stripe);
+    expect(late.result?.code).toBe('PAYMENT_DUPLICATE');
+    expect(await db.order.count({ where: { eventId } })).toBe(orders);
+  });
+  it('a Stripe failure while cancelling is logged, not thrown: the release has committed', async () => {
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-30', at: '2026-12-01T12:10:00', kind: 'HOLD', customer: 'C-0005', ref: 'H-00005', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-31', at: '2026-12-01T12:11:00', kind: 'PAY_START', customer: 'C-0005', ref: 'H-00005' }), stripe)).code).toBe('PAYING');
+    const broken = new StripeRecorded();
+    broken.cancelPaymentIntent = async () => { throw new StripeProviderError('stripe down'); };
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = await hook(body('failed', { id: 'evt_fail_5', pi: 'pi_rec_H-00005' }), '2026-12-01T12:12:00', broken);
+    expect(out.result?.code).toBe('PAYMENT_FAILED_RELEASED');
+    expect(err).toHaveBeenCalledWith(expect.stringContaining('could not cancel pi_rec_H-00005'));
+    err.mockRestore();
+  });
 });
 
 describe('the route', () => {
-  it('503 without a webhook secret; 404 for an unknown event id; 400 for a bad signature with the real clock', async () => {
+  it('503 without a webhook secret; the signature first: 400 for a bad one whether or not the event exists; a signed event not for this database is 200 ignored', async () => {
     vi.stubEnv('STRIPE_WEBHOOK_SECRET', '');
     const { POST } = await import('@/app/api/checkout/webhook/route');
     const { env } = await import('@/core/env');
@@ -140,9 +162,20 @@ describe('the route', () => {
     expect((await post(body('succeeded'), 'x')).status).toBe(503);
     (env as { STRIPE_WEBHOOK_SECRET?: string }).STRIPE_WEBHOOK_SECRET = SECRET;
     const unknown = body('succeeded').replace(eventId, '00000000-0000-0000-0000-000000000000');
-    expect((await post(unknown, 'x')).status).toBe(404);
     const now = Math.floor(Date.now() / 1000);
+    // unsigned or wrongly signed: the same 400 whether the event exists or not, so the answer says nothing about the database
+    expect((await post(unknown, 'x')).status).toBe(400);
+    expect((await post(body('succeeded'), 'x')).status).toBe(400);
     expect((await post(body('succeeded'), signStripePayload(body('succeeded'), 'wrong', now))).status).toBe(400);
+    // signed, but not for an event here (unknown id, no id, not a UUID): 200 ignored, so Stripe neither retries nor disables the endpoint
+    const signed = async (raw: string) => post(raw, signStripePayload(raw, SECRET, now));
+    const noId = JSON.stringify({ id: 'evt_noid', type: 'payment_intent.succeeded', data: { object: { id: 'pi_other', metadata: {} } } });
+    const badId = body('succeeded').replace(eventId, 'not-a-uuid');
+    for (const raw of [unknown, noId, badId]) {
+      const res = await signed(raw);
+      expect(res.status).toBe(200);
+      expect(((await res.json()) as { reason: string }).reason).toMatch(/^ignored: /);
+    }
     (env as { STRIPE_WEBHOOK_SECRET?: string }).STRIPE_WEBHOOK_SECRET = saved;
     vi.unstubAllEnvs();
   });
