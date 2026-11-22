@@ -2,7 +2,27 @@
 
 A 10-minute walk through an invented 1,016-seat hall's ticketing engine. **Synthetic data only, Stripe test mode only, no claim about any venue's policy, ticketing law or fire code.** Every command below was run once on 2026-11-12 (local Mac, Postgres 17, port 7700) before this file was committed.
 
-> **Hosted demo (2026-11-20):** not deployed yet. The steps to put this on Vercel are in [`DEPLOY.md`](DEPLOY.md), and the short walk for a visitor is the README's "Try the live demo". This file stays the presenter's local script.
+> **Hosted demo (2026-11-21): live** at https://turnstile.labintelligence.co, behind a shared password the owner gives out (never written here). The visitor's walk is the README's "Try the live demo"; the stops below map it to the tests that cover it. The rest of this file stays the presenter's local script.
+
+## Live demo (https://turnstile.labintelligence.co)
+
+**Not yet clicked through live.** No stop below has been walked on the live site by the owner as of 2026-11-21: Vercel's runtime logs since the deploy show no request to `/demo` or any `/o/…` page (DEPLOY.md, "What the closeout run read"). Each stop is covered by an e2e test against a local production build with the recorded Stripe double and a fixture-signed webhook (36 e2e tests passed with and without the password gate on 2026-11-20, per NEXT.md). The first real Stripe test payment (stops 3 to 5) is EVAL O-8 and is the owner's.
+
+| # | Stop (README step) | URL on the live site | What you should see | Covered by | Live status |
+|---|---|---|---|---|---|
+| 0 | Password gate | `/` | A Basic-auth prompt; 401 without the password | `tests/checkout/gate.test.ts` (unit); DEPLOY.md 2026-11-20 production-mode check | not yet clicked through live |
+| 1 | Sign in (step 1) | `/demo` | Six accounts; pick `owner@acme.demo.test` | `e2e/demo.spec.ts` "demo sign-in lands a seeded owner in their org"; `e2e/hosted-demo.spec.ts` walk | not yet clicked through live |
+| 2 | The event (step 1) | `/o/acme/events/EV-SYNTH-001` | Two pools (800, 216), four tiers, remaining and available, "How available is worked out" | `e2e/hosted-demo.spec.ts` walk; `e2e/event.spec.ts` "Door reads pool sold out, not tier sold out; BALC still sells" | not yet clicked through live |
+| 3 | Hold two floor tickets (step 2) | `…/buy?as=C-0001` | `OK HELD`, a ten-minute countdown, **Pay $76.98** | `e2e/hosted-demo.spec.ts` walk; `e2e/buy.spec.ts` | not yet clicked through live |
+| 4 | Pay with a Stripe test card (step 3) | `…/buy` | Stripe Elements form; after 4242, tickets appear when the signed webhook lands | `e2e/buy.spec.ts` "hold → pay → signed webhook → tickets" (**recorded double, fixture secret; the real card form has never been rendered**) | not yet clicked through live; **EVAL O-8** |
+| 5 | Orphan refusal and a seat pair (step 4) | `…/buy?as=C-0002` | `ORPHAN_SEAT` for a gap of one; a side-by-side pair holds and pays $127.00 | `e2e/buy.spec.ts` (orphan pick refused); `e2e/hosted-demo.spec.ts` walk | not yet clicked through live |
+| 6 | Refund at the box office (step 5) | `…/box` | Preview with days before, window and amount; **Refund $38.49** equals the preview | `e2e/box.spec.ts` "refund preview equals the recorded refund"; `e2e/hosted-demo.spec.ts` walk | not yet clicked through live; the live refund is part of **EVAL O-8** |
+| 7 | Ledger (step 6) | `…/ledger`, `…/ledger/csv` | Captured − refunded = net; CSV in integer cents | `e2e/ledger.spec.ts` "page totals = CSV column sums after a sale and a partial refund" | not yet clicked through live |
+| 8 | Door (step 7) | `…/door` | DO NOT ADMIT before doors; after the one-way clock move, ADMIT, then a second scan refused with the first time | `e2e/door.spec.ts` "DOORS_NOT_OPEN, TICKET_REFUNDED, CHECKED_IN, ALREADY_CHECKED_IN …"; `e2e/hosted-demo.spec.ts` walk | not yet clicked through live; **uses the org up (D-49)** |
+| 9 | Member refused the clock | `…/events/EV-SYNTH-001` as `member@acme.demo.test` | Today: the app's error page, not a refusal (review item 5) | `e2e/hosted-demo.spec.ts` "a demo member can hold and release a ticket, and is refused the event clock" | not yet clicked through live |
+| 10 | Phone | all of the above at phone width | Pages fit at 390 px; seat rows wrap 6 + 6 (review item 15) | `e2e/a11y.spec.ts` "axe at 390 px, light and dark" | not yet clicked through live (owner's phone) |
+
+Before handing the password out, read the review's "before the password" items (`docs/audits/FIVE-LENS-2026-11-21.md`): a visitor with the password can reach the demo owner's destructive settings (SEC-1), and the second visitor's walk does not match the README's "you should see" lines (UX-2).
 
 ## Before you start (once)
 
@@ -92,5 +112,5 @@ Buy with card 4242 4242 4242 4242, then refund one ticket in the box office; rec
 - **Stripe is unproven live.** Recorded payloads and a published fixture signing secret; the 4242 round trip is Shane's step and has not been run.
 - **Not looked at in a browser by eye**; layout is checked by axe (14 scans, 0 violations) not by taste.
 - **Nothing is sent.** Order confirmations and offer notices are queued and made undrainable.
-- **Not deployed**, no real buyer accounts (staff act as a fixture customer), one event, one hall, no load test.
+- **Live since 2026-11-21 behind a shared password**, no real buyer accounts (staff act as a fixture customer), one event, one hall, no load test.
 - **CI is green on `phase-2`** (run 43063558361) and PR #2 is deliberately unmerged.
