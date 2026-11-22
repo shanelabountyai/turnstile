@@ -1,5 +1,36 @@
 # NEXT
 
+## ▶ 2026-11-21 (Opus 5.5, scheduled closeout run, branch `closeout/2026-11-21-live`): Turnstile is live; closeout pack and five-lens review written. **Docs only.** Draft PR "Turnstile: live closeout pack and five-lens review (docs only)", not merged.
+
+**Done (2026-11-21):**
+- DEPLOY.md step 9: `https://turnstile.labintelligence.co` in `README.md` and `docs/DEPLOY.md`; the README says it is live behind a shared password Shane gives out (no password written). Stripe wording unchanged: "Stripe boundary tested against recorded payloads and a fixture signing secret" until O-8. Scope-honesty banner untouched.
+- DEPLOY.md step 10: D-52 supersedes D-36 (Vercel billing read; Neon not readable here). D-51 records the run's judgment calls; D-53 records the review (report only).
+- `docs/RELEASE_NOTES.md` live-release section (stale "Cost review pending" row removed); `docs/DEMO.md` "Live demo" table, 11 stops mapped to e2e tests, all **not yet clicked through live**; `docs/LINKEDIN_DRAFTS.md`, two unposted drafts with a source for every figure.
+- Exec brief **"Turnstile Live in Brief"** (Claude Docs, private until shared): https://claude.ai/artifact/Y7XpxZDNWba6okaP1As1R5
+- Five-lens review: `docs/audits/FIVE-LENS-2026-11-21.md` + five lens files in `docs/audits/FIVE-LENS-2026-11-21-lenses/`. **57 findings: 2 Blocker, 13 Major, 42 Minor → 30 ranked work items, 5 proposed PRDs (titles, goals, tests only).** Verdict: ship after the top items. Nothing fixed, no PRD written.
+
+**Verified, and how:**
+- Vercel API, read-only: project `turnstile`; Production deployment `dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub` READY (commit `9d8b434`, 12:35 CT) after two ERROR builds (12:23, 12:31); domains include `turnstile.labintelligence.co`; Vercel Authentication on all deployment URLs except custom domains; runtime errors since deploy: none; runtime logs: five requests, scanner paths on the custom domain, **no request to `/demo`, `/api/health`, any `/o/…` page or the webhook**.
+- Vercel billing (team-wide, billing day 2026-11-21 08:00 UTC → 11-22 08:00 UTC, read while open): $0.7402 billed (Pro $0.66667); Turnstile rows in the API's truncated sample: 16 build minutes $0.056, functions < $0.00001.
+- Gate here: `npm run fixtures:check` OK · `npm run inventory:lint` OK (12 files, 6 screen files) · `npm run inventory:eval` match (2,662, commitment `d4d64203…61d43`) · `npm run design:contrast` OK 0 pairs · `git diff --stat main` = docs/README/NEXT only. (`npm ci` needed `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true`, as before.) CI results are in the PR body.
+- Review rendering: local production build on Postgres 16 seeded with `seed-hosted.ts` (migrations by `psql`); axe 48 runs, 0 violations on the Turnstile event screens; typecheck and lint clean; 52 database-free vitest tests passed.
+
+**Not verified:** the live pages (cloud egress cannot reach the site; share links stop at the password); Neon usage; anything at Stripe (never called); a real Stripe Elements form (never rendered by anyone); a Turnstile-only Vercel total (the API sample is truncated); that merging this PR skips the Vercel build (the `ignoreCommand` docs-only rule should skip it).
+
+**Open decisions (one at a time, detail in the review §4):** (1) does O-8 wait for the money fixes (recommend: wait; CODE-1 refund ids repeat across `acme`/`globex` on one Stripe account; CODE-2 decline-then-success keeps money); (2) what the shared password exposes (SEC-1: demo owners reach delete-org / members / SSO / API keys); (3) D-49 demo wear-out; (4) who may refund (SEC-5); (5) the org home kept by D-38; (6) no engine rule change for CODE-2. Plus: decide how a reviewer gets the password. **(7) New, from the overnight review on PR #8:** the repo is public (D-1), so `docs/audits/FIVE-LENS-2026-11-21-lenses/security.md`, the report's §2 items 1 and 3 and §4 already publish open weaknesses of the live site on the pushed branch (SEC-1, SEC-2, SEC-4, CODE-1). Options: (a) move the lens detail out of the repo and keep a summary (the pushed branch history still holds it; no force-push by rule); (b) keep it and hand out no password until PRD-1 and PRD-2 land; (c) leave it. Reviewer's recommendation: (b) at minimum, (a) too if the repo stays public.
+
+**You:**
+1. You: run DEPLOY.md step 8 (password prompt, `/api/health`, `/demo`, the README walk) and the first Stripe test payment — after deciding decision 1 above (the review recommends merging the small money-fix PR first).
+2. You: record the PaymentIntent id and the Refund id in `docs/EVAL.md` O-8; only then change "Stripe boundary tested against recorded payloads…" anywhere.
+3. You: walk `docs/DEMO.md` "Live demo" stops on a laptop and on a phone; mark each one verified.
+4. You: make the review decisions in `docs/audits/FIVE-LENS-2026-11-21.md` §4, one at a time; say which work items become PRDs.
+5. You: read `docs/LINKEDIN_DRAFTS.md`; pick, edit or drop (nothing is posted or in the Ledger).
+6. You: share the brief https://claude.ai/artifact/Y7XpxZDNWba6okaP1As1R5 when ready (private until you do).
+7. You: read Neon's usage page for `turnstile` once and add the figure to D-52; check the demo password is 16+ characters (review item 8).
+8. You: review this PR; merge or not (docs only).
+
+---
+
 ## ▶ 2026-11-20 (Fable 5.2, scheduled deploy-prep run, branch `deploy/vercel`): ready to deploy, **not deployed**. Draft PR "Turnstile: deploy prep for Vercel (not deployed)", not merged.
 
 **Nothing was deployed and no account was touched.** No Vercel project, database or Stripe object was created, read or changed; no variable was set anywhere; no Stripe network call was made. **Merging the PR starts CI and nothing else**, because no Vercel project is linked. Once one is, every push to `main` that changes a non-doc file is a Production build that migrates and seeds.

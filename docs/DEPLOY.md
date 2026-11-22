@@ -1,11 +1,21 @@
 # DEPLOY — Turnstile on Vercel
 
-**Turnstile is not deployed.** There is no Vercel project, no hosted database and no production URL. This file is the
-order of work for the day there is one. It was written by a cloud run on 2026-11-20 that created, read and changed no
-account anywhere; every step below that touches Vercel, Neon or Stripe is the owner's and is marked **You:**.
-Decisions behind it: D-44 to D-50 in `docs/decisions.md`.
+**Turnstile is live (2026-11-21)** at **https://turnstile.labintelligence.co**, behind the shared demo password (D-46).
+Vercel project `turnstile`, Neon database, Stripe **test mode**. Production deployment `dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub`
+(commit `9d8b434`, READY, built 2026-11-21 12:35 CT, read from Vercel's API on 2026-11-21). Its build log, as reported by the owner in the
+scheduled closeout brief (2026-11-21; this run did not read the build log itself): `deploy-env` OK, 25 migrations applied, `seed-hosted` loaded the six demo accounts and 216 seats + 700
+customers in each of `acme` and `globex`. Two earlier Production builds of the same commit ended in ERROR (12:23 and 12:31
+CT), as step 4 expects while variables are missing.
 
-`<PRODUCTION_URL>` below is a placeholder. Nobody has chosen the address yet; it is filled in at step 4.
+This file was written by a cloud run on 2026-11-20 as the order of work, and updated on 2026-11-21 by the closeout run
+(steps 9 and 10 below). Every step that touches Vercel, Neon or Stripe is the owner's and is marked **You:**. Decisions
+behind it: D-44 to D-50 and D-51 to D-53 in `docs/decisions.md`.
+
+**Status of the steps (2026-11-21):** 1 to 4, 6 and 7 done by the owner (the READY Production
+deployment above shows a project, a database the build could migrate, and variables that passed `deploy-env`). Step 5 (the
+Stripe webhook endpoint, its URL and events) is **not verified**: a READY build does not show it, and Stripe was not called. **8 not yet
+reported done** (the smoke check and the first real Stripe test payment, EVAL O-8). 9 done by the closeout run (this
+file and the README carry the address). 10 recorded as D-52 (Vercel read; Neon not readable from a cloud session).
 
 Still true once deployed: synthetic data only, Stripe **test mode** only, nothing is sent (notices stop in the outbox),
 and no claim about any venue's policy, any ticketing law or any fire code.
@@ -36,7 +46,7 @@ cloud session or CI. `VERCEL` and `VERCEL_ENV` are set by Vercel itself. Nothing
 | 1 | `DATABASE_URL` | Every query the app makes. | Neon: the **owner** role through the **pooler** (`-pooler` host). RLS is off (D-6), so the app connects as the owner. | build (step 3) and runtime | Build refused (core schema). |
 | 2 | `MIGRATE_URL` | Migrations during the build. Read only by `scripts/vercel-build.mjs`. | Neon: the **owner** role, **direct** (no `-pooler`). | build | Build refused. Code never ships ahead of its migrations. |
 | 3 | `AUTH_SECRET` | Root secret for session tokens and sealed values. At least 32 characters. | You generate it (`openssl rand -hex 32`). Changing it later signs everyone out. | build and runtime | Build refused (core schema). |
-| 4 | `APP_URL` | The site's own address: Stripe returns the buyer to `APP_URL` + the Buy page; cookies are `Secure` when it is https. | `<PRODUCTION_URL>`: `https://…`, origin only, no path, no trailing slash. | build and runtime | Build refused if missing, not https, localhost, or with a path. |
+| 4 | `APP_URL` | The site's own address: Stripe returns the buyer to `APP_URL` + the Buy page; cookies are `Secure` when it is https. | `https://turnstile.labintelligence.co`: origin only, no path, no trailing slash. | build and runtime | Build refused if missing, not https, localhost, or with a path. |
 | 5 | `EMAIL_ENABLED` | Set to `0`. Production refuses to start unless email is configured or switched off; Turnstile sends nothing (D-33). | The literal `0`. | build and runtime | Build refused (core schema names `RESEND_API_KEY, EMAIL_FROM`). |
 | 6 | `DEMO_MODE` | Set to `1`. Turns on `/demo`, the only way to sign in with email off, and the demo seed at build. | The literal `1`. | build and runtime | Build refused. (At runtime without it `/demo` is a 404 and demo sessions stop resolving.) |
 | 7 | `DEMO_ACCESS_PASSWORD` | The one shared password in front of every page (HTTP Basic, any username). | You choose it and give it to the people you demo to. Changing it needs a new deployment. | runtime | Build refused. (At runtime without it every page of a Vercel deployment answers 503: the gate fails closed.) |
@@ -50,7 +60,7 @@ and `RLS_MODE` (RLS stays off, D-6), `RESEND_API_KEY` / `EMAIL_FROM` / `EMAIL_SA
 (unused), `STRIPE_PRICE_ID` (the template's billing key; billing is removed), `SSO_*` (no provider), `AI_ENABLED` (no model
 client), `WEBHOOK_ALLOW_PRIVATE` (refused in production), `ALLOW_CLOUD_DB` (only for reaching a cloud database from a laptop).
 
-**Webhook endpoint path:** `POST <PRODUCTION_URL>/api/checkout/webhook`, events `payment_intent.succeeded` and
+**Webhook endpoint path:** `POST https://turnstile.labintelligence.co/api/checkout/webhook`, events `payment_intent.succeeded` and
 `payment_intent.payment_failed`. It is not behind the demo password (Stripe cannot answer a Basic challenge); its guard is
 the signature.
 
@@ -73,10 +83,10 @@ Every step is yours: this run could not and did not do any of them. Each is done
    (`pk_test_…`) and the secret key (`sk_test_…`). Never the live pair: the build refuses them.
 4. **You: create the Vercel project.** Import `shanelabountyai/turnstile`; framework preset Next.js; leave the build
    command empty (Vercel picks up `vercel-build`); production branch `main`. Decide the address (a `*.vercel.app` name
-   or your own subdomain, as Earmark has) and add the domain: that address is `<PRODUCTION_URL>`.
+   or your own subdomain, as Earmark has) and add the domain. **Done:** the address is `https://turnstile.labintelligence.co`.
    The import starts a first build. **It is meant to fail**: with nothing set it stops at step 1 of the build and lists
    the missing names. Nothing is migrated, seeded or served.
-5. **You: create the Stripe webhook endpoint (test mode).** URL `<PRODUCTION_URL>/api/checkout/webhook`; events
+5. **You: create the Stripe webhook endpoint (test mode).** URL `https://turnstile.labintelligence.co/api/checkout/webhook`; events
    `payment_intent.succeeded` and `payment_intent.payment_failed`. Copy its signing secret (`whsec_…`).
 6. **You: set the 11 variables** in Vercel → Project → Settings → Environment Variables, **Production** only, from the
    table above.
@@ -87,9 +97,9 @@ Every step is yours: this run could not and did not do any of them. Each is done
    non-doc file to `main` instead (the diff check skips a build with nothing new in it; this run could not test
    Vercel's behaviour on a redeploy).
 8. **You: smoke check.** In a private window:
-   1. `<PRODUCTION_URL>/` asks for a password (any username, the `DEMO_ACCESS_PASSWORD` value). Without it: 401.
-   2. `<PRODUCTION_URL>/api/health` shows `{"ok":true}`.
-   3. `<PRODUCTION_URL>/demo` lists six accounts.
+   1. `https://turnstile.labintelligence.co/` asks for a password (any username, the `DEMO_ACCESS_PASSWORD` value). Without it: 401.
+   2. `https://turnstile.labintelligence.co/api/health` shows `{"ok":true}`.
+   3. `https://turnstile.labintelligence.co/demo` lists six accounts.
    4. Walk the README's "Try the live demo" steps once, top to bottom. Step 3 is the first real Stripe test payment
       this app has ever taken (EVAL O-8): if the tickets do not appear within a minute of paying, open the webhook
       endpoint's delivery log in Stripe and read the response code (200 = verified and applied; 400 = signature:
@@ -97,11 +107,12 @@ Every step is yours: this run could not and did not do any of them. Each is done
       PaymentIntent's metadata is not in this database).
    5. Record the PaymentIntent id and the Refund id in `docs/EVAL.md` (O-8). Until that is done, say "Stripe boundary
       tested against recorded payloads and a fixture signing secret", not "works with Stripe".
-9. **You: write the address down.** Replace `<PRODUCTION_URL>` in `README.md` ("Try the live demo") and in this file,
-   and change the README's "not live yet" sentence. Decide how a hiring manager gets the password; it must not be
-   written in the repository.
-10. **You: cost re-check.** D-36's trigger has fired (a Vercel and a Neon project named `turnstile` exist). Add the
-    superseding row to `docs/decisions.md`.
+9. **Done 2026-11-21 (closeout run):** the address is in `README.md` ("Try the live demo") and in this file, and the
+   README says the site is live behind a shared password the owner gives out. **You:** decide how a hiring manager gets
+   the password; it must not be written in the repository.
+10. **Recorded 2026-11-21 as D-52** (supersedes D-36): Vercel usage read from Vercel's billing API, read-only; Neon could
+    not be read from a cloud session. **You:** read Neon's usage page for project `turnstile` once and add the figure to
+    D-52's row (or a new row).
 
 ## The daily cron
 
@@ -171,3 +182,22 @@ Not checked, because this run had no Vercel, Neon or Stripe access and must not 
 - Anything on Neon: the pooler with the cast path's advisory locks, the owner role's `BYPASSRLS`, cold-start latency.
 - Anything against Stripe: Elements, a real test PaymentIntent, a real signed webhook, a real refund. The e2e uses the
   repo's recorded Stripe double and a webhook signed with the published fixture secret.
+
+## What the closeout run read on 2026-11-21 (read-only, Vercel API)
+
+- Project `turnstile` (`prj_R8tHcbt7cieNW03VfYsks4rQawUW`): framework Next.js, Node 26.x; domains
+  `turnstile.labintelligence.co`, `turnstile-eta.vercel.app` and two Vercel-generated aliases. Vercel Authentication is on
+  for every deployment URL except custom domains (`all_except_custom_domains`), so the `*.vercel.app` addresses ask for a
+  Vercel login before the app's own password; the custom domain answers with the app's password gate.
+- Deployments: three Production builds of `9d8b434` on 2026-11-21 (12:23 ERROR, 12:31 ERROR, 12:35 READY, Central time).
+- Runtime errors since the deploy: none reported (`get_runtime_errors`, 2-day window).
+- Runtime logs since the deploy: five function requests in all; four to paths the app does not have, which look like
+  internet scanners on the custom domain (`/robots.txt`, `/assets/js/qr_modal.js`, `/css/support_parent.css` at 22:56 UTC)
+  plus `/` and `/favicon.png` on the deployment URL at 18:36 UTC. **No request to `/demo`, `/api/health`, any `/o/…` page or
+  `/api/checkout/webhook` appears**, which matches step 8 not being reported done. (A request the password gate refuses may
+  not reach a function log; this is not proof of who visited.)
+- Not read: the live pages themselves (the cloud session's egress cannot reach the site, and share links stop at the
+  password gate), environment variable values (never), Neon, Stripe.
+
+**Merging a docs-only pull request:** `vercel.json`'s `ignoreCommand` skips a Production build when only `docs/` or `*.md`
+changed, so merging the closeout PR should start no build. Not verified on Vercel by this run.
