@@ -6,6 +6,8 @@ Counts: Blocker 0, Major 1, Minor 7.
 
 ---
 
+> **Correction 2026-11-22 (D-55): SEC-1 and SEC-2 are refuted.** The template already refuses a demo session for every action named below: `assertNotDemo` (`src/core/auth/session.ts:109`) is called by `assertFresh` (so `deleteOrg` and export), by `withMembers` (`src/core/tenancy/orgs.ts:58`), by invites (`src/core/tenancy/invites.ts:22`), by SSO settings (`src/modules/sso/settings.ts:26`), by API key minting (`src/modules/apikeys/keys.ts:23`) and by webhook endpoints (`src/modules/apikeys/webhooks.ts:77`). `e2e/security-pages.spec.ts:28,33` asserts the refusal text on the live demo owners. This lens missed those calls. Found when a proxy lockdown built for SEC-1 broke that spec; the lockdown was not kept.
+
 ## SEC-1 — The shared password hands every visitor the owner's destructive controls, so one visitor can break the demo for everyone
 - **Severity:** Major
 - **Where:** `src/core/authz/permissions.ts:7` (owner holds `org.delete`, `members.manage`, `apikeys.manage`); `src/app/o/[org]/settings/danger/actions.ts:11` (`destroyOrg`); `src/app/o/[org]/settings/{members,sso,apikeys}/actions.ts`; `src/app/(public)/demo/signin/route.ts` (signs in any `isDemo` user, owner included, MFA marked passed, `src/core/auth/demo.ts`); `scripts/seed-hosted.ts` (re-seeds only on a Production build).

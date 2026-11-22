@@ -171,4 +171,14 @@ CI for Phase 3: green on 3e22f32 (ci (off) and modules-removed both success), ht
 
 ## Live Stripe round trip (Phase 2, by hand)
 
-Not yet run. Owner's step (O-8): one order through Stripe Elements with test card 4242, one refund; PaymentIntent and Refund ids recorded here. No key is ever in this repo or CI.
+Not yet run. Owner's step (O-8), on the live site after the money-boundary fixes (D-54, D-56) are deployed. No key is ever in this repo or CI. Record each id here:
+
+| # | Step | Org | Expect | PaymentIntent | Refund |
+|---|---|---|---|---|---|
+| 1 | Hold 2 × ADV, pay with 4242 | `acme` | tickets appear after the webhook; Stripe shows the payment succeeded | | — |
+| 2 | Refund one ticket at the box office | `acme` | preview = refund; Stripe shows the refund; no "Stripe will be told" notice | | |
+| 3 | Hold 2 × ADV, pay with 4242, refund one ticket | `globex` | Stripe shows a second refund (the first refund id in this event is also `R-00001`; D-56 keys it by event) | | |
+| 4 | Hold 1 × ADV, pay with a decline card (`4000 0000 0000 0002`) | `acme` | the form says the hold cannot be paid again; after the failure webhook, Stripe shows the PaymentIntent **canceled** | | — |
+| 5 | Refresh the page from step 4 | `acme` | no card form for that hold; no order; nothing captured in Stripe | (same as 4) | — |
+
+Until this table is filled, the claim stays: Stripe boundary tested against recorded payloads and a fixture signing secret.
