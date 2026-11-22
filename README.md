@@ -6,11 +6,11 @@
 
 ## Try the live demo (about ten minutes)
 
-**The site is not live yet.** There is no deployment: no Vercel project, no hosted database, no address. The repository
-is ready for one, and the owner's steps are in [`docs/DEPLOY.md`](docs/DEPLOY.md). Until then, `<PRODUCTION_URL>` below is
-a placeholder, and the same walk runs locally from the Quickstart with [`docs/DEMO.md`](docs/DEMO.md).
+**The site is live** at **https://turnstile.labintelligence.co** (since 2026-11-21), behind a shared password that the
+owner gives out; it is not written anywhere in this repository. The owner's deploy steps are in
+[`docs/DEPLOY.md`](docs/DEPLOY.md), and the same walk runs locally from the Quickstart with [`docs/DEMO.md`](docs/DEMO.md).
 
-Once it is live: open **`<PRODUCTION_URL>/demo`**. The site asks for a shared password first (HTTP Basic, any username;
+Open **`https://turnstile.labintelligence.co/demo`**. The site asks for the shared password first (HTTP Basic, any username;
 the owner gives it out). `/demo` then lists six seeded accounts: pick one to sign in, no email or password. Everything is
 invented data. Payments are Stripe **test mode**: no real card works and no money moves. No email is sent.
 
@@ -56,8 +56,10 @@ counts and ledger totals include what earlier visitors bought.
 production build on a database holding only what a deploy puts there (2026-11-20, 36 e2e tests passed with and without
 the password gate). In that test Stripe is the repository's recorded double and the webhook is signed with the fixture
 secret: **step 3's card form and a real Stripe test payment have not been run by anyone yet** (it is the owner's first
-smoke check, `docs/EVAL.md` O-8). Nothing here has been run against a live site, because there is none. What the
-engine's numbers do and do not prove is in the banner at the top.
+smoke check, `docs/EVAL.md` O-8). Until it is recorded there, the honest wording is: Stripe boundary tested against
+recorded payloads and a fixture signing secret. The live site's pages have not been clicked through by the owner yet
+(2026-11-21); the deployment itself built and is serving (Vercel deployment `dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub`, READY).
+What the engine's numbers do and do not prove is in the banner at the top.
 
 A Next.js 16 + Prisma 7 + Postgres template with the parts every multi-tenant app rebuilds: magic-link sign-in with TOTP,
 orgs and roles, one authorization path, an append-only audit log, share links, cron, and optional billing (Stripe) and
