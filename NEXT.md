@@ -1,5 +1,20 @@
 # NEXT
 
+## ▶ 2026-11-22 (Opus 5.5, live session with Shane): PR #8 merged; money-boundary fixes on branch `fix/money-boundary`, PR open, **not merged**.
+
+Shane said "run all 5 in order" (the closeout recommendation). What happened to each:
+1. **Password length (16+):** yours. Not checked here (env values are never read from a cloud session).
+2. **PR #8 merged** (`82bf970`, on Shane's ask). Vercel's Production build for it was CANCELED by the docs-only Ignored Build Step, so production is still `dpl_8aMfYPVd5DxeyZ5bjHxXps2aYmub` (read from Vercel's API).
+3. **Built (D-56):** idempotency keys per event (CODE-1); cancel the PaymentIntent after a failed payment and keep the pay form shut after a refused card (CODE-2); every Stripe refund error stays PENDING_PROVIDER with an on-screen note instead of the error page (CODE-3/4); webhook checks the signature first, foreign events 200 ignored (CODE-6/SEC-3). **Not built: the demo-settings lockdown.** SEC-1/SEC-2 were wrong: the template already refuses demo sessions there (`assertNotDemo`); D-55, corrections in the review.
+4. **O-8:** yours, after the fix PR is merged and deployed; the five-step script is in `docs/EVAL.md` (D-54).
+5. **Hand out the password:** yours, after 4.
+
+Gate (cloud sandbox, Postgres 16, migrations by `psql`): tsc clean · lint 0 · inventory:eval match (2,662, commitment `d4d64203…61d43`) · inventory:lint OK · fixtures:check OK · vitest 58 files, 484 passed, 33 skipped, 4 failed (the same template `inv-34-export` failures as on untouched main in this sandbox: no `_prisma_migrations` table when migrated by `psql`) · inventory:eval:db match, 2,662 in 77.3 s, 0 pending provider · e2e full run 34/36 with the lockdown (both failures were the lockdown, reverted), then security-pages + buy + box + hosted-demo + ledger + door 8/8 · mutation checks: key without the event id → 2 tests red; cancel removed → 2 tests red. Not run: `foundation:drift` (no template tag here; no template-owned path changed), anything at Stripe.
+
+**You:** check the password length · review and merge the fix PR (it deploys: code changes build) · run O-8 with the `docs/EVAL.md` script and fill the ids · then hand out the password. Still open: D-49 (wear-out), review decisions 3–6, a production retry for pending refunds (review item 12).
+
+---
+
 ## ▶ 2026-11-21 (Opus 5.5, scheduled closeout run, branch `closeout/2026-11-21-live`): Turnstile is live; closeout pack and five-lens review written. **Docs only.** Draft PR "Turnstile: live closeout pack and five-lens review (docs only)", not merged.
 
 **Done (2026-11-21):**
