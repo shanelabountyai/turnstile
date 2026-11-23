@@ -229,11 +229,20 @@ describe('the route', () => {
     const signed = async (raw: string) => post(raw, signStripePayload(raw, SECRET, now));
     const noId = JSON.stringify({ id: 'evt_noid', type: 'payment_intent.succeeded', data: { object: { id: 'pi_other', metadata: {} } } });
     const badId = body('succeeded').replace(eventId, 'not-a-uuid');
+    const out = vi.spyOn(console, 'log').mockImplementation(() => {});
     for (const raw of [unknown, noId, badId]) {
       const res = await signed(raw);
       expect(res.status).toBe(200);
       expect(((await res.json()) as { reason: string }).reason).toMatch(/^ignored: /);
     }
+    // review S4: an ignored signed event leaves one log line with its ids (never the body), so a paid PaymentIntent
+    // whose event row is gone (a demo reset) can be found and refunded by hand
+    const lines = out.mock.calls.map((c) => JSON.parse(String(c[0])) as Record<string, unknown>).filter((l) => l.event === 'checkout.webhook_ignored');
+    out.mockRestore();
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatchObject({ stripe_event: 'evt_fixture_succeeded_00001', type: 'payment_intent.succeeded', payment_intent: 'pi_fixture_00001', turnstile_metadata: true, why: 'not an event in this database' });
+    expect(lines[1]).toMatchObject({ stripe_event: 'evt_noid', payment_intent: 'pi_other', turnstile_metadata: false });
+    expect(JSON.stringify(lines)).not.toContain('5700');
     (env as { STRIPE_WEBHOOK_SECRET?: string }).STRIPE_WEBHOOK_SECRET = saved;
     vi.unstubAllEnvs();
   });
