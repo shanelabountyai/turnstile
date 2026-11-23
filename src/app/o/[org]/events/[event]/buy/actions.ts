@@ -40,7 +40,7 @@ export const holdTickets = orgAction(null, z.object({ ...who, tier: label, qty: 
 
 export const releaseHold = orgAction(null, z.object({ ...who, hold: label }), (ctx, i) => cast(ctx, i, { kind: 'RELEASE', ref: i.hold }));
 
-/** PAY_START: the PaymentIntent first (idempotency key = hold id), then the cast (D-23). Works the same for an offer. */
+/** PAY_START: the PaymentIntent first (idempotency key = event id + hold id, D-56), then the cast (D-23). Works the same for an offer. */
 export const payHold = orgAction(null, z.object({ ...who, hold: label }), (ctx, i) => cast(ctx, i, { kind: 'PAY_START', ref: i.hold }));
 
 export const joinWaitlist = orgAction(null, z.object({ ...who, target: label, qty }), (ctx, i) => cast(ctx, i, { kind: 'WAITLIST_JOIN', target: i.target, qty: i.qty }));

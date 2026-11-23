@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { db } from '@/core/db';
 import { castCommand } from '@/checkout/cast';
-import { applyWebhook, payStart, requestRefund, settleRefunds } from '@/checkout/checkout';
+import { applyWebhook, payStart, requestRefund, requestRefundSettled, settleRefunds } from '@/checkout/checkout';
 import { axisNow } from '@/checkout/clock';
 import { loadFixtureEvent } from '@/checkout/load';
 import { StripeProviderError, StripeRecorded } from '@/checkout/stripe';
@@ -137,6 +137,21 @@ describe('checkout over the cast path with StripeRecorded', () => {
     const late = await hook(body('succeeded', { id: 'evt_ok_4', pi: 'pi_rec_H-00004' }), '2026-12-01T12:03:00', stripe);
     expect(late.result?.code).toBe('PAYMENT_DUPLICATE');
     expect(await db.order.count({ where: { eventId } })).toBe(orders);
+    // non-negotiable 4 at the boundary (D-58): the money that landed on the released hold goes back in full
+    expect(late.status).toBe(200);
+    expect(stripe.calls.at(-1)).toEqual({ kind: 'refund', refundId: 'paid-after-failed:pi_rec_H-00004', paymentIntentId: 'pi_rec_H-00004', amountCents: 3849, eventId });
+    expect(await db.ticket.count({ where: { eventId, orderId: { notIn: ['ORD-00001'] } } })).toBe(0);
+  });
+  it('paid after failed: a redelivered success sends the same refund again (same key); a second success for a payment that was seated or already refunded by the engine sends none (D-58)', async () => {
+    const refunds = () => stripe.calls.filter((c) => c.kind === 'refund').length;
+    const n = refunds();
+    expect((await hook(body('succeeded', { id: 'evt_ok_4', pi: 'pi_rec_H-00004' }), '2026-12-01T12:04:00', stripe)).result?.code).toBe('PAYMENT_DUPLICATE');
+    expect(refunds()).toBe(n + 1);
+    expect(stripe.calls.at(-1)).toMatchObject({ kind: 'refund', refundId: 'paid-after-failed:pi_rec_H-00004' });
+    // pi_rec_H-00003 was CONFIRMED (SUCCEEDED) and pi_fixture_00001 was PAID_AFTER_TIMEOUT (SUCCEEDED_LATE, refunded as R-00001): neither is refunded here
+    expect((await hook(body('succeeded', { id: 'evt_ok_3b', pi: 'pi_rec_H-00003' }), '2026-12-01T12:05:00', stripe)).result?.code).toBe('PAYMENT_DUPLICATE');
+    expect((await hook(body('succeeded', { id: 'evt_ok_1b' }), '2026-12-01T12:06:00', stripe)).result?.code).toBe('PAYMENT_DUPLICATE');
+    expect(refunds()).toBe(n + 1);
   });
   it('a Stripe failure while cancelling is logged, not thrown: the release has committed', async () => {
     expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-30', at: '2026-12-01T12:10:00', kind: 'HOLD', customer: 'C-0005', ref: 'H-00005', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
@@ -148,6 +163,49 @@ describe('checkout over the cast path with StripeRecorded', () => {
     expect(out.result?.code).toBe('PAYMENT_FAILED_RELEASED');
     expect(err).toHaveBeenCalledWith(expect.stringContaining('could not cancel pi_rec_H-00005'));
     err.mockRestore();
+  });
+  it('paid after failed: when Stripe does not take the refund the webhook answers 503, so Stripe delivers it again, and the next delivery refunds (D-58)', async () => {
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-40', at: '2026-12-01T12:20:00', kind: 'HOLD', customer: 'C-0006', ref: 'H-00006', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-41', at: '2026-12-01T12:21:00', kind: 'PAY_START', customer: 'C-0006', ref: 'H-00006' }), stripe)).code).toBe('PAYING');
+    expect((await hook(body('failed', { id: 'evt_fail_6', pi: 'pi_rec_H-00006' }), '2026-12-01T12:22:00', stripe)).result?.code).toBe('PAYMENT_FAILED_RELEASED');
+    stripe.failRefundOnce.add('paid-after-failed:pi_rec_H-00006');
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const first = await hook(body('succeeded', { id: 'evt_ok_6', pi: 'pi_rec_H-00006' }), '2026-12-01T12:23:00', stripe);
+    expect(first).toMatchObject({ status: 503, result: { code: 'PAYMENT_DUPLICATE' } });
+    expect(err).toHaveBeenCalledWith(expect.stringContaining('pi_rec_H-00006 was paid after its payment failed and is NOT refunded yet'));
+    err.mockRestore();
+    const again = await hook(body('succeeded', { id: 'evt_ok_6', pi: 'pi_rec_H-00006' }), '2026-12-01T12:24:00', stripe);
+    expect(again).toMatchObject({ status: 200, result: { code: 'PAYMENT_DUPLICATE' } });
+    expect(stripe.calls.filter((c) => c.kind === 'refund' && c.refundId === 'paid-after-failed:pi_rec_H-00006')).toHaveLength(2);
+    expect(await db.order.count({ where: { eventId, holdId: 'H-00006' } })).toBe(0);
+  });
+  it('a refund Stripe does not take is logged with its refund id, every time, not only for idempotency errors (review S1)', async () => {
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-50', at: '2026-12-01T12:30:00', kind: 'HOLD', customer: 'C-0007', ref: 'H-00007', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-51', at: '2026-12-01T12:31:00', kind: 'PAY_START', customer: 'C-0007', ref: 'H-00007' }), stripe)).code).toBe('PAYING');
+    expect((await hook(body('succeeded', { id: 'evt_ok_7', pi: 'pi_rec_H-00007' }), '2026-12-01T12:32:00', stripe)).result).toMatchObject({ code: 'CONFIRMED', detail: 'ORD-00002 T-00003' });
+    const down = new StripeRecorded();
+    down.createRefund = async () => { throw new StripeProviderError('Stripe StripeAPIError status=500 on refund'); };
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = await requestRefundSettled(orgId, eventId, cmd({ cmd_id: 'K-52', at: '2026-12-01T12:33:00', kind: 'REFUND_REQUEST', customer: 'C-0007', ref: 'ORD-00002', tickets: ['T-00003'] }), down);
+    expect(out).toMatchObject({ result: { code: 'REFUNDED' }, pending: 1 });
+    expect(err).toHaveBeenCalledWith(expect.stringMatching(/refund R-00004 .*not confirmed by Stripe.*StripeAPIError/));
+    err.mockRestore();
+  });
+  it('pending counts this command\'s refunds only: another refund stuck at Stripe does not mark a confirmed one as pending (review S2)', async () => {
+    // R-00004 from the test above is still without a Stripe id, and stays refused here
+    const stuck = new StripeRecorded();
+    const record = stuck.createRefund.bind(stuck);
+    stuck.createRefund = async (a) => { if (a.refundId === 'R-00004') throw new StripeProviderError('Stripe StripeInvalidRequestError status=400 on refund R-00004'); return record(a); };
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-60', at: '2026-12-01T12:40:00', kind: 'HOLD', customer: 'C-0008', ref: 'H-00008', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-61', at: '2026-12-01T12:41:00', kind: 'PAY_START', customer: 'C-0008', ref: 'H-00008' }), stripe)).code).toBe('PAYING');
+    expect((await hook(body('succeeded', { id: 'evt_ok_8', pi: 'pi_rec_H-00008' }), '2026-12-01T12:42:00', stripe)).result).toMatchObject({ code: 'CONFIRMED', detail: 'ORD-00003 T-00004' });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = await requestRefundSettled(orgId, eventId, cmd({ cmd_id: 'K-62', at: '2026-12-01T12:43:00', kind: 'REFUND_REQUEST', customer: 'C-0008', ref: 'ORD-00003', tickets: ['T-00004'] }), stuck);
+    err.mockRestore();
+    expect(out.result.detail).toMatch(/^R-00005 /);
+    expect((await db.refund.findUniqueOrThrow({ where: { eventId_refundId: { eventId, refundId: 'R-00005' } } })).stripeRefundId).toBe('re_rec_R-00005');
+    expect((await db.refund.findUniqueOrThrow({ where: { eventId_refundId: { eventId, refundId: 'R-00004' } } })).stripeRefundId).toBeNull();
+    expect(out.pending).toBe(0);
   });
 });
 
@@ -171,11 +229,20 @@ describe('the route', () => {
     const signed = async (raw: string) => post(raw, signStripePayload(raw, SECRET, now));
     const noId = JSON.stringify({ id: 'evt_noid', type: 'payment_intent.succeeded', data: { object: { id: 'pi_other', metadata: {} } } });
     const badId = body('succeeded').replace(eventId, 'not-a-uuid');
+    const out = vi.spyOn(console, 'log').mockImplementation(() => {});
     for (const raw of [unknown, noId, badId]) {
       const res = await signed(raw);
       expect(res.status).toBe(200);
       expect(((await res.json()) as { reason: string }).reason).toMatch(/^ignored: /);
     }
+    // review S4: an ignored signed event leaves one log line with its ids (never the body), so a paid PaymentIntent
+    // whose event row is gone (a demo reset) can be found and refunded by hand
+    const lines = out.mock.calls.map((c) => JSON.parse(String(c[0])) as Record<string, unknown>).filter((l) => l.event === 'checkout.webhook_ignored');
+    out.mockRestore();
+    expect(lines).toHaveLength(3);
+    expect(lines[0]).toMatchObject({ stripe_event: 'evt_fixture_succeeded_00001', type: 'payment_intent.succeeded', payment_intent: 'pi_fixture_00001', turnstile_metadata: true, why: 'not an event in this database' });
+    expect(lines[1]).toMatchObject({ stripe_event: 'evt_noid', payment_intent: 'pi_other', turnstile_metadata: false });
+    expect(JSON.stringify(lines)).not.toContain('5700');
     (env as { STRIPE_WEBHOOK_SECRET?: string }).STRIPE_WEBHOOK_SECRET = saved;
     vi.unstubAllEnvs();
   });

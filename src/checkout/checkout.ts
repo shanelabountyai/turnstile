@@ -1,11 +1,13 @@
 // The checkout flows over the cast path with the Stripe boundary in the right place (D-23):
-//   payStart       — PaymentIntent first (idempotency key = hold id), PAYING recorded only after Stripe returns.
+//   payStart       — PaymentIntent first (idempotency key = event id + hold id, D-56), PAYING recorded only after Stripe returns.
 //   applyWebhook   — verify, map, cast (dedupe on event.id through the CommandLog), then settle any refund the engine issued.
 //   settleRefunds  — every Refund row still without a Stripe id gets the refunds.create call (idempotency key = event
 //                    id + refund id, D-56); any Stripe failure leaves it NULL (PENDING_PROVIDER), the loop goes on to the
 //                    next row, and the next call retries it. StripeLive maps every Stripe error to StripeProviderError.
-//   A failed payment that releases its hold also cancels the PaymentIntent, so a later card cannot pay it (D-56).
+//   A failed payment that releases its hold also cancels the PaymentIntent (D-56). The cancel is best effort: a success
+//   that still arrives for a FAILED payment is refunded in full at Stripe, with no order and no ledger row (D-58).
 import { withOrg } from '@/core/db/rls';
+import { log } from '@/core/log';
 import { castCommand, type CastOptions } from './cast';
 import { StripeProviderError, type StripeGateway } from './stripe';
 import { verifyStripeSignature, webhookCommand, type StripeEvent } from './webhook';
@@ -28,7 +30,8 @@ export async function payStart(orgId: string, eventId: string, cmd: Command, str
   return res;
 }
 
-export type WebhookOutcome = { status: 400 | 404 | 200; reason?: string; result?: Result };
+/** 503 = the command is recorded but Stripe did not take a refund that has no Refund row to wait in (D-58); Stripe delivers the event again. */
+export type WebhookOutcome = { status: 400 | 200 | 503; reason?: string; result?: Result };
 
 /** The webhook, after the route has found the org and event from the PaymentIntent's metadata. `at` is the command's time on the axis; with `clock` the cast restamps it on the event clock (D-35). */
 export async function applyWebhook(a: { orgId: string; eventId: string; rawBody: string; header: string | null; secret: string; nowSeconds: number; at: Timestamp; clock?: Date; stripe: StripeGateway | (() => StripeGateway) }): Promise<WebhookOutcome> {
@@ -42,7 +45,31 @@ export async function applyWebhook(a: { orgId: string; eventId: string; rawBody:
   const gateway = () => (typeof a.stripe === 'function' ? a.stripe() : a.stripe);
   if (result.code === 'PAID_AFTER_TIMEOUT' || result.code === 'PAID_AFTER_CANCEL') await settleRefunds(a.orgId, a.eventId, gateway());
   if (result.code === 'PAYMENT_FAILED_RELEASED') await cancelReleased(a.eventId, cmd.payment_id, gateway());
+  if (cmd.kind === 'PAY_SUCCEEDED' && result.code === 'PAYMENT_DUPLICATE' && !(await refundPaidAfterFailed(a.orgId, a.eventId, cmd.payment_id, gateway))) return { status: 503, result };
   return { status: 200, result };
+}
+
+/**
+ * Late money is refunded, never seated (non-negotiable 4), held at the boundary (D-58). The engine answers a success
+ * for a payment that already FAILED with PAYMENT_DUPLICATE: no order, and no Refund row either. That success is real
+ * money on a released hold: the cancel above can lose the race to a second card, or fail. So it is refunded in full
+ * here, keyed by the PaymentIntent, with no ledger row (an engine rule for it is the owner's call). Only a FAILED
+ * payment qualifies: a duplicate success for a seated (SUCCEEDED) or engine-refunded (SUCCEEDED_LATE) payment moves
+ * nothing. Returns false when Stripe did not take the refund; the caller answers 503 so Stripe redelivers, the cast
+ * dedupes on event.id, and this runs again with the same idempotency key.
+ */
+async function refundPaidAfterFailed(orgId: string, eventId: string, paymentIntentId: string, gateway: () => StripeGateway): Promise<boolean> {
+  const p = await withOrg({ orgId }, (tx) => tx.payment.findUnique({ where: { eventId_paymentId: { eventId, paymentId: paymentIntentId } }, select: { state: true, amountCents: true } }), { atomic: false });
+  if (p?.state !== 'FAILED') return true;
+  try {
+    await gateway().createRefund({ refundId: `paid-after-failed:${paymentIntentId}`, paymentIntentId, amountCents: p.amountCents, eventId });
+    log('checkout.paid_after_failed_refunded', { event_id: eventId, payment_intent: paymentIntentId, amount_cents: p.amountCents });
+    return true;
+  } catch (e) {
+    if (!(e instanceof StripeProviderError)) throw e;
+    console.error(`[turnstile] ${paymentIntentId} was paid after its payment failed and is NOT refunded yet (${p.amountCents} cents, event ${eventId}): ${e.message}`);
+    return false;
+  }
 }
 
 /** The hold is gone, so the PaymentIntent must not take money later (review CODE-2). A Stripe failure is logged, not thrown: the cast has committed. */
@@ -55,10 +82,15 @@ async function cancelReleased(eventId: string, paymentIntentId: string, stripe: 
   }
 }
 
-/** REFUND_REQUEST: the engine decides, then Stripe is told (D-23). `pending` = refunds Stripe has not confirmed yet. */
+/** REFUND_REQUEST: the engine decides, then Stripe is told (D-23). `pending` = how many of THIS command's refunds Stripe
+ * has not confirmed yet (the ids are the leading `R-…` words of the REFUNDED detail); an older refund still stuck at
+ * Stripe is retried by the same settle but is not counted against this one. */
 export async function requestRefundSettled(orgId: string, eventId: string, cmd: Command, stripe: StripeGateway, opts: CastOptions = {}): Promise<{ result: Result; pending: number }> {
   const result = await castCommand(orgId, eventId, cmd, opts);
-  const pending = result.code === 'REFUNDED' ? (await settleRefunds(orgId, eventId, stripe)).pending : 0;
+  if (result.code !== 'REFUNDED') return { result, pending: 0 };
+  await settleRefunds(orgId, eventId, stripe);
+  const mine = result.detail.split(' ').filter((w) => /^R-\d+$/.test(w));
+  const pending = await withOrg({ orgId }, (tx) => tx.refund.count({ where: { eventId, refundId: { in: mine }, stripeRefundId: null } }), { atomic: false });
   return { result, pending };
 }
 
@@ -77,7 +109,8 @@ export async function settleRefunds(orgId: string, eventId: string, stripe: Stri
       settled++;
     } catch (e) {
       if (!(e instanceof StripeProviderError)) throw e;
-      if (e.kind === 'idempotency') console.error(`[turnstile] BUG: idempotency key reused for ${eventId}:${r.refundId}: ${e.message}`);
+      // every failure is logged: the Refund row stores no error, so this line is the only trace of why it is still pending
+      console.error(`[turnstile] ${e.kind === 'idempotency' ? 'BUG: idempotency key reused; ' : ''}refund ${r.refundId} (event ${eventId}, ${r.paymentId}, ${r.amountCents} cents) not confirmed by Stripe, left PENDING_PROVIDER: ${e.message}`);
     }
   }
   return { settled, pending: rows.length - settled };

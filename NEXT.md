@@ -1,5 +1,27 @@
 # NEXT
 
+## ▶ 2026-11-23 (Fable 5.2, scheduled run): post-merge review of PR #9. **1 must-fix, fixed on branch `review/money-boundary-2026-11-23`. Draft PR, not merged. Nothing deployed. Merging it deploys to production.**
+
+PR #9 was merged as `c957f7a` and is live. A separate agent reviewed it from the PR text and diff alone; each finding acted on was reproduced here first. **1 must-fix, 6 should-fix, 7 nits.** D-57 to D-59.
+
+**Must-fix (M1), fixed:** PR #9 said a declined card "can no longer be followed by a paying one". It still could. A refresh or a second tab re-rendered the pay form while the hold was `PAYING`; if that card paid before the failure webhook was processed, the cancel was refused and only logged, and the success webhook answered `PAYMENT_DUPLICATE`: money taken, no order, **no refund**. Same end if the cancel failed. Now: a success on a `FAILED` payment is refunded in full at Stripe (503 and Stripe redelivers if the refund does not go through), and the form is not offered once Stripe has a refused card on the PaymentIntent (D-58).
+- **Live exposure today:** the deployed code has the hole. It needs a Stripe test-mode payment by someone with the shared password; test mode means no real money. O-8 has not been run, so no PaymentIntent exists on production as far as `docs/EVAL.md` records (not verified at Stripe).
+- **What you can do now without a code change:** hold off O-8 steps 4 and 5 (the decline and the refresh) and keep the password to yourself until this PR is merged.
+
+**Should-fix, fixed (D-59):** every unconfirmed refund is logged (S1); the "Stripe will be told" notice counts this refund only (S2); ignored signed webhooks leave a log line with ids (S4); Stripe's message text no longer reaches logs (N3); the O-0001 key test asserts literal keys (S6); three stale comments.
+
+**Checked and found to hold:** idempotency keys (unique per event, stable on retry, about 70 characters, no double charge or refund across the format change given O-8 never ran); signature before any parse or lookup, raw body, replay dedupe; no Stripe text on a page or in a response; the two changed expectations in `webhook.test.ts` are justified; **SEC-1/SEC-2 refutation is right** (`assertNotDemo` is where D-55 says; `revokeInvite` has none, which a demo session cannot reach usefully).
+
+**Left for you (product calls, in the PR):** (1) engine rule for paid-after-failed so it shows in the ledger (review decision 6b); (2) permanent versus retryable refund refusals on screen, and a stored last error (schema change); (3) a production retry for pending refunds (review item 12), including Stripe's 24-hour idempotency window; (4) what a signed webhook for a deleted event should do beyond the log line, and cancelling open PaymentIntents in the reset procedure; (5) PR #9's "wraps every Stripe error" is true for refund and cancel only: `createPaymentIntent` and `clientSecret` still throw to the error page (digest only, no Stripe text); (6) the webhook route builds `StripeLive` directly, so a missing key at runtime would answer 500 on failed-payment events.
+
+Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` written locally with CI's public values; `npm ci` needs `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true`), **main `c957f7a` → branch**: tsc clean → clean · lint 0 → 0 · inventory:eval match (2,662, commitment `d4d64203…61d43`) → same · inventory:lint OK → OK · fixtures:check OK → OK · vitest 58 files, 484 passed, 33 skipped, 4 failed → 58 files, **492 passed**, 33 skipped, 4 failed (the same 4 template `inv-34-export` tests on both; confirmed here on untouched main: `relation "_prisma_migrations" does not exist`) · inventory:eval:db match, 2,662, 48 refund calls, 0 pending → same · `next build` rc 0 → rc 0 · e2e security-pages + buy + box + hosted-demo + ledger + door: not run on main → 8/8 on the branch. Not run: the other e2e specs, `foundation:drift` (no template-owned path changed), anything at Stripe. CI per check is in the PR body.
+
+**Not verified:** anything against live Stripe (the cancel refusal, the refund, redelivery after a 503, `last_payment_error` on a real PaymentIntent, idempotency replay of a failed request); the live site; whether production holds any `PAYING` hold or pending Refund row.
+
+**You:** read the draft PR · merge it if you agree (that deploys) · then run O-8 with the `docs/EVAL.md` script, including the new note under the table · make the six calls above one at a time.
+
+---
+
 ## ▶ 2026-11-23 (Opus 5.5, scheduled run, branch `prds/review-2026-11-21`): PRDs written from the 2026-11-21 five-lens review. **Docs only.** Draft PR, not merged.
 
 Since the entry below, **PR #9 was merged** (2026-11-23, `c957f7a`). Draft PR #10 (post-merge review of #9, with fixes and D-58) is open and not merged.

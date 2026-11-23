@@ -8,6 +8,8 @@ import { useRef, useState } from 'react';
 // shut: Stripe's failure webhook releases the hold and the server cancels the PaymentIntent, so a second card on the
 // same PaymentIntent would take money for a hold that no longer exists (D-56, review CODE-2). A form-filling mistake
 // (Stripe's validation_error) creates no payment attempt and can be corrected in place.
+// The page also stops offering this form once Stripe has a refused card on the PaymentIntent (clientSecret is null,
+// D-58), so a refresh does not bring it back; a late success that still gets through is refunded by the webhook.
 type Elements = { create(kind: 'payment'): { mount(el: HTMLElement): void } };
 type StripeJs = { elements(o: { clientSecret: string }): Elements; confirmPayment(o: { elements: Elements; confirmParams: { return_url: string } }): Promise<{ error?: { message?: string; type?: string } }> };
 declare global { interface Window { Stripe?: (key: string) => StripeJs } }

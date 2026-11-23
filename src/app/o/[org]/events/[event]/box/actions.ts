@@ -25,7 +25,7 @@ export const confirmRefund = orgAction(null, z.object({ event: z.string().min(1)
     cmd_id: `U-${randomUUID()}`, at: eventNow(clock, ev), kind: 'REFUND_REQUEST', customer: order.customer, ref: i.order, tier_id: '', qty: 0, seats: [],
     payment_id: '', target: '', tickets: i.tickets, note: 'box office',
   };
-  // a Stripe failure leaves the Refund PENDING_PROVIDER and says so on the page; it never throws after the commit (D-56)
+  // a Stripe failure leaves the Refund PENDING_PROVIDER and says so on the page; a Stripe error never throws after the commit (D-56); a database error still does
   const { pending } = await requestRefundSettled(ctx.orgId, ev.id, cmd, stripeGateway(), { clock });
   redirect(`/o/${ctx.slug}/events/${ev.eventKey}/box?order=${i.order}&r=${cmd.cmd_id}${pending ? '&stripe=pending' : ''}#refund`);
 });
