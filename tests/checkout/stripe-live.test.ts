@@ -37,6 +37,9 @@ describe('StripeLive idempotency keys (D-56)', () => {
     const { keys, live } = fake();
     for (const eventId of [A, B]) await live.createPaymentIntent({ holdId: 'O-0001', amountCents: 3849, currency: 'USD', customer: 'C-0001', orgId: 'o', eventId });
     expect(keys.map((k) => k.key)).toEqual([idempotencyKey(A, 'O-0001'), idempotencyKey(B, 'O-0001')]);
+    // literal keys, not idempotencyKey() compared with itself: this must go red if the event id is dropped (review S6)
+    expect(keys.map((k) => k.key)).toEqual([`${A}:O-0001`, `${B}:O-0001`]);
+    expect(keys[0]!.key).not.toBe(keys[1]!.key);
   });
   it('cancelling a PaymentIntent is keyed by event and PaymentIntent', async () => {
     const { keys, live } = fake();
