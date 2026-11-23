@@ -1,10 +1,11 @@
 // The checkout flows over the cast path with the Stripe boundary in the right place (D-23):
-//   payStart       — PaymentIntent first (idempotency key = hold id), PAYING recorded only after Stripe returns.
+//   payStart       — PaymentIntent first (idempotency key = event id + hold id, D-56), PAYING recorded only after Stripe returns.
 //   applyWebhook   — verify, map, cast (dedupe on event.id through the CommandLog), then settle any refund the engine issued.
 //   settleRefunds  — every Refund row still without a Stripe id gets the refunds.create call (idempotency key = event
 //                    id + refund id, D-56); any Stripe failure leaves it NULL (PENDING_PROVIDER), the loop goes on to the
 //                    next row, and the next call retries it. StripeLive maps every Stripe error to StripeProviderError.
-//   A failed payment that releases its hold also cancels the PaymentIntent, so a later card cannot pay it (D-56).
+//   A failed payment that releases its hold also cancels the PaymentIntent (D-56). The cancel is best effort: a success
+//   that still arrives for a FAILED payment is refunded in full at Stripe, with no order and no ledger row (D-58).
 import { withOrg } from '@/core/db/rls';
 import { log } from '@/core/log';
 import { castCommand, type CastOptions } from './cast';
