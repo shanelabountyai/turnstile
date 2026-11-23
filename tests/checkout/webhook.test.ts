@@ -137,6 +137,21 @@ describe('checkout over the cast path with StripeRecorded', () => {
     const late = await hook(body('succeeded', { id: 'evt_ok_4', pi: 'pi_rec_H-00004' }), '2026-12-01T12:03:00', stripe);
     expect(late.result?.code).toBe('PAYMENT_DUPLICATE');
     expect(await db.order.count({ where: { eventId } })).toBe(orders);
+    // non-negotiable 4 at the boundary (D-58): the money that landed on the released hold goes back in full
+    expect(late.status).toBe(200);
+    expect(stripe.calls.at(-1)).toEqual({ kind: 'refund', refundId: 'paid-after-failed:pi_rec_H-00004', paymentIntentId: 'pi_rec_H-00004', amountCents: 3849, eventId });
+    expect(await db.ticket.count({ where: { eventId, orderId: { notIn: ['ORD-00001'] } } })).toBe(0);
+  });
+  it('paid after failed: a redelivered success sends the same refund again (same key); a second success for a payment that was seated or already refunded by the engine sends none (D-58)', async () => {
+    const refunds = () => stripe.calls.filter((c) => c.kind === 'refund').length;
+    const n = refunds();
+    expect((await hook(body('succeeded', { id: 'evt_ok_4', pi: 'pi_rec_H-00004' }), '2026-12-01T12:04:00', stripe)).result?.code).toBe('PAYMENT_DUPLICATE');
+    expect(refunds()).toBe(n + 1);
+    expect(stripe.calls.at(-1)).toMatchObject({ kind: 'refund', refundId: 'paid-after-failed:pi_rec_H-00004' });
+    // pi_rec_H-00003 was CONFIRMED (SUCCEEDED) and pi_fixture_00001 was PAID_AFTER_TIMEOUT (SUCCEEDED_LATE, refunded as R-00001): neither is refunded here
+    expect((await hook(body('succeeded', { id: 'evt_ok_3b', pi: 'pi_rec_H-00003' }), '2026-12-01T12:05:00', stripe)).result?.code).toBe('PAYMENT_DUPLICATE');
+    expect((await hook(body('succeeded', { id: 'evt_ok_1b' }), '2026-12-01T12:06:00', stripe)).result?.code).toBe('PAYMENT_DUPLICATE');
+    expect(refunds()).toBe(n + 1);
   });
   it('a Stripe failure while cancelling is logged, not thrown: the release has committed', async () => {
     expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-30', at: '2026-12-01T12:10:00', kind: 'HOLD', customer: 'C-0005', ref: 'H-00005', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
@@ -148,6 +163,21 @@ describe('checkout over the cast path with StripeRecorded', () => {
     expect(out.result?.code).toBe('PAYMENT_FAILED_RELEASED');
     expect(err).toHaveBeenCalledWith(expect.stringContaining('could not cancel pi_rec_H-00005'));
     err.mockRestore();
+  });
+  it('paid after failed: when Stripe does not take the refund the webhook answers 503, so Stripe delivers it again, and the next delivery refunds (D-58)', async () => {
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-40', at: '2026-12-01T12:20:00', kind: 'HOLD', customer: 'C-0006', ref: 'H-00006', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-41', at: '2026-12-01T12:21:00', kind: 'PAY_START', customer: 'C-0006', ref: 'H-00006' }), stripe)).code).toBe('PAYING');
+    expect((await hook(body('failed', { id: 'evt_fail_6', pi: 'pi_rec_H-00006' }), '2026-12-01T12:22:00', stripe)).result?.code).toBe('PAYMENT_FAILED_RELEASED');
+    stripe.failRefundOnce.add('paid-after-failed:pi_rec_H-00006');
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const first = await hook(body('succeeded', { id: 'evt_ok_6', pi: 'pi_rec_H-00006' }), '2026-12-01T12:23:00', stripe);
+    expect(first).toMatchObject({ status: 503, result: { code: 'PAYMENT_DUPLICATE' } });
+    expect(err).toHaveBeenCalledWith(expect.stringContaining('pi_rec_H-00006 was paid after its payment failed and is NOT refunded yet'));
+    err.mockRestore();
+    const again = await hook(body('succeeded', { id: 'evt_ok_6', pi: 'pi_rec_H-00006' }), '2026-12-01T12:24:00', stripe);
+    expect(again).toMatchObject({ status: 200, result: { code: 'PAYMENT_DUPLICATE' } });
+    expect(stripe.calls.filter((c) => c.kind === 'refund' && c.refundId === 'paid-after-failed:pi_rec_H-00006')).toHaveLength(2);
+    expect(await db.order.count({ where: { eventId, holdId: 'H-00006' } })).toBe(0);
   });
 });
 
