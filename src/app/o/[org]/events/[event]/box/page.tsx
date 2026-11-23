@@ -24,7 +24,7 @@ const TICKET: Record<string, string> = { ISSUED: 'valid', CHECKED_IN: 'used at t
 
 export const metadata = { title: 'Box office · Turnstile' };
 
-export default async function BoxOffice({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ order?: string; t?: string | string[]; r?: string }> }) {
+export default async function BoxOffice({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ order?: string; t?: string | string[]; r?: string; stripe?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const p = await params;
   const q = await searchParams;
@@ -130,6 +130,11 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
                   <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
                 </Notice>
                 <Announce assertive={result.status !== 'OK'} text={sayCode(result.code) ?? `${result.kind}: ${result.code}`} />
+                {q.stripe === 'pending' && (
+                  <Notice k="hold" title="Refund recorded; Stripe will be told">
+                    Stripe did not confirm the refund yet. The refund is recorded here and stays pending until Stripe accepts it (D-23).
+                  </Notice>
+                )}
               </>
             )}
             <form method="get" action={`${base}/box#refund`} className="cluster" style={{ alignItems: 'flex-end' }}>

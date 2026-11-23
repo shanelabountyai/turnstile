@@ -2,7 +2,7 @@
 import { randomUUID } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
-import { requestRefund } from '@/checkout/checkout';
+import { requestRefundSettled } from '@/checkout/checkout';
 import { eventNow } from '@/checkout/clock';
 import { eventByKey } from '@/checkout/read';
 import { stripeGateway } from '@/checkout/stripe';
@@ -25,6 +25,7 @@ export const confirmRefund = orgAction(null, z.object({ event: z.string().min(1)
     cmd_id: `U-${randomUUID()}`, at: eventNow(clock, ev), kind: 'REFUND_REQUEST', customer: order.customer, ref: i.order, tier_id: '', qty: 0, seats: [],
     payment_id: '', target: '', tickets: i.tickets, note: 'box office',
   };
-  await requestRefund(ctx.orgId, ev.id, cmd, stripeGateway(), { clock });
-  redirect(`/o/${ctx.slug}/events/${ev.eventKey}/box?order=${i.order}&r=${cmd.cmd_id}#refund`);
+  // a Stripe failure leaves the Refund PENDING_PROVIDER and says so on the page; it never throws after the commit (D-56)
+  const { pending } = await requestRefundSettled(ctx.orgId, ev.id, cmd, stripeGateway(), { clock });
+  redirect(`/o/${ctx.slug}/events/${ev.eventKey}/box?order=${i.order}&r=${cmd.cmd_id}${pending ? '&stripe=pending' : ''}#refund`);
 });
