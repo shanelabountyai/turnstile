@@ -81,10 +81,15 @@ async function cancelReleased(eventId: string, paymentIntentId: string, stripe: 
   }
 }
 
-/** REFUND_REQUEST: the engine decides, then Stripe is told (D-23). `pending` = refunds Stripe has not confirmed yet. */
+/** REFUND_REQUEST: the engine decides, then Stripe is told (D-23). `pending` = how many of THIS command's refunds Stripe
+ * has not confirmed yet (the ids are the leading `R-…` words of the REFUNDED detail); an older refund still stuck at
+ * Stripe is retried by the same settle but is not counted against this one. */
 export async function requestRefundSettled(orgId: string, eventId: string, cmd: Command, stripe: StripeGateway, opts: CastOptions = {}): Promise<{ result: Result; pending: number }> {
   const result = await castCommand(orgId, eventId, cmd, opts);
-  const pending = result.code === 'REFUNDED' ? (await settleRefunds(orgId, eventId, stripe)).pending : 0;
+  if (result.code !== 'REFUNDED') return { result, pending: 0 };
+  await settleRefunds(orgId, eventId, stripe);
+  const mine = result.detail.split(' ').filter((w) => /^R-\d+$/.test(w));
+  const pending = await withOrg({ orgId }, (tx) => tx.refund.count({ where: { eventId, refundId: { in: mine }, stripeRefundId: null } }), { atomic: false });
   return { result, pending };
 }
 

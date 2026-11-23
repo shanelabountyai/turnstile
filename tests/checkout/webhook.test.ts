@@ -191,6 +191,22 @@ describe('checkout over the cast path with StripeRecorded', () => {
     expect(err).toHaveBeenCalledWith(expect.stringMatching(/refund R-00004 .*not confirmed by Stripe.*StripeAPIError/));
     err.mockRestore();
   });
+  it('pending counts this command\'s refunds only: another refund stuck at Stripe does not mark a confirmed one as pending (review S2)', async () => {
+    // R-00004 from the test above is still without a Stripe id, and stays refused here
+    const stuck = new StripeRecorded();
+    const record = stuck.createRefund.bind(stuck);
+    stuck.createRefund = async (a) => { if (a.refundId === 'R-00004') throw new StripeProviderError('Stripe StripeInvalidRequestError status=400 on refund R-00004'); return record(a); };
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-60', at: '2026-12-01T12:40:00', kind: 'HOLD', customer: 'C-0008', ref: 'H-00008', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-61', at: '2026-12-01T12:41:00', kind: 'PAY_START', customer: 'C-0008', ref: 'H-00008' }), stripe)).code).toBe('PAYING');
+    expect((await hook(body('succeeded', { id: 'evt_ok_8', pi: 'pi_rec_H-00008' }), '2026-12-01T12:42:00', stripe)).result).toMatchObject({ code: 'CONFIRMED', detail: 'ORD-00003 T-00004' });
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = await requestRefundSettled(orgId, eventId, cmd({ cmd_id: 'K-62', at: '2026-12-01T12:43:00', kind: 'REFUND_REQUEST', customer: 'C-0008', ref: 'ORD-00003', tickets: ['T-00004'] }), stuck);
+    err.mockRestore();
+    expect(out.result.detail).toMatch(/^R-00005 /);
+    expect((await db.refund.findUniqueOrThrow({ where: { eventId_refundId: { eventId, refundId: 'R-00005' } } })).stripeRefundId).toBe('re_rec_R-00005');
+    expect((await db.refund.findUniqueOrThrow({ where: { eventId_refundId: { eventId, refundId: 'R-00004' } } })).stripeRefundId).toBeNull();
+    expect(out.pending).toBe(0);
+  });
 });
 
 describe('the route', () => {
