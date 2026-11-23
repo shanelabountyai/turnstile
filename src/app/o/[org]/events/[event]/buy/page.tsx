@@ -180,7 +180,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                           )}
                           {h.state === 'PAYING' && (secrets.get(h.hold)
                             ? <StripePay publishableKey={pk!} clientSecret={secrets.get(h.hold)!} returnUrl={`${env.APP_URL}${self}`} />
-                            : <p className="hint" data-testid="paying">PaymentIntent {h.paymentId}. {pk ? 'Stripe returned no client secret.' : 'Recorded Stripe (no publishable key here): the tickets are issued when the signed webhook arrives.'} Refresh to see it land.</p>)}
+                            : <p className="hint" data-testid="paying">PaymentIntent {h.paymentId}. {pk ? 'Stripe is not taking a card for this payment now (it was paid, refused or cancelled).' : 'Recorded Stripe (no publishable key here): the tickets are issued when the signed webhook arrives.'} Refresh to see it land.</p>)}
                         </li>
                       );
                     })}

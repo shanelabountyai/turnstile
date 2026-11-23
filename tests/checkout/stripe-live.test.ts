@@ -65,3 +65,17 @@ describe('StripeLive error mapping (D-56, review CODE-3)', () => {
     await expect(live.cancelPaymentIntent({ eventId: A, paymentIntentId: 'pi_a' })).rejects.toBeInstanceOf(TypeError);
   });
 });
+
+describe('StripeLive.clientSecret: the pay form is offered only while the PaymentIntent can still take a first card (review M1)', () => {
+  const liveWith = (pi: Record<string, unknown>) =>
+    new StripeLive(undefined, { paymentIntents: { retrieve: async () => ({ client_secret: 'pi_x_secret_y', last_payment_error: null, ...pi }) }, refunds: {} } as unknown as StripeClient);
+  it('a fresh PaymentIntent gives its client secret', async () => {
+    for (const status of ['requires_payment_method', 'requires_confirmation', 'requires_action']) expect(await liveWith({ status }).clientSecret('pi_x')).toBe('pi_x_secret_y');
+  });
+  it('after a refused card (last_payment_error set) there is no secret, so a refresh before the failure webhook lands cannot offer a second card', async () => {
+    expect(await liveWith({ status: 'requires_payment_method', last_payment_error: { type: 'card_error', code: 'card_declined' } }).clientSecret('pi_x')).toBeNull();
+  });
+  it('a PaymentIntent that is processing, paid or cancelled gives no secret', async () => {
+    for (const status of ['processing', 'succeeded', 'canceled', 'requires_capture']) expect(await liveWith({ status }).clientSecret('pi_x')).toBeNull();
+  });
+});

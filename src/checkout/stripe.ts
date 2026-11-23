@@ -22,7 +22,7 @@ export interface StripeGateway {
   createRefund(a: RefundArgs): Promise<{ id: string }>;
   /** After a failed payment releases the hold, the PaymentIntent is cancelled so it can never be confirmed again (D-56, review CODE-2). */
   cancelPaymentIntent(a: CancelArgs): Promise<void>;
-  /** What Stripe Elements needs to confirm a PaymentIntent in the browser; null where there is no live Stripe. */
+  /** What Stripe Elements needs to confirm a PaymentIntent in the browser; null where there is no live Stripe, and null when the PaymentIntent can no longer take a first card. */
   clientSecret(paymentIntentId: string): Promise<string | null>;
 }
 
@@ -32,6 +32,9 @@ export const stripeGateway = (): StripeGateway => (env.STRIPE_SECRET_KEY ? new S
 
 /** The part of the official client StripeLive uses; a test passes a stand-in with these three calls. */
 export type StripeClient = Pick<Stripe, 'paymentIntents' | 'refunds'>;
+
+/** PaymentIntent statuses in which Stripe Elements can still confirm a card. */
+const PAYABLE: ReadonlySet<string> = new Set(['requires_payment_method', 'requires_confirmation', 'requires_action']);
 
 export class StripeLive implements StripeGateway {
   private readonly s: StripeClient;
@@ -65,8 +68,11 @@ export class StripeLive implements StripeGateway {
       throw providerError(e, `cancel ${a.paymentIntentId}`);
     }
   }
+  /** Null once a card has been refused or the PaymentIntent has moved on: the hold is about to be released (or the
+   * money is already moving), so the Buy screen must not offer the form again on a refresh or in a second tab (D-58). */
   async clientSecret(paymentIntentId: string) {
-    return (await this.s.paymentIntents.retrieve(paymentIntentId)).client_secret;
+    const pi = await this.s.paymentIntents.retrieve(paymentIntentId);
+    return PAYABLE.has(pi.status) && !pi.last_payment_error ? pi.client_secret : null;
   }
 }
 
