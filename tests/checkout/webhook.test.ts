@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { db } from '@/core/db';
 import { castCommand } from '@/checkout/cast';
-import { applyWebhook, payStart, requestRefund, settleRefunds } from '@/checkout/checkout';
+import { applyWebhook, payStart, requestRefund, requestRefundSettled, settleRefunds } from '@/checkout/checkout';
 import { axisNow } from '@/checkout/clock';
 import { loadFixtureEvent } from '@/checkout/load';
 import { StripeProviderError, StripeRecorded } from '@/checkout/stripe';
@@ -178,6 +178,18 @@ describe('checkout over the cast path with StripeRecorded', () => {
     expect(again).toMatchObject({ status: 200, result: { code: 'PAYMENT_DUPLICATE' } });
     expect(stripe.calls.filter((c) => c.kind === 'refund' && c.refundId === 'paid-after-failed:pi_rec_H-00006')).toHaveLength(2);
     expect(await db.order.count({ where: { eventId, holdId: 'H-00006' } })).toBe(0);
+  });
+  it('a refund Stripe does not take is logged with its refund id, every time, not only for idempotency errors (review S1)', async () => {
+    expect((await castCommand(orgId, eventId, cmd({ cmd_id: 'K-50', at: '2026-12-01T12:30:00', kind: 'HOLD', customer: 'C-0007', ref: 'H-00007', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(orgId, eventId, cmd({ cmd_id: 'K-51', at: '2026-12-01T12:31:00', kind: 'PAY_START', customer: 'C-0007', ref: 'H-00007' }), stripe)).code).toBe('PAYING');
+    expect((await hook(body('succeeded', { id: 'evt_ok_7', pi: 'pi_rec_H-00007' }), '2026-12-01T12:32:00', stripe)).result).toMatchObject({ code: 'CONFIRMED', detail: 'ORD-00002 T-00003' });
+    const down = new StripeRecorded();
+    down.createRefund = async () => { throw new StripeProviderError('Stripe StripeAPIError status=500 on refund'); };
+    const err = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const out = await requestRefundSettled(orgId, eventId, cmd({ cmd_id: 'K-52', at: '2026-12-01T12:33:00', kind: 'REFUND_REQUEST', customer: 'C-0007', ref: 'ORD-00002', tickets: ['T-00003'] }), down);
+    expect(out).toMatchObject({ result: { code: 'REFUNDED' }, pending: 1 });
+    expect(err).toHaveBeenCalledWith(expect.stringMatching(/refund R-00004 .*not confirmed by Stripe.*StripeAPIError/));
+    err.mockRestore();
   });
 });
 

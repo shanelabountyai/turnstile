@@ -83,10 +83,13 @@ export class StripeProviderError extends Error {
   }
 }
 
-/** Wrap the official client's errors; an idempotency error means a key was reused with different parameters: a bug, not an outage. */
+/** Wrap the official client's errors; an idempotency error means a key was reused with different parameters: a bug, not an outage.
+ * The message is built from Stripe's type, code, HTTP status and request id only. Stripe's own message text is left out:
+ * callers log this, and that text can quote request values (an authentication error quotes the key, redacted). */
 function providerError(e: unknown, what: string): Error {
   if (!(e instanceof Stripe.errors.StripeError)) return e instanceof Error ? e : new Error(String(e));
-  return new StripeProviderError(`Stripe ${e.type} on ${what}: ${e.message}`, e instanceof Stripe.errors.StripeIdempotencyError ? 'idempotency' : 'other');
+  const facts = [e.type, e.code && `code=${e.code}`, e.statusCode && `status=${e.statusCode}`, e.requestId && `request=${e.requestId}`].filter(Boolean).join(' ');
+  return new StripeProviderError(`Stripe ${facts} on ${what}`, e instanceof Stripe.errors.StripeIdempotencyError ? 'idempotency' : 'other');
 }
 
 /** Recorded answers: PaymentIntent ids by hold id, refund ids by refund id; unmapped ids are minted as `pi_rec_<hold>` / `re_rec_<refund>`. */

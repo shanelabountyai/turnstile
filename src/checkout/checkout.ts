@@ -103,7 +103,8 @@ export async function settleRefunds(orgId: string, eventId: string, stripe: Stri
       settled++;
     } catch (e) {
       if (!(e instanceof StripeProviderError)) throw e;
-      if (e.kind === 'idempotency') console.error(`[turnstile] BUG: idempotency key reused for ${eventId}:${r.refundId}: ${e.message}`);
+      // every failure is logged: the Refund row stores no error, so this line is the only trace of why it is still pending
+      console.error(`[turnstile] ${e.kind === 'idempotency' ? 'BUG: idempotency key reused; ' : ''}refund ${r.refundId} (event ${eventId}, ${r.paymentId}, ${r.amountCents} cents) not confirmed by Stripe, left PENDING_PROVIDER: ${e.message}`);
     }
   }
   return { settled, pending: rows.length - settled };

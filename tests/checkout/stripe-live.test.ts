@@ -60,6 +60,18 @@ describe('StripeLive error mapping (D-56, review CODE-3)', () => {
     expect(err).toBeInstanceOf(StripeProviderError);
     expect((err as StripeProviderError).kind).toBe('idempotency');
   });
+  it('the provider error names Stripe\'s type, code, status and request id, and never carries Stripe\'s message text (review N3: it can quote a key)', async () => {
+    const { live } = fake(() => new Stripe.errors.StripeAuthenticationError({ message: 'Invalid API Key provided: sk_test_****abcd', code: 'api_key_invalid', statusCode: 401, requestId: 'req_123' } as ConstructorParameters<typeof Stripe.errors.StripeAuthenticationError>[0]));
+    for (const call of [() => live.createRefund({ refundId: 'R-00001', paymentIntentId: 'pi_a', amountCents: 1, eventId: A }), () => live.cancelPaymentIntent({ eventId: A, paymentIntentId: 'pi_a' })]) {
+      const err = (await call().catch((e: unknown) => e)) as StripeProviderError;
+      expect(err).toBeInstanceOf(StripeProviderError);
+      expect(err.message).toMatch(/StripeAuthenticationError/);
+      expect(err.message).toMatch(/api_key_invalid/);
+      expect(err.message).toMatch(/401/);
+      expect(err.message).toMatch(/req_123/);
+      expect(err.message).not.toMatch(/sk_test|Invalid API Key/);
+    }
+  });
   it('a non-Stripe error is not swallowed into a provider error', async () => {
     const { live } = fake(() => new TypeError('a bug of ours'));
     await expect(live.cancelPaymentIntent({ eventId: A, paymentIntentId: 'pi_a' })).rejects.toBeInstanceOf(TypeError);
