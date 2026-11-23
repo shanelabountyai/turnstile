@@ -1,5 +1,32 @@
 # NEXT
 
+## ▶ 2026-11-23 (Opus 5.5, scheduled run, branch `prds/review-2026-11-21`): PRDs written from the 2026-11-21 five-lens review. **Docs only.** Draft PR, not merged.
+
+Since the entry below, **PR #9 was merged** (2026-11-23, `c957f7a`). Draft PR #10 (post-merge review of #9, with fixes and D-58) is open and not merged.
+
+Built (`docs/prds/`, nothing else changed):
+- PRD-1 to PRD-5, one per proposed PRD in review §3. Each has problem, evidence (file:line at `9d8b434`), scope, out of scope, acceptance tests and review items covered.
+- PRD-1 is marked "covered by #9", except its O-8 test (still open, `docs/EVAL.md:174`). Item 3 (SEC-1/SEC-2) is marked refuted (D-55).
+- `DECISIONS-NEEDED-2026-11-22.md`: the open decisions, each once, with options, trade-offs and a recommendation:
+  - Decision 3 (D-49 wear-out) first;
+  - then Decision 7 (public repo detail, from this file's 2026-11-21 entry);
+  - then 4 (who may refund), 5 (org home) and 6 (engine rule; the same question as #10's product call 1).
+  - Decisions 1 and 2 are listed as already settled (D-54, D-55).
+- `docs/prds/README.md` is the index.
+
+Not done, by the brief: no code, no `docs/decisions.md` row, no decision taken. `add_repo` was not available as a tool in this session. The repository was already in scope, cloned and pushable, so the run went on (as D-50 and D-51 record for earlier runs).
+
+**Likely conflict:** #10 also edits this file. Whichever merges second needs this section kept.
+
+Gate: see the PR's "Gate results" section.
+
+**You:**
+1. You: read `docs/prds/DECISIONS-NEEDED-2026-11-22.md` and answer Decision 3 first. PRD-3 item 18 (the e2e sets its own clock) is needed before 2026-12-01 10:00 whatever you choose.
+2. You: say which PRDs to build, and in what order.
+3. You: review this PR. Merge it or not (docs only; the `ignoreCommand` should skip the build).
+
+---
+
 ## ▶ 2026-11-22 (Opus 5.5, live session with Shane): PR #8 merged; money-boundary fixes on branch `fix/money-boundary`, PR open, **not merged**.
 
 Shane said "run all 5 in order" (the closeout recommendation). What happened to each:
