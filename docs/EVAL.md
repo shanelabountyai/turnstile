@@ -181,4 +181,6 @@ Not yet run. Owner's step (O-8), on the live site after the money-boundary fixes
 | 4 | Hold 1 × ADV, pay with a decline card (`4000 0000 0000 0002`) | `acme` | the form says the hold cannot be paid again; after the failure webhook, Stripe shows the PaymentIntent **canceled** | | — |
 | 5 | Refresh the page from step 4 | `acme` | no card form for that hold; no order; nothing captured in Stripe | (same as 4) | — |
 
+**Review note, 2026-11-23 (D-58).** On `c957f7a` (what is deployed), step 5 can still show a card form if the refresh is quicker than the failure webhook, and a second card paid there is kept: no order, no refund. Branch `review/money-boundary-2026-11-23` (not merged, not deployed) removes the form once Stripe has the refused card, and refunds a success that still gets through. With that branch deployed, a sixth step is worth recording: after step 4, pay the same PaymentIntent from a second tab that was opened before the decline; expect no order, a **full refund** in Stripe, and a `checkout.paid_after_failed_refunded` line in the Vercel log. None of this has run against live Stripe.
+
 Until this table is filled, the claim stays: Stripe boundary tested against recorded payloads and a fixture signing secret.
