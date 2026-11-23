@@ -2,7 +2,9 @@
 
 Each decision is written once here. The PRDs point to this file and do not repeat it. Numbers are the review's (§4 of `docs/audits/FIVE-LENS-2026-11-21.md`), so cross-references still work. Decision 7 comes from NEXT.md, not the review (see its entry).
 
-The order below is the order I suggest taking them in. **Nothing here is decided.** Each recommendation is a recommendation only. Record your answer in `docs/decisions.md`, which outranks the PRDs.
+> **Decided 2026-11-23.** Shane took every recommendation below ("Merge PR #11 + take recs"). They are recorded as D-60 (Decision 3), D-61 (Decision 7), D-62 (Decision 4), D-63 (Decision 5) and D-64 (Decision 6) in `docs/decisions.md`, which outranks this file. The options are kept here for the record.
+
+The order below is the order suggested for taking them.
 
 **Already settled, listed so they are not asked again:**
 - **Decision 1** (does O-8 wait for the money fixes): **(a) wait**, D-54. #9 is merged. O-8 itself is still open (`docs/EVAL.md:174`).
@@ -14,7 +16,7 @@ The order below is the order I suggest taking them in. **Nothing here is decided
 
 ---
 
-## 1st — Decision 3: D-49, the demo wears out one way
+## 1st — Decision 3: D-49, the demo wears out one way — **decided: D-60**
 
 **Question:** how should a spent or damaged demo org recover?
 
@@ -34,7 +36,7 @@ The order below is the order I suggest taking them in. **Nothing here is decided
 
 ---
 
-## 2nd — Decision 7: what the public repo says about open weaknesses
+## 2nd — Decision 7: what the public repo says about open weaknesses — **decided: D-61**
 
 **Source:** NEXT.md 2026-11-21, item (7), raised by the overnight review on PR #8. It is not in the five-lens report, but it applies to this PR: the PRD files restate the review's evidence in the public repo (D-1).
 
@@ -50,7 +52,7 @@ The order below is the order I suggest taking them in. **Nothing here is decided
 
 ---
 
-## 3rd — Decision 4: who may refund? (SEC-5)
+## 3rd — Decision 4: who may refund? (SEC-5) — **decided: D-62**
 
 **Question:** should refunds (and perhaps sales and check-in) need a permission above membership?
 
@@ -63,7 +65,7 @@ The order below is the order I suggest taking them in. **Nothing here is decided
 
 ---
 
-## 4th — Decision 5: the org home (revisits D-38)
+## 4th — Decision 5: the org home (revisits D-38) — **decided: D-63**
 
 **Question:** what should `/o/<org>` show after sign-in?
 
@@ -77,7 +79,7 @@ The order below is the order I suggest taking them in. **Nothing here is decided
 
 ---
 
-## 5th — Decision 6: engine rule for a success on a failed payment (CODE-2 alternative; same as PR #10 call 1)
+## 5th — Decision 6: engine rule for a success on a failed payment (CODE-2 alternative; same as PR #10 call 1) — **decided: D-64**
 
 **Question:** when Stripe captures money on a payment the engine already marked `FAILED`, should the boundary handle it, or should the engine get a rule?
 

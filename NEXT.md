@@ -1,5 +1,29 @@
 # NEXT
 
+## ▶ 2026-11-23 (Opus 5.5, live with Shane): PR #11 merged; the five review decisions are recorded as D-60 to D-64 on branch `decisions/review-2026-11-21`. PR open, not merged.
+
+Shane chose "Merge PR #11 + take recs". PR #11 was merged as `8d11afc`. It was docs only, so the `ignoreCommand` should skip the production build.
+
+Recorded in `docs/decisions.md`. These start at D-60 because open draft PR #10 uses D-57 to D-59.
+- **D-60:** D-49 is decided. A nightly reset runs in demo mode only, with a D-21 exception for demo mode, and the seed always puts the clock at sales open.
+- **D-61:** the review's detail stays in the repo. No password goes out until #10 is merged and PRD-2 items 5, 6 and 8 are done.
+- **D-62:** every member is box-office staff.
+- **D-63:** the org home gets the event card and `id="main"`.
+- **D-64:** the paid-after-failed case is handled at the boundary for now, with the engine rule later (this also answers #10's call 1).
+
+`docs/prds/DECISIONS-NEEDED-2026-11-22.md` and the index are marked decided.
+
+**Nothing is built.** Next, in order:
+1. Merge #10. That deploys.
+2. Build PRD-3 item 18 (e2e sets its own clock) before 2026-12-01 10:00.
+3. Build PRD-2 items 5, 6 and 8 (the password gate, D-61).
+4. Build the rest of PRD-3, including the reset (D-60).
+5. Then PRD-4, then PRD-5.
+
+O-8 is still yours.
+
+---
+
 ## ▶ 2026-11-23 (Opus 5.5, scheduled run, branch `prds/review-2026-11-21`): PRDs written from the 2026-11-21 five-lens review. **Docs only.** Draft PR, not merged.
 
 Since the entry below, **PR #9 was merged** (2026-11-23, `c957f7a`). Draft PR #10 (post-merge review of #9, with fixes and D-58) is open and not merged.
