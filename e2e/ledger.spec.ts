@@ -21,6 +21,8 @@ test('ledger: page totals = CSV column sums after a sale and a partial refund', 
   expect((await castAs(ids, { kind: 'REFUND_REQUEST', customer: 'C-0001', ref: t.orderId, tickets: [t.ticketId] })).code).toBe('REFUNDED');
 
   await page.goto(`/o/acme/events/${EVENT}/ledger`);
+  // PRD-3 item 12: castAs casts the refund without telling Stripe, so its row has no Stripe refund id: one unsettled refund, just made.
+  await expect(page.getByTestId('unsettled-refunds')).toHaveText('Refunds not yet confirmed by Stripe: 1. They are already counted in Refunded above. 1 will be sent to Stripe again by the nightly job.');
   const csv = await (await page.request.get(`/o/acme/events/${EVENT}/ledger/csv`)).text();
   const [head, ...lines] = csv.trim().split('\r\n').map((l) => l.split(','));
   const sum = (k: string) => lines.reduce((n, l) => n + Number(l[head!.indexOf(k)]), 0);

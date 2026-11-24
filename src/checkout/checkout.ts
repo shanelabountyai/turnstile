@@ -135,9 +135,10 @@ export async function requestRefund(orgId: string, eventId: string, cmd: Command
   return (await requestRefundSettled(orgId, eventId, cmd, stripe, opts)).result;
 }
 
-/** Calls refunds.create for every Refund row without a Stripe id; returns how many settled and how many are still pending. */
-export async function settleRefunds(orgId: string, eventId: string, given: StripeGateway | (() => StripeGateway)): Promise<{ settled: number; pending: number }> {
-  const rows = await withOrg({ orgId }, (tx) => tx.refund.findMany({ where: { eventId, stripeRefundId: null }, orderBy: { refundId: 'asc' } }), { atomic: false });
+/** Calls refunds.create for every Refund row without a Stripe id (or only the ones named); returns how many settled and how many are still pending. */
+export async function settleRefunds(orgId: string, eventId: string, given: StripeGateway | (() => StripeGateway), only?: string[]): Promise<{ settled: number; pending: number }> {
+  // `only`: the nightly retry passes exactly the refund ids it has shown to be inside Stripe's idempotency window (refund-retry.ts)
+  const rows = await withOrg({ orgId }, (tx) => tx.refund.findMany({ where: { eventId, stripeRefundId: null, ...(only && { refundId: { in: only } }) }, orderBy: { refundId: 'asc' } }), { atomic: false });
   if (rows.length === 0) return { settled: 0, pending: 0 };
   let stripe: StripeGateway;
   try {
@@ -152,7 +153,9 @@ export async function settleRefunds(orgId: string, eventId: string, given: Strip
   for (const r of rows) {
     try {
       const { id } = await stripe.createRefund({ refundId: r.refundId, paymentIntentId: r.paymentId, amountCents: r.amountCents, eventId });
-      await withOrg({ orgId }, (tx) => tx.refund.update({ where: { eventId_refundId: { eventId, refundId: r.refundId } }, data: { stripeRefundId: id } }));
+      // updateMany with the NULL guard: if another settle (a box-office refund, the nightly retry) wrote the id first, this
+      // writes nothing instead of tripping the append-only trigger after Stripe has already answered. Same key, same answer.
+      await withOrg({ orgId }, (tx) => tx.refund.updateMany({ where: { eventId, refundId: r.refundId, stripeRefundId: null }, data: { stripeRefundId: id } }));
       settled++;
     } catch (e) {
       if (!(e instanceof StripeProviderError)) throw e;

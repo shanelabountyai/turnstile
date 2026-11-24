@@ -17,3 +17,17 @@ export const PAY_RECEIVED = 'Payment received by Stripe; tickets appear when Str
 export const PAY_RECEIVED_NEXT = 'That usually takes a few seconds. Refresh the page to see your tickets.';
 /** The pay button until Stripe.js has loaded and the card form is on the page. */
 export const PAY_LOADING = 'Loading the card form…';
+
+// ---- item 12: unsettled refunds on the Ledger
+/**
+ * The Ledger's line about refunds Stripe has not confirmed (Refund rows with no Stripe refund id). `retryable` are the
+ * ones the nightly job will send again; `needsOwner` are the ones it will not, because a retry could refund twice.
+ */
+export function unsettledRefundsWords(unsettled: number, retryable: number, needsOwner: number): string {
+  const head = `Refunds not yet confirmed by Stripe: ${unsettled}.`;
+  if (unsettled === 0) return head;
+  const parts = [head, 'They are already counted in Refunded above.'];
+  if (retryable > 0) parts.push(`${retryable} will be sent to Stripe again by the nightly job.`);
+  if (needsOwner > 0) parts.push(`${needsOwner} ${needsOwner === 1 ? 'needs' : 'need'} the owner: too old to be retried safely (a retry could refund twice), so ${needsOwner === 1 ? 'it is' : 'they are'} not retried automatically.`);
+  return parts.join(' ');
+}
