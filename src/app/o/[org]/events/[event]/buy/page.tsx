@@ -14,7 +14,7 @@ import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { ActionForm } from '@/core/ui/action-form';
-import { Countdown } from '@/components/countdown';
+import { Countdown, CountdownVoice } from '@/components/countdown';
 import { StripePay } from '@/components/stripe-pay';
 import { Announce } from '@/components/announce';
 import { EmptyState, EventTabs, Notice, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
@@ -114,6 +114,8 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
           status={<Pill k="info">Event clock {axis(v.asOf)}</Pill>}
           lead="Every count below is worked out from sold and held tickets when the page loads. Nothing is reserved until you have a hold."
         />
+        {/* PRD-4 item 16: the countdowns' spoken warnings, in a region that outlives an expired hold's refresh */}
+        <CountdownVoice />
 
         {result && (
           <>
@@ -173,7 +175,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                           <p className="cluster"><Pill k="hold">{h.state}</Pill><span>{h.kind === 'OFFER' ? 'Offer' : 'Hold'} {h.hold} · {h.tier}</span></p>
                           {h.kind === 'OFFER' && h.state === 'HELD' && <p>A seat came back and you were first in line. It is held for you until the timer runs out, then it goes to the next person.</p>}
                           {h.secondsLeft !== null && (
-                            <p><span className="fig-lg"><Countdown key={h.deadline} seconds={h.secondsLeft} label={`time left on ${h.hold}`} /></span>{' '}
+                            <p><span className="fig-lg"><Countdown key={h.deadline} seconds={h.secondsLeft} label={h.hold} /></span>{' '}
                               <span className="muted">{h.state === 'HELD' ? (h.kind === 'OFFER' ? 'to accept' : 'to pay') : 'for the payment to land'} · until {axis(h.deadline!)}</span></p>
                           )}
                           <p>{sum}</p>
