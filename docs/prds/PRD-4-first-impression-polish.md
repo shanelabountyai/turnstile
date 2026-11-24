@@ -1,6 +1,6 @@
 # PRD-4 — First impression and screen polish
 
-**Status:** proposed. Not built. Item 14 depends on Decision 5 (it revisits D-38).
+**Status:** Built (draft PR), 2026-11-24: items 13, 14, 15, 16, 17 and 19 (D-75 to D-79), on branch `prd-4/first-impression-polish`, stacked on PRD-3. Not merged. Left out: the org bar trim (item 14's optional part, a follow-up). Item 14 follows D-63. The browser checks were written as Playwright specs; see the PR for which ran here.
 **Source:** `docs/audits/FIVE-LENS-2026-11-21.md` §3 PRD-4; review items 13, 14, 15, 16, 17, 19.
 **Evidence:** file:line at `9d8b434`, as the review cites it. #9 did not touch these files.
 **Rule that applies:** question, result and notice wording is Shane's. Copy changes here are proposals for him to edit.
