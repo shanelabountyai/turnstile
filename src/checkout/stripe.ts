@@ -24,7 +24,19 @@ export interface StripeGateway {
   cancelPaymentIntent(a: CancelArgs): Promise<void>;
   /** What Stripe Elements needs to confirm a PaymentIntent in the browser; null where there is no live Stripe, and null when the PaymentIntent can no longer take a first card. */
   clientSecret(paymentIntentId: string): Promise<string | null>;
+  /** What the Buy screen shows a PAYING hold, from one read of the PaymentIntent (PRD-3 item 10). */
+  payView(paymentIntentId: string): Promise<PayView>;
 }
+
+/**
+ * `card`: Elements can still confirm a first card. `received`: Stripe has the payment (`processing` or `succeeded`) and
+ * the signed webhook has not landed yet, so the page shows no card form and says the tickets follow. `closed`: no card
+ * can be taken (refused, cancelled, or a status this app never creates).
+ */
+export type PayView = { kind: 'card'; clientSecret: string } | { kind: 'received' } | { kind: 'closed' };
+
+/** PaymentIntent statuses that mean Stripe has taken the payment or is taking it: nothing more for the customer to enter. */
+const RECEIVED: ReadonlySet<string> = new Set(['processing', 'succeeded']);
 
 /**
  * Live Stripe where a secret key is set. Without one: the recorded double everywhere except a Production deployment,
@@ -87,6 +99,12 @@ export class StripeLive implements StripeGateway {
     const pi = await this.s.paymentIntents.retrieve(paymentIntentId);
     return PAYABLE.has(pi.status) && !pi.last_payment_error ? pi.client_secret : null;
   }
+  /** Not wrapped in providerError on purpose: payForms catches anything and logs the error's class only. */
+  async payView(paymentIntentId: string): Promise<PayView> {
+    const pi = await this.s.paymentIntents.retrieve(paymentIntentId);
+    if (RECEIVED.has(pi.status)) return { kind: 'received' };
+    return PAYABLE.has(pi.status) && !pi.last_payment_error && pi.client_secret ? { kind: 'card', clientSecret: pi.client_secret } : { kind: 'closed' };
+  }
 }
 
 /** Any failure from Stripe, so callers can leave a Refund PENDING_PROVIDER (D-23) instead of throwing after a commit. */
@@ -133,5 +151,10 @@ export class StripeRecorded implements StripeGateway {
   }
   async clientSecret() {
     return null;
+  }
+  /** A test says what Stripe would report for a PaymentIntent: its status, by id (PRD-3 item 10). Unset = no status known. */
+  readonly intentStatus = new Map<string, string>();
+  async payView(paymentIntentId: string): Promise<PayView> {
+    return RECEIVED.has(this.intentStatus.get(paymentIntentId) ?? '') ? { kind: 'received' } : { kind: 'closed' };
   }
 }

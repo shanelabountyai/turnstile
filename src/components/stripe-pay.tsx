@@ -1,6 +1,7 @@
 'use client';
 import Script from 'next/script';
 import { useRef, useState } from 'react';
+import { PAY_LOADING } from '@/checkout/prd3-wording';
 
 // Stripe Elements, test mode, only where NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY is set (D-26). Stripe.js loads from
 // js.stripe.com as Stripe requires, so no npm wrapper is added. Confirming here moves the PaymentIntent; the tickets
@@ -10,6 +11,7 @@ import { useRef, useState } from 'react';
 // (Stripe's validation_error) creates no payment attempt and can be corrected in place.
 // The page also stops offering this form once Stripe has a refused card on the PaymentIntent (clientSecret is null,
 // D-58), so a refresh does not bring it back; a late success that still gets through is refunded by the webhook.
+// Until Stripe.js has loaded and the card form is mounted, the button is disabled and says it is loading (PRD-3 item 10).
 type Elements = { create(kind: 'payment'): { mount(el: HTMLElement): void } };
 type StripeJs = { elements(o: { clientSecret: string }): Elements; confirmPayment(o: { elements: Elements; confirmParams: { return_url: string } }): Promise<{ error?: { message?: string; type?: string } }> };
 declare global { interface Window { Stripe?: (key: string) => StripeJs } }
@@ -20,6 +22,7 @@ export function StripePay({ publishableKey, clientSecret, returnUrl }: { publish
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(true);
   const [spent, setSpent] = useState(false);
+  const [ready, setReady] = useState(false);
 
   function mount() {
     if (live.current || !window.Stripe || !box.current) return;
@@ -27,6 +30,7 @@ export function StripePay({ publishableKey, clientSecret, returnUrl }: { publish
     const elements = stripe.elements({ clientSecret });
     elements.create('payment').mount(box.current);
     live.current = { stripe, elements };
+    setReady(true);
     setBusy(false);
   }
 
@@ -49,7 +53,7 @@ export function StripePay({ publishableKey, clientSecret, returnUrl }: { publish
       <Script src="https://js.stripe.com/v3" onReady={mount} />
       <div ref={box} />
       {error && <p role="alert">{error}</p>}
-      <button type="submit" disabled={busy || spent}>Pay with Stripe (test mode)</button>
+      <button type="submit" disabled={busy || spent}>{ready ? 'Pay with Stripe (test mode)' : PAY_LOADING}</button>
     </form>
   );
 }

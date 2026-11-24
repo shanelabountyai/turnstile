@@ -9,3 +9,11 @@ export const PAY_NOT_STARTED = 'Payment could not be started, and nothing was ch
 export const PAY_AMOUNT_MISMATCH = 'Payment was not started: the amount for this hold could not be confirmed, and nothing was charged. Release the hold and hold the tickets again.';
 /** On one PAYING hold when its card form could not be fetched from Stripe. Other holds on the page are unaffected. */
 export const PAY_FORM_UNAVAILABLE = 'The card form for this payment could not be loaded just now. Nothing was charged. Refresh the page to try again.';
+
+// ---- item 10: Payment received
+/** On a PAYING hold once Stripe has the payment (PaymentIntent `processing` or `succeeded`, or Stripe's redirect back). The first sentence is PRD-3's. */
+export const PAY_RECEIVED = 'Payment received by Stripe; tickets appear when Stripe confirms it.';
+/** Follows PAY_RECEIVED: the page does not refresh itself. */
+export const PAY_RECEIVED_NEXT = 'That usually takes a few seconds. Refresh the page to see your tickets.';
+/** The pay button until Stripe.js has loaded and the card form is on the page. */
+export const PAY_LOADING = 'Loading the card form…';
