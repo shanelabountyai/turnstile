@@ -4,6 +4,7 @@ import { eventNow } from '@/checkout/clock';
 import { otherDemoOrg, usedUp } from '@/checkout/demo';
 import { stripePublishableKey } from '@/checkout/env';
 import { axis, day, duration, minutesFrom, refundWindows, saleState, stamp, tierState, time } from '@/checkout/format';
+import { movedOn } from '@/checkout/buy-view';
 import { dollars, eventByKey, readEvent } from '@/checkout/read';
 import { payForms } from '@/checkout/pay-form';
 import { PAY_FORM_UNAVAILABLE, PAY_RECEIVED, PAY_RECEIVED_NEXT, usedUpWords } from '@/checkout/prd3-wording';
@@ -49,7 +50,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const v = await readEvent(ctx.orgId, ev.id, eventNow(new Date(), ev));
   const { customers, result } = await withOrg(ctx, async (tx) => ({
     customers: await tx.customer.findMany({ where: { orgId: ctx.orgId }, orderBy: { customerId: 'asc' }, select: { customerId: true, name: true } }),
-    result: q.r ? await tx.commandLog.findUnique({ where: { eventId_cmdId: { eventId: ev.id, cmdId: q.r } }, select: { kind: true, status: true, code: true, detail: true, at: true } }) : null,
+    result: q.r ? await tx.commandLog.findUnique({ where: { eventId_cmdId: { eventId: ev.id, cmdId: q.r } }, select: { kind: true, status: true, code: true, detail: true, at: true, payload: true } }) : null,
   }), { atomic: false });
   const me = customers.find((c) => c.customerId === q.as);
   const slug = ctx.slug;
@@ -74,6 +75,8 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const forms = await payForms(live, Boolean(pk), stripeGateway, { paymentIntent: q.payment_intent, redirectStatus: q.redirect_status });
   const hidden = me && <><input type="hidden" name="event" value={ev.eventKey} /><input type="hidden" name="customer" value={me.customerId} /></>;
   const said = result && sayCode(result.code);
+  // PRD-4 item 17 (UX-11, DES-11): an accepted hold or payment whose hold has since moved on (paid, expired) is not echoed
+  const echo = result && !movedOn(result, v.holds) ? result : null;
   const sales = saleState(v);
 
   // Where the customer is, for the step list: the latest thing that happened to them, read off the view.
@@ -112,17 +115,18 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
           eyebrow={`${v.event.name} · ${day(v.event.startsAt)} · doors ${time(v.event.doorsAt)}`}
           title={me ? <>Buy tickets · acting as {me.customerId}</> : 'Buy tickets'}
           status={<Pill k="info">Event clock {axis(v.asOf)}</Pill>}
+          actions={me && <a className="button secondary" href="#as">Change customer</a>}
           lead="Every count below is worked out from sold and held tickets when the page loads. Nothing is reserved until you have a hold."
         />
         {/* PRD-4 item 16: the countdowns' spoken warnings, in a region that outlives an expired hold's refresh */}
         <CountdownVoice />
 
-        {result && (
+        {echo && (
           <>
-            <Notice k={codeKind(result.status, result.code)} title={said ?? `${result.kind} → ${result.code}`}>
-              <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
+            <Notice k={codeKind(echo.status, echo.code)} title={said ?? `${echo.kind} → ${echo.code}`}>
+              <span className="muted" data-testid="result">{echo.status} {echo.code}{echo.detail && ` · ${echo.detail}`} · at {axis(echo.at)}</span>
             </Notice>
-            <Announce assertive={result.status !== 'OK'} text={said ?? `${result.kind}: ${result.code}`} />
+            <Announce assertive={echo.status !== 'OK'} text={said ?? `${echo.kind}: ${echo.code}`} />
           </>
         )}
 

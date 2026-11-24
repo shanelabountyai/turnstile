@@ -1,6 +1,6 @@
 import { notFound } from 'next/navigation';
 import { eventNow } from '@/checkout/clock';
-import { axis, count, pageOf } from '@/checkout/format';
+import { axis, count, counted, pageOf } from '@/checkout/format';
 import { unsettledRefundsWords } from '@/checkout/prd3-wording';
 import { dollars, eventByKey, readEvent, type EventView } from '@/checkout/read';
 import { pendingRefunds } from '@/checkout/refund-retry';
@@ -74,8 +74,8 @@ export default async function Ledger({ params, searchParams }: { params: Promise
         />
 
         <Stats>
-          <Stat label="Captured" value={<span data-testid="captured">{dollars(l.capturedCents)}</span>} sub={`${count(l.capturedCents)}¢ · ${count(l.orders)} orders and ${count(late.length)} late payment${late.length === 1 ? '' : 's'}`} />
-          <Stat label="Refunded" value={<span data-testid="refunded">{dollars(l.refundedCents)}</span>} sub={`${count(l.refundedCents)}¢ · ${count(l.refunds)} refunds, ${count(late.length)} of them late money`} />
+          <Stat label="Captured" value={<span data-testid="captured">{dollars(l.capturedCents)}</span>} sub={`${count(l.capturedCents)}¢ · ${counted(l.orders, 'order')} and ${count(late.length)} late payment${late.length === 1 ? '' : 's'}`} />
+          <Stat label="Refunded" value={<span data-testid="refunded">{dollars(l.refundedCents)}</span>} sub={`${count(l.refundedCents)}¢ · ${counted(l.refunds, 'refund')}, ${count(late.length)} of them late money`} />
           <Stat label="Net" value={<span data-testid="net">{dollars(l.netCents)}</span>} k="good" sub={`✓ ${count(l.capturedCents)} − ${count(l.refundedCents)} = ${count(l.netCents)}¢`} />
         </Stats>
         <p className={pend.unsettled > 0 ? 'limit' : 'muted'} role={pend.unsettled > 0 ? 'status' : undefined} data-testid="unsettled-refunds">
@@ -88,7 +88,7 @@ export default async function Ledger({ params, searchParams }: { params: Promise
           <Stat label="Checked in" value={count(l.checkedIn)} />
         </Stats>
 
-        <Section id="payments" title="Per payment" aside={<span className="muted">{count(v.payments.length)} lines</span>}>
+        <Section id="payments" title="Per payment" aside={<span className="muted">{counted(v.payments.length, 'line')}</span>}>
           {v.payments.length === 0 ? <p>No payments captured yet.</p> : (
             <>
               {late.length > 0 && (
