@@ -147,8 +147,17 @@ The demo database is shared and is not reset between visitors. Two things wear i
 TRUNCATE "Event", "Pool", "Tier", "Section", "Seat", "Hold", "Payment", "Order", "Ticket", "WaitlistEntry", "Refund", "CommandLog", "Customer";
 ```
 
-then start a new Production build (step 7). The seed finds no event and loads both again, with the clock back at the
-moment sales open. The demo accounts and the audit log are not touched. This deletes every synthetic order and ledger
+then start a new Production build (step 7). The seed finds no event and loads both again. **Before 2026-12-01 10:00
+(Chicago)** it puts the clock back at the moment sales open. **From then on it leaves the clock on the wall clock** (offset 0), so the demo
+then runs on the real 2027 dates below; until the D-60 seed change lands, set the clock by hand on the Event page after a reset.
+
+**The demo's calendar end (review item 18, CODE-9, UX-18).** The event clock is the wall clock plus the event's stored
+`clockOffsetSeconds`, and it keeps ticking with nobody touching it. On the event clock, EARLY goes off sale at
+2027-01-16 00:00, ADV at 2027-03-20 17:00, and sales close at 2027-03-20 20:00 (`fixtures/event.json`). The real date
+each one arrives is that time minus the offset, which differs per org and depends on when the event was first loaded
+(read it from the `Event` row). The README walk's refund figures assume the event clock is more than 30 days before
+the show (2027-02-18 20:00 on the event clock). D-60's nightly reset is decided but not built; until it lands, these
+dates stand. `e2e/hosted-demo.spec.ts` does not depend on them: it puts its freshly seeded events at sales open itself. The demo accounts and the audit log are not touched. This deletes every synthetic order and ledger
 line; that is the point of it, and it is why no button or script in the app does it.
 
 ## Rolling back
