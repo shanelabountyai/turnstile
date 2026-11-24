@@ -50,6 +50,7 @@ const result = (page: Page) => page.getByTestId('result');
 async function arrive(browser: Browser, org: Org): Promise<Page> {
   const page = await (await browser.newContext()).newPage();
   await page.goto('/demo');
+  await expect(page.getByRole('button', { name: /@(acme|globex)\.demo\.test$/ })).toHaveCount(6); // "lists six seeded accounts"
   await page.getByRole('button', { name: `owner@${org}.demo.test` }).click();
   return page;
 }
@@ -113,7 +114,10 @@ async function stepsOneToSix(page: Page, v: Visitor): Promise<Carried> {
   await expect(page.getByRole('heading', { name: 'Your holds' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Your tickets' })).toHaveCount(0);
   await expect(page.getByText(/^Sales (closed|open )/)).toHaveCount(0); // on sale
-  await page.locator('select[name="tier"]').selectOption('ADV'); // the form starts on EARLY × 1; the walk needs ADV × 2
+  // The form starts on tier EARLY, quantity 1: change Tier to ADV and Quantity to 2.
+  await expect(page.locator('select[name="tier"]')).toHaveValue('EARLY');
+  await expect(page.getByRole('spinbutton', { name: 'Quantity' }).first()).toHaveValue('1');
+  await page.locator('select[name="tier"]').selectOption('ADV');
   await page.getByRole('spinbutton', { name: 'Quantity' }).first().fill('2');
   await page.getByRole('button', { name: 'Hold tickets' }).click();
   // You should see: OK HELD and a ten-minute countdown.
