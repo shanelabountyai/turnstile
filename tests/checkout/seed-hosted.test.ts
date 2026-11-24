@@ -1,6 +1,6 @@
 // D-47: the deployed demo's seed, run by the Production build. Accounts plus a write-once fixture event per demo org;
-// a second run (the next deploy) changes nothing; the event clock is moved only on a fresh load, and only forward to
-// the moment sales open.
+// a second run (the next deploy) changes nothing; the event clock is moved only on a fresh load, to the moment sales
+// open, whatever the wall date (D-60 item 2).
 import { beforeAll, describe, expect, it } from 'vitest';
 import { eventNow } from '@/checkout/clock';
 import { dbSystem as db } from '@/core/db/system'; // fixtures run as the owner role
@@ -41,9 +41,15 @@ describe('seed-hosted (D-47)', () => {
     expect(lines.filter((l) => l.includes('already loaded'))).toHaveLength(2);
   });
 
-  it('loaded while sales are open on the wall clock, the event stays on the wall clock', async () => {
+  // D-60 item 2 changed this behaviour on purpose (it was: "the event stays on the wall clock", offset 0). A load after
+  // sales open on the wall clock now also starts at sales open, so a reset after 2026-12-01 does not put the demo on the
+  // real calendar (review CODE-8, CODE-9, CODE-10).
+  it('loaded while sales are open on the wall clock, the event clock is still put at sales open', async () => {
     await resetAuthTables();
     await seedHosted('fixtures', DURING_SALES);
-    for (const e of await events()) expect(e.clockOffsetSeconds).toBe(0);
+    for (const e of await events()) {
+      expect(eventNow(DURING_SALES, e)).toBe(e.salesOpenAt);
+      expect(e.clockOffsetSeconds).toBeLessThan(0);
+    }
   });
 });
