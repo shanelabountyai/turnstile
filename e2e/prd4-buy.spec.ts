@@ -46,3 +46,38 @@ test('"Change customer" sits by the Buy title and jumps to the picker', async ({
   await expect(page.getByRole('heading', { name: 'Acting as' })).toBeInViewport();
   await expect(page.getByRole('combobox', { name: 'Customer' })).toBeInViewport();
 });
+
+test('an orphan refusal names the stranded seat and keeps the pick ticked, in the section it was made', async ({ page }) => {
+  await signIn(page);
+  await setClock(page, '2026-12-01T10:05:30');
+  await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0002`);
+  await page.getByLabel('A-A-01 open').check();
+  await page.getByLabel('A-A-03 open').check();
+  await page.getByRole('button', { name: 'Hold seats in A' }).click();
+  await expect(page.getByTestId('result')).toContainText('REJECT ORPHAN_SEAT');
+  await expect(page.getByTestId('stranded')).toHaveText('Seat A-A-02 would be left on its own.');
+  await expect(page.getByLabel('A-A-01 open')).toBeChecked();
+  await expect(page.getByLabel('A-A-03 open')).toBeChecked();
+  await expect(page.getByLabel('A-A-02 open')).not.toBeChecked();
+  // pressing "Hold seats" again sends the same pick, and gets the same answer
+  await page.getByRole('button', { name: 'Hold seats in A' }).click();
+  await expect(page.getByTestId('stranded')).toHaveText('Seat A-A-02 would be left on its own.');
+
+  // In section B the refusal comes back on section B, not the first section.
+  await page.getByRole('navigation', { name: 'Balcony sections' }).getByRole('link', { name: /^Section B/ }).click();
+  await page.getByLabel('B-C-05 open').check();
+  await page.getByLabel('B-C-07 open').check();
+  await page.getByRole('button', { name: 'Hold seats in B' }).click();
+  await expect(page.getByTestId('result')).toContainText('REJECT ORPHAN_SEAT');
+  await expect(page.getByRole('navigation', { name: 'Balcony sections' }).getByRole('link', { name: /^Section B/ })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByTestId('stranded')).toHaveText('Seat B-C-06 would be left on its own.');
+  await expect(page.getByLabel('B-C-05 open')).toBeChecked();
+  await expect(page.getByLabel('B-C-07 open')).toBeChecked();
+
+  // A pick that is accepted comes back unticked, with no stranded sentence.
+  await page.getByLabel('B-C-07 open').uncheck();
+  await page.getByLabel('B-C-06 open').check();
+  await page.getByRole('button', { name: 'Hold seats in B' }).click();
+  await expect(page.getByTestId('result')).toContainText('OK HELD');
+  await expect(page.getByTestId('stranded')).toHaveCount(0);
+});

@@ -4,7 +4,7 @@ import { eventNow } from '@/checkout/clock';
 import { otherDemoOrg, usedUp } from '@/checkout/demo';
 import { stripePublishableKey } from '@/checkout/env';
 import { axis, day, duration, minutesFrom, refundWindows, saleState, stamp, tierState, time } from '@/checkout/format';
-import { movedOn } from '@/checkout/buy-view';
+import { movedOn, refusedPick, sectionOfPick, strandedBy, strandedWords } from '@/checkout/buy-view';
 import { dollars, eventByKey, readEvent } from '@/checkout/read';
 import { payForms } from '@/checkout/pay-form';
 import { PAY_FORM_UNAVAILABLE, PAY_RECEIVED, PAY_RECEIVED_NEXT, usedUpWords } from '@/checkout/prd3-wording';
@@ -68,7 +68,11 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const ga = v.tiers.filter((t) => v.pools.find((x) => x.pool === t.pool)?.kind === 'GA');
   const tierOfPool = new Map(v.tiers.map((t) => [t.pool, t]));
   const poolOf = new Map(v.pools.map((x) => [x.pool, x]));
-  const section = v.sections.find((s) => s.section === q.section) ?? v.sections[0];
+  // PRD-4 item 19 (UX-14): an ORPHAN_SEAT refusal comes back with its pick ticked, in its section, naming the seat it
+  // would strand. Worked out for display from the refused command and the rows as read now; the engine decided.
+  const picked = refusedPick(result);
+  const section = v.sections.find((s) => s.section === (q.section ?? sectionOfPick(v.sections, picked))) ?? v.sections[0];
+  const stranded = strandedWords(section ? strandedBy(section.rows, picked) : []);
   const balc = section && tierOfPool.get(section.pool);
   // One PAYING hold at a time (PRD-3 item 11): a Stripe failure for one PaymentIntent costs that hold its form, not the page.
   // Stripe's redirect back after confirmPayment carries the PaymentIntent and its status: that hold shows "Payment received", no form (item 10).
@@ -124,9 +128,10 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
         {echo && (
           <>
             <Notice k={codeKind(echo.status, echo.code)} title={said ?? `${echo.kind} → ${echo.code}`}>
+              {stranded && <p data-testid="stranded">{stranded}</p>}
               <span className="muted" data-testid="result">{echo.status} {echo.code}{echo.detail && ` · ${echo.detail}`} · at {axis(echo.at)}</span>
             </Notice>
-            <Announce assertive={echo.status !== 'OK'} text={said ?? `${echo.kind}: ${echo.code}`} />
+            <Announce assertive={echo.status !== 'OK'} text={`${said ?? `${echo.kind}: ${echo.code}`}${stranded && ` ${stranded}`}`} />
           </>
         )}
 
@@ -286,7 +291,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                             <span className="seats" role="group" aria-label={`Section ${section.section} row ${r.row}`}>
                               {r.seats.map((st) => (
                                 <label key={st.seat} className="seat" data-k="hold" title={`${st.seat} ${st.state.toLowerCase()}`}>
-                                  <input type="checkbox" name="seats[]" value={st.seat} disabled={st.state !== 'OPEN'} aria-label={`${st.seat} ${st.state.toLowerCase()}`} />
+                                  <input type="checkbox" name="seats[]" value={st.seat} disabled={st.state !== 'OPEN'} defaultChecked={st.state === 'OPEN' && picked.includes(st.seat)} aria-label={`${st.seat} ${st.state.toLowerCase()}`} />
                                   {st.num}
                                 </label>
                               ))}
