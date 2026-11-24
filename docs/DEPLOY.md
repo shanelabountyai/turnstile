@@ -29,7 +29,7 @@ runs four steps, in order, and stops at the first that fails; a failed build lea
 |---|---|---|---|
 | 1 | `scripts/deploy-env.ts` | Checks every variable in the table below. | The build log lists the names that are missing or wrong. No value is printed. |
 | 2 | `prisma migrate deploy` | Applies pending migrations with `MIGRATE_URL`. | Schema and code stay in step: the new code does not ship. |
-| 3 | `scripts/seed-hosted.ts` | Only when `DEMO_MODE=1`: the six demo accounts, and the fixture event loaded into each demo org that does not have it. Write-once: an event that is already there is never touched, so a deploy does not reset anyone's holds, orders or event clock. | — |
+| 3 | `scripts/seed-hosted.ts` | Only when `DEMO_MODE=1`: the six demo accounts, and the fixture event loaded into each demo org that does not have it. Write-once: an event that is already there is never touched, so a deploy does not reset anyone's holds, orders or event clock. A freshly loaded event's clock is put at the moment sales open, whatever the wall date (D-60). | — |
 | 4 | `npm run build` | The Next.js build. | — |
 
 A **Preview** build is skipped altogether (`vercel.json` `ignoreCommand`, as Earmark D-56), and a build of `main` is also
@@ -51,7 +51,7 @@ cloud session or CI. `VERCEL` and `VERCEL_ENV` are set by Vercel itself. Nothing
 | 6 | `DEMO_MODE` | Set to `1`. Turns on `/demo`, the only way to sign in with email off, and the demo seed at build. | The literal `1`. | build and runtime | Build refused. (At runtime without it `/demo` is a 404 and demo sessions stop resolving.) |
 | 7 | `DEMO_ACCESS_PASSWORD` | The one shared password in front of every page (HTTP Basic, any username). | You choose it and give it to the people you demo to. **16 or more characters** (PRD-2 item 8, D-66). Changing it needs a new deployment. | runtime | Build refused, also when it is shorter than 16 characters: the build names the variable and never prints the value or its length. (At runtime without it every page of a Vercel deployment answers 503: the gate fails closed.) |
 | 8 | `CRON_SECRET` | Vercel Cron sends it to `/api/cron` as a bearer token. At least 16 characters. | You generate it (`openssl rand -hex 16`). | runtime | Build refused. (At runtime without it the daily cron call answers 401 and nothing is swept.) |
-| 9 | `STRIPE_SECRET_KEY` | Creates the PaymentIntent on Pay and the refunds. Must start with `sk_test_` (or `rk_test_`). | Stripe dashboard, **test mode**, API keys. | runtime | Build refused, also for a live key. (At runtime without it Pay records a hold as PAYING that no real payment can complete.) |
+| 9 | `STRIPE_SECRET_KEY` | Creates the PaymentIntent on Pay and the refunds. Must start with `sk_test_` (or `rk_test_`). | Stripe dashboard, **test mode**, API keys. | runtime | Build refused, also for a live key. (At runtime without it, since PRD-3 item 11: Pay answers on the form that payment could not be started and the hold stays held; a box-office refund is recorded and waits as unconfirmed; nothing is marked PAYING. Before that change Pay recorded a hold as PAYING that no real payment could complete.) |
 | 10 | `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe Elements in the browser. Public by design; inlined into the bundle **at build time**. Must start with `pk_test_`. | Stripe dashboard, **test mode**, API keys. | build | Build refused. (Set after a build, it has no effect until the next build.) |
 | 11 | `STRIPE_WEBHOOK_SECRET` | Verifies Stripe's signed webhook. Tickets are issued only when it verifies. Must start with `whsec_`. | Stripe dashboard, **test mode**, the webhook endpoint created in step 5. | runtime | Build refused, also for the fixture secret published in `fixtures/stripe/`. (At runtime without it the webhook answers 503 and no ticket is ever issued.) |
 
@@ -122,7 +122,21 @@ outbox, sweeps SSO state rows and re-checks SSO domains, and delivers queued API
 every one of those counts is 0 (checked on a production build, 2026-11-20): Turnstile's own notices are parked
 undrainable (D-33), the demo accounts are refused exports, and there is no SSO provider or API key.
 
-- **Must it be on for the demo?** No. No step of the demo depends on it.
+**Since PRD-3 (D-70, D-73) the same call also runs two Turnstile jobs**, after the template's, and their counts are
+in the same JSON answer and the `cron.done` log line:
+
+- `refunds`: refunds Stripe has not confirmed are sent again, but only those the job can show are under 23 hours old
+  (Stripe replays an idempotency key for 24). The rest are counted as `needsOwner` and never retried automatically.
+- `demoReset`: **only when `DEMO_MODE=1`, every night, the Turnstile tables are emptied and both demo orgs are loaded
+  again**, with the event clock at sales open. It answers `{ "ran": false, "why": … }` and changes nothing while a
+  refund is unconfirmed, while a PaymentIntent could not be cancelled, if the fixture files cannot be read, or if
+  rows exist outside the two demo orgs. Demo accounts, sessions, the audit log and the outbox are not touched.
+
+Neither job has run on Vercel: both are tested on a local production build with recorded Stripe. **You: after the
+first night, read the cron's log line** (`cron.done`, fields `refunds` and `demoReset`).
+
+- **Must it be on for the demo?** No step of the walk depends on it, but the nightly reset does: with the cron off, a
+  spent demo org stays spent until the hand reset below.
 - **Left on (the default here, D-48):** one function call a day, which also wakes the database once a day. The only
   thing it accumulates work for over time is the rate-limit table. Check the plan's own cron and compute limits when
   you create the project; this run did not look up prices.
@@ -133,7 +147,13 @@ undrainable (D-33), the demo accounts are refused exports, and there is no SSO p
 
 ## Resetting the demo
 
-The demo database is shared and is not reset between visitors. Two things wear it out:
+**Since PRD-3 the demo resets itself every night** (D-60, D-73: the `demoReset` job in the daily cron, 06:00 UTC,
+demo mode only). The hand reset below still works and is the fallback when the nightly one refuses (its answer says
+why) or the cron is off. If it refuses because a refund is unconfirmed, look at the Ledger's "Refunds not yet confirmed
+by Stripe" line and the PaymentIntent's refunds at Stripe before wiping anything: the row is the record that money is
+owed.
+
+The demo database is shared and is not reset between visitors during the day. Two things wear it out:
 
 - **The event clock only moves forward once commands exist (D-35).** The demo's last step moves it to show night so the
   door opens. Sales close one hour after doors, so about an hour later nobody can buy in that org again. The README
