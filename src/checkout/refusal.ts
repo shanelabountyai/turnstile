@@ -9,6 +9,11 @@
 // no body, no write); a non-member is still notFound and a signed-out caller is still sent to sign in (both are
 // navigation signals, not AuthzError, and pass straight through); and the `spec` rides on the export unchanged, so
 // the INV-01..04/22 harness drives the action exactly as before.
+//
+// Two things to know before reusing it (review, 2026-11-24). (1) It answers every AuthzError with the one message it
+// was given, including one thrown from inside the action's body, so wrap only an action whose body calls nothing that
+// checks a different permission (setEventClock's does not). (2) A refused post is now an HTTP 200 with no server log
+// line, where the throw used to leave a logged 500.
 import type { ActionSpec, Failure } from '@/core/authz/action';
 import { AuthzError } from '@/core/authz/guards';
 

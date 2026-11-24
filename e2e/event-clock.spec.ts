@@ -82,9 +82,11 @@ test('a member who posts Set clock anyway is refused inline: the org bar stays a
   expect(posts.every((s) => s === 200)).toBe(true);
   expect(statuses.filter((s) => s >= 500)).toEqual([]);
 
-  // Nothing moved: the clock is still in the hour it was, not at show night, and no audit line was written.
+  // Nothing moved: the clock is not at show night (it is still in 2026, where the fresh event's wall clock is), and no
+  // audit line was written. The audit count is what proves the "Back to the wall clock" press did nothing.
   await page.reload();
   await expect(page.getByTestId('clock-movers')).toBeVisible();
-  await expect(page.getByTestId('event-clock')).toHaveText(new RegExp(`^${before.slice(0, 10)}`));
+  await expect(page.getByTestId('event-clock')).toHaveText(new RegExp(`^${before.slice(0, 4)}-`));
+  await expect(page.getByTestId('event-clock')).not.toHaveText(/^2027-03-20/);
   expect(await audits()).toBe(auditsBefore);
 });

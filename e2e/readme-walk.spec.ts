@@ -110,6 +110,9 @@ async function stepsOneToSix(page: Page, v: Visitor): Promise<Carried> {
 
   // 2. Hold two floor tickets, as a customer nobody has used: no "Your holds" and no "Your tickets" after Act as.
   await tabs(page).getByRole('link', { name: 'Buy' }).click();
+  await expect(page.locator('select[name="as"] option:not([disabled])')).toHaveCount(700); // "There are 700 (C-0001 to C-0700)"
+  await expect(page.locator('select[name="as"] option:not([disabled])').first()).toHaveAttribute('value', 'C-0001');
+  await expect(page.locator('select[name="as"] option:not([disabled])').last()).toHaveAttribute('value', 'C-0700');
   await actAs(page, v.floor);
   await expect(page.getByRole('heading', { name: 'Your holds' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Your tickets' })).toHaveCount(0);
@@ -280,6 +283,8 @@ test('A: the first visitor finishes in acme; the second finds acme spent and doe
 
   // The two orgs never mixed: each ledger holds its own two payments.
   for (const org of DEMO_ORGS) expect(await db.payment.count({ where: { eventId: ids[org].eventId } })).toBe(2);
+  await first.context().close();
+  await second.context().close();
 });
 
 test('B: the first visitor stops after step 6; the second does the whole walk in the same org as a different fresh customer', async ({ browser }) => {
@@ -296,10 +301,18 @@ test('B: the first visitor stops after step 6; the second does the whole walk in
 
   const two: Visitor = { org: 'acme', floor: 'C-0355', balcony: 'C-0356', firstInOrg: false, clock: { type: ['03202027', '070005PM'], fill: '2027-03-20T19:00:05', shows: '2027-03-20 19:00' } };
   const second = await arrive(browser, 'acme');
+  // "If the page then shows Your holds or Your tickets, an earlier visitor used that customer": the first visitor's
+  // floor customer shows both to the second visitor (the live hold and the order), which is the cue to pick another.
+  await second.goto(`/o/acme/events/${EVENT}/buy?as=${one.floor}`);
+  await expect(second.getByRole('heading', { name: 'Your holds' })).toBeVisible();
+  await expect(second.getByRole('heading', { name: 'Your tickets' })).toBeVisible();
+  await second.goto('/demo');
+  await second.getByRole('button', { name: 'owner@acme.demo.test' }).click();
   const carried = await stepsOneToSix(second, two);
   // The shared ledger now holds both visitors' purchases and refunds, to the cent: twice the README's first-visitor figures.
   await expect(second.getByTestId('captured')).toHaveText('$407.96');
   await expect(second.getByTestId('refunded')).toHaveText('$76.98');
   await expect(second.getByTestId('net')).toHaveText('$330.98');
   await stepSeven(second, two, carried);
+  await second.context().close();
 });
