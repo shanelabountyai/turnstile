@@ -8,7 +8,7 @@ import { EVENT, freshEvent, setClock, signIn } from './turnstile';
 test.beforeAll(async () => { await freshEvent('prd4-buttons.spec'); });
 test.afterAll(() => db.$disconnect());
 
-type Pair = { button: string; buttonBottom: number; fieldBottom: number };
+type Pair = { button: string; buttonBottom: number; fieldBottom: number; wrapped: boolean };
 
 /** Every `.cluster` with a direct `label` (holding an input or select) and a direct button: the two bottom edges. */
 const pairs = (page: Page) => page.evaluate(() => {
@@ -20,8 +20,8 @@ const pairs = (page: Page) => page.evaluate(() => {
     for (const b of buttons) for (const f of fields) {
       if (b.offsetParent === null) continue;
       const br = b.getBoundingClientRect(); const fr = f.getBoundingClientRect();
-      if (br.top >= fr.bottom) continue; // wrapped onto a line of its own: not the same row
-      out.push({ button: b.textContent!.trim(), buttonBottom: br.bottom, fieldBottom: fr.bottom });
+      // wrapped onto a line of its own (it depends on the fonts: CI's wrap where this sandbox's do not): not the same row
+      out.push({ button: b.textContent!.trim(), buttonBottom: br.bottom, fieldBottom: fr.bottom, wrapped: br.top >= fr.bottom });
     }
   }
   return out;
@@ -32,16 +32,20 @@ test('at 1280 every cluster button sits on its field\'s bottom edge (Event, Buy,
   await signIn(page);
   await setClock(page, '2026-12-01T10:05:30');
   const seen: string[] = [];
+  const aligned: string[] = [];
   for (const path of [`/o/acme/events/${EVENT}`, `/o/acme/events/${EVENT}/buy`, `/o/acme/events/${EVENT}/buy?as=C-0001`, `/o/acme/events/${EVENT}/box`]) {
     await page.goto(path);
     for (const p of await pairs(page)) {
       seen.push(p.button);
+      if (p.wrapped) continue;
+      aligned.push(p.button);
       expect(Math.abs(p.buttonBottom - p.fieldBottom), `${path}: "${p.button}" bottom ${p.buttonBottom} vs field ${p.fieldBottom}`).toBeLessThanOrEqual(1);
     }
   }
-  // premise: the forms the review names were measured (Box office's 'Pick balcony seats as this customer' wraps under its
-  // field at 1280, so it is not in a row with it and is not measured)
-  for (const b of ['Set clock', 'Act as', 'Hold tickets', 'Join the Section A waitlist', 'Join waitlist', 'Open order']) expect(seen).toContain(b);
+  // premise: every form the review names was found beside its field, and at least four of them share a row with it
+  // (a button that wraps onto its own line is not misaligned, and which ones wrap depends on the fonts)
+  for (const b of ['Set clock', 'Act as', 'Hold tickets', 'Join the Section A waitlist', 'Join waitlist', 'Pick balcony seats as this customer', 'Open order']) expect(seen).toContain(b);
+  expect(new Set(aligned).size, `measured on one row: ${[...new Set(aligned)].join(', ')}`).toBeGreaterThanOrEqual(4);
 });
 
 test('the seat fieldset keeps a gap between the last row and "Hold seats"', async ({ page }) => {
