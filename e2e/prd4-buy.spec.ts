@@ -40,10 +40,10 @@ test('"Change customer" sits by the Buy title and jumps to the picker', async ({
   await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0001`);
   const link = page.locator('header.page-head').getByRole('link', { name: 'Change customer' });
   await expect(link).toHaveAttribute('href', '#as');
-  await expect(page.getByRole('heading', { name: 'Acting as' })).not.toBeInViewport();
+  await expect(page.getByRole('heading', { name: 'Acting as', exact: true })).not.toBeInViewport();
   await link.click();
   await expect(page).toHaveURL(/#as$/);
-  await expect(page.getByRole('heading', { name: 'Acting as' })).toBeInViewport();
+  await expect(page.getByRole('heading', { name: 'Acting as', exact: true })).toBeInViewport();
   await expect(page.getByRole('combobox', { name: 'Customer' })).toBeInViewport();
 });
 
