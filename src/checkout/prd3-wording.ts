@@ -1,0 +1,11 @@
+// PRD-3: every sentence this PRD puts on a screen, in one place, so the owner can read and change the wording without
+// hunting through pages. **Proposed wording: Shane approves or replaces each one** (the PR lists them under "Wording
+// for Shane to approve"). Words only: nothing here decides anything, and no sentence carries Stripe's own error text.
+
+// ---- item 11: Pay fails soft
+/** Returned by the Pay action when Stripe did not create the PaymentIntent (or no gateway could be built). The hold is still HELD. */
+export const PAY_NOT_STARTED = 'Payment could not be started, and nothing was charged. Your hold is still yours: try Pay again before the timer runs out.';
+/** Returned by the Pay action if the amount Stripe would be asked for and the engine's amount ever disagree. Nothing is sent to Stripe. */
+export const PAY_AMOUNT_MISMATCH = 'Payment was not started: the amount for this hold could not be confirmed, and nothing was charged. Release the hold and hold the tickets again.';
+/** On one PAYING hold when its card form could not be fetched from Stripe. Other holds on the page are unaffected. */
+export const PAY_FORM_UNAVAILABLE = 'The card form for this payment could not be loaded just now. Nothing was charged. Refresh the page to try again.';

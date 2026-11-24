@@ -3,8 +3,9 @@ import { randomUUID } from 'node:crypto';
 import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { castCommand } from '@/checkout/cast';
-import { payStart } from '@/checkout/checkout';
+import { PayStartError, payStart } from '@/checkout/checkout';
 import { eventNow } from '@/checkout/clock';
+import { PAY_AMOUNT_MISMATCH, PAY_NOT_STARTED } from '@/checkout/prd3-wording';
 import { eventByKey } from '@/checkout/read';
 import { stripeGateway } from '@/checkout/stripe';
 import { orgAction } from '@/core/authz/action';
@@ -26,8 +27,17 @@ async function cast(ctx: OrgCtx, i: { event: string; customer: string }, c: Part
   const cmd: Command = {
     cmd_id: `U-${randomUUID()}`, at: eventNow(clock, ev), customer: i.customer, ref: '', tier_id: '', qty: 0, seats: [], payment_id: '', target: '', tickets: [], note: 'buy screen', ...c,
   };
-  if (cmd.kind === 'PAY_START') await payStart(ctx.orgId, ev.id, cmd, stripeGateway(), { clock });
-  else await castCommand(ctx.orgId, ev.id, cmd, { clock });
+  if (cmd.kind === 'PAY_START') {
+    try {
+      // the gateway is built inside payStart, and only if Stripe has to be called: a missing key on Production is a
+      // provider failure like any other (PRD-3 item 11), so it comes back as words on this form, with the hold still HELD
+      await payStart(ctx.orgId, ev.id, cmd, stripeGateway, { clock });
+    } catch (e) {
+      if (!(e instanceof PayStartError)) throw e;
+      if (e.kind === 'amount') console.error(`[turnstile] ${e.message}`);
+      return { error: e.kind === 'amount' ? PAY_AMOUNT_MISMATCH : PAY_NOT_STARTED };
+    }
+  } else await castCommand(ctx.orgId, ev.id, cmd, { clock });
   redirect(`/o/${ctx.slug}/events/${ev.eventKey}/buy?as=${i.customer}&r=${cmd.cmd_id}`);
 }
 

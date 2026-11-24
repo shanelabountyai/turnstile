@@ -16,7 +16,7 @@ export type CancelArgs = { paymentIntentId: string; eventId: string };
 export const idempotencyKey = (eventId: string, id: string): string => `${eventId}:${id}`;
 
 export interface StripeGateway {
-  /** Idempotency key = event id + hold id (D-5, D-56). Returns the PaymentIntent id, which is the engine's payment_id. */
+  /** Idempotency key = event id + hold id (D-5, D-56). Returns the PaymentIntent id, which is the engine's payment_id. Throws StripeProviderError on any Stripe failure. */
   createPaymentIntent(a: PaymentIntentArgs): Promise<{ id: string }>;
   /** Idempotency key = event id + refund id (D-5, D-56). Returns Stripe's refund id. Throws StripeProviderError on any Stripe failure. */
   createRefund(a: RefundArgs): Promise<{ id: string }>;
@@ -26,9 +26,18 @@ export interface StripeGateway {
   clientSecret(paymentIntentId: string): Promise<string | null>;
 }
 
-/** Live Stripe where a secret key is set, recorded otherwise. Recorded is safe to fall back to: it moves no money, and
- * nothing is sold without a webhook signed with STRIPE_WEBHOOK_SECRET (the e2e sets the fixture's; production never does). */
-export const stripeGateway = (): StripeGateway => (env.STRIPE_SECRET_KEY ? new StripeLive() : new StripeRecorded());
+/**
+ * Live Stripe where a secret key is set. Without one: the recorded double everywhere except a Production deployment,
+ * where a missing key is a configuration fault and this throws (PRD-3 item 11, review CODE-7). Before, Production fell
+ * back to the double silently: Pay answered "PAYING" for a PaymentIntent that did not exist. Off Production the
+ * fallback stays: it moves no money, and nothing is sold without a webhook signed with STRIPE_WEBHOOK_SECRET (tests,
+ * CI, a laptop and a Preview build have no key by design, D-5).
+ */
+export function stripeGateway(e: { VERCEL_ENV?: string; STRIPE_SECRET_KEY?: string } = env): StripeGateway {
+  if (e.STRIPE_SECRET_KEY) return new StripeLive(e.STRIPE_SECRET_KEY);
+  if (e.VERCEL_ENV === 'production') throw new StripeNotConfigured();
+  return new StripeRecorded();
+}
 
 /** The part of the official client StripeLive uses; a test passes a stand-in with these three calls. */
 export type StripeClient = Pick<Stripe, 'paymentIntents' | 'refunds'>;
@@ -47,11 +56,15 @@ export class StripeLive implements StripeGateway {
     this.s = new Stripe(secretKey);
   }
   async createPaymentIntent(a: PaymentIntentArgs) {
-    const pi = await this.s.paymentIntents.create(
-      { amount: a.amountCents, currency: a.currency.toLowerCase(), automatic_payment_methods: { enabled: true }, metadata: { hold_id: a.holdId, customer: a.customer, org_id: a.orgId, event_id: a.eventId } },
-      { idempotencyKey: idempotencyKey(a.eventId, a.holdId) },
-    );
-    return { id: pi.id };
+    try {
+      const pi = await this.s.paymentIntents.create(
+        { amount: a.amountCents, currency: a.currency.toLowerCase(), automatic_payment_methods: { enabled: true }, metadata: { hold_id: a.holdId, customer: a.customer, org_id: a.orgId, event_id: a.eventId } },
+        { idempotencyKey: idempotencyKey(a.eventId, a.holdId) },
+      );
+      return { id: pi.id };
+    } catch (e) {
+      throw providerError(e, `PaymentIntent for ${a.holdId}`); // PRD-3 item 11: payStart turns this into words on the form
+    }
   }
   async createRefund(a: RefundArgs) {
     try {
@@ -80,6 +93,14 @@ export class StripeLive implements StripeGateway {
 export class StripeProviderError extends Error {
   constructor(message: string, readonly kind: 'idempotency' | 'other' = 'other') {
     super(message);
+  }
+}
+
+/** Production with no STRIPE_SECRET_KEY (PRD-3 item 11). A provider failure to every caller: a refund stays pending, a
+ * cancel is logged, Pay says so on the form. The message names the variable and never a value. */
+export class StripeNotConfigured extends StripeProviderError {
+  constructor() {
+    super('STRIPE_SECRET_KEY is not set on this Production deployment');
   }
 }
 

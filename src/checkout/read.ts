@@ -9,6 +9,7 @@ import { rowKey, type Rules } from '@/inventory/event';
 import { toSeconds, type Timestamp } from '@/inventory/time';
 import type { Command, Result } from '@/inventory/types';
 import { engineState, eventDef, loadRows } from './cast';
+import { eventNow } from './clock';
 
 export type SoldOut = 'SOLD_OUT_POOL' | 'SOLD_OUT_TIER' | null;
 
@@ -149,6 +150,19 @@ export async function previewRefund(orgId: string, eventId: string, cmd: Command
     return { ticket: r.ticket_id, seat: t.seat, priceCents: t.price_cents, feeCents: t.fee_cents, amountCents: r.amount_cents };
   });
   return { result, daysBefore, refundBps: terms.refund_bps, feeRefunded: terms.fee_refunded, lines, totalCents: lines.reduce((a, l) => a + l.amountCents, 0) };
+}
+
+/**
+ * PRD-3 item 11: what a command would answer right now, by running it on the hydrated engine in memory and writing
+ * nothing (the same trick as previewRefund). payStart asks this before it calls Stripe, so a hold the stored rows
+ * still call HELD but the event clock has already expired creates no PaymentIntent. With `clock` the command is read
+ * on the event clock at that wall instant, as the cast will stamp it (D-35); without, at `cmd.at`. Either way no
+ * earlier than the log's last command. The cast that follows is still the only thing that decides and records.
+ */
+export async function previewCommand(orgId: string, eventId: string, cmd: Command, clock?: Date): Promise<Result> {
+  const ev = clock ? await withOrg({ orgId }, (tx) => tx.event.findUniqueOrThrow({ where: { id: eventId }, select: { timezoneLabel: true, clockOffsetSeconds: true } }), { atomic: false }) : null;
+  const { e, asOf } = await hydrated(orgId, eventId, ev && clock ? eventNow(clock, ev) : cmd.at);
+  return e.apply({ ...cmd, at: asOf });
 }
 
 /** The ledger export (task 3.7): `payments` as CSV, integer cents, through core's RFC 4180 writer. No totals row: sum the columns. */
