@@ -8,14 +8,14 @@
 // This is the same stored offset `setEventClock` writes; it is data on the event, not an engine rule.
 import { pathToFileURL } from 'node:url';
 import { axisNow } from '@/checkout/clock';
+import { DEMO_ORGS } from '@/checkout/demo';
 import { AlreadyLoaded, loadFixtureEvent } from '@/checkout/load';
 import { db } from '@/core/db'; // importing it is what refuses a cloud database off Vercel (INV-18)
 import { withOrg } from '@/core/db/rls';
 import { timestamp, toSeconds } from '@/inventory/time';
 import { seedDemo } from './seed-demo';
 
-/** The template seed's two orgs; each gets its own copy of the fixture event. */
-export const DEMO_ORGS = ['acme', 'globex'] as const;
+export { DEMO_ORGS }; // the two demo orgs now live in src/checkout/demo.ts, where the screens can read them (PRD-3 item 9)
 
 export async function seedHosted(dir = 'fixtures', wall = new Date()): Promise<string[]> {
   const lines = await seedDemo();

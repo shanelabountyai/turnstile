@@ -31,3 +31,26 @@ export function unsettledRefundsWords(unsettled: number, retryable: number, need
   if (needsOwner > 0) parts.push(`${needsOwner} ${needsOwner === 1 ? 'needs' : 'need'} the owner: too old to be retried safely (a retry could refund twice), so ${needsOwner === 1 ? 'it is' : 'they are'} not retried automatically.`);
   return parts.join(' ');
 }
+
+// ---- item 9: the spent demo org and the one-way clock
+/** One line, in demo mode, on the Events card and above the customer picker on Buy, once sales have closed on the event clock. `other` is the other demo org's slug. */
+export const usedUpWords = (other: string): string =>
+  `This organisation’s demo is used up: sales have closed on its event clock, and the clock cannot go back. Use the other demo organisation, ${other}, or ask for a reset.`;
+
+/** The confirmation shown before a clock move that closes sales. Times are axis strings as the page shows them ("2027-03-20 20:00:00"). */
+export const CLOCK_PAST_CLOSE = {
+  title: 'This closes sales, and it is one-way',
+  body: (closesAt: string, to: string): string =>
+    `Sales close at ${closesAt}. Setting the event clock to ${to} ends sales for this event: nothing more can be held or bought in this organisation. The clock cannot be set back before the last recorded command, so after the next scan, hold or payment at the new time this cannot be undone here.`,
+  /** Added in demo mode, where the organisation is shared. */
+  demo: 'This demo organisation is shared: every later visitor finds it used up until it is reset.',
+  confirm: (to: string): string => `Yes, set the clock to ${to} and close sales`,
+  cancel: 'Cancel',
+};
+
+/** Why "Back to the wall clock" is not offered in demo mode (keys are WallClockBlock in src/checkout/demo.ts). */
+export const WALL_CLOCK_BLOCKED: Record<'fails' | 'before-open' | 'closes-sales', string> = {
+  fails: '“Back to the wall clock” is off: the wall clock is earlier than the last recorded command, and the event clock cannot go before it.',
+  'before-open': '“Back to the wall clock” is off in the demo: the wall clock is before sales open, so nothing could be bought.',
+  'closes-sales': '“Back to the wall clock” is off in the demo: the wall clock is past the close of sales, so it would use this organisation up. Use Set clock if that is what you mean.',
+};

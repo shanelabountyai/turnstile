@@ -1,13 +1,15 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { eventNow } from '@/checkout/clock';
+import { otherDemoOrg, usedUp } from '@/checkout/demo';
 import { stripePublishableKey } from '@/checkout/env';
 import { axis, day, duration, minutesFrom, refundWindows, saleState, stamp, tierState, time } from '@/checkout/format';
 import { dollars, eventByKey, readEvent } from '@/checkout/read';
 import { payForms } from '@/checkout/pay-form';
-import { PAY_FORM_UNAVAILABLE, PAY_RECEIVED, PAY_RECEIVED_NEXT } from '@/checkout/prd3-wording';
+import { PAY_FORM_UNAVAILABLE, PAY_RECEIVED, PAY_RECEIVED_NEXT, usedUpWords } from '@/checkout/prd3-wording';
 import { stripeGateway } from '@/checkout/stripe';
 import { codeKind, sayCode } from '@/checkout/words';
+import { demoEnabled } from '@/core/auth/demo';
 import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { env } from '@/core/env';
@@ -121,6 +123,9 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
             <Announce assertive={result.status !== 'OK'} text={said ?? `${result.kind}: ${result.code}`} />
           </>
         )}
+
+        {/* PRD-3 item 9: in demo mode a spent org says what to do next, above the customer picker wherever the picker is */}
+        {usedUp(demoEnabled(), { asOf: v.asOf, ...v.event }) && <p className="limit" data-testid="used-up">{usedUpWords(otherDemoOrg(slug))}</p>}
 
         {!me && picker}
 
