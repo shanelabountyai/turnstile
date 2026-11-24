@@ -11,7 +11,8 @@ owner gives out; it is not written anywhere in this repository. The owner's depl
 [`docs/DEPLOY.md`](docs/DEPLOY.md), and the same walk runs locally from the Quickstart with [`docs/DEMO.md`](docs/DEMO.md).
 
 Open **`https://turnstile.labintelligence.co/demo`**. The site asks for the shared password first (HTTP Basic, any username;
-the owner gives it out). `/demo` then lists six seeded accounts: pick one to sign in, no email or password. Everything is
+the owner gives it out). `/demo` then lists six seeded accounts: pick one to sign in, no email or password. **Start as
+`owner@acme.demo.test`**: every step below uses it. Everything is
 invented data. Payments are Stripe **test mode**: no real card works and no money moves. No email is sent.
 
 | Account | Who | Used in |
@@ -19,22 +20,37 @@ invented data. Payments are Stripe **test mode**: no real card works and no mone
 | `owner@acme.demo.test` | owner of the venue's org; may also move the event clock | every step |
 | `owner@globex.demo.test` | the same event in a second org with its own clock | the whole walk again, if `acme` is spent (see step 7) |
 
+**Step 7 uses the demo up.** The event clock cannot be moved back past the last command, and sales close an hour after
+doors, so once someone has done step 7 in an org, the Buy screen there says *Sales closed* for everyone after them.
+If `acme` already says so, do the walk as `owner@globex.demo.test` in **Globex Labs**; if both do, the demo needs the
+owner's reset (`docs/DEPLOY.md`, "Resetting the demo"). The database is shared and is not reset between visitors, so
+counts and ledger totals include what earlier visitors bought.
+
+**The dollar figures assume the event clock is more than 30 days before the show.** The Event page shows the event
+clock; the show starts 2027-03-20 20:00. Closer to the show than that, steps 5 and 6 give a smaller refund or none,
+by the refund windows on the Event page.
+
 1. **Sign in and find the event.** Pick `owner@acme.demo.test` → **Acme Studio** → **Events** → **Synthetic Night
    (fixture)**. *You should see* two pools (a floor of 800, a balcony of 216) and four tiers, each with *remaining* and
    *available*, and the line **How “available” is worked out**: the smaller of what the tier has left and what its
    pool has left, worked out when the page loads and stored nowhere. The floor's tier allotments add up to more than the floor holds, on purpose.
-2. **Hold two floor tickets.** **Buy** → *Acting as* `C-0001` → **Act as**. Tier `ADV`, Quantity `2` → **Hold tickets**.
+2. **Hold two floor tickets.** **Buy** → *Acting as* → pick a customer nobody has used → **Act as**. There are 700
+   (`C-0001` to `C-0700`): take one from the middle of the list, not the first. If the page then shows **Your holds**
+   or **Your tickets**, an earlier visitor used that customer: pick another. The form starts on tier `EARLY`, quantity
+   `1`: **change Tier to `ADV` and Quantity to `2`** → **Hold tickets**.
    *You should see* `OK HELD` and a ten-minute countdown. The countdown is display only; the server decides the expiry
    to the second.
 3. **Pay with a Stripe test card.** **Pay $76.98** (2 × $34.99 + 2 × $3.50 fee). In the Stripe form use card
    `4242 4242 4242 4242`, any future expiry, any CVC → **Pay with Stripe (test mode)**. You come back to the Buy page;
    refresh until **Your tickets** shows one order with two ticket codes. The tickets are issued only when Stripe's signed
    webhook arrives, so a few seconds' wait is the design. Copy both codes.
-4. **Two balcony seats, and the seat you cannot strand.** Change *Acting as* to `C-0002`. In a balcony row, tick two
+4. **Two balcony seats, and the seat you cannot strand.** Change *Acting as* (at the foot of the page) to a second
+   customer nobody has used. In a balcony row, tick two
    open seats with **one open seat between them** → **Hold seats in A**. *You should see* it refused: `ORPHAN_SEAT`,
    the seat in the middle would be stranded between two taken ones. Now tick two open seats **side by side**, hold them,
    and pay $127.00 (2 × $60.00 + 2 × $3.50) the same way. Copy one of the two codes.
-5. **Refund one ticket at the box office.** **Box office** → *Refund a ticket* → the order of `C-0001` → **Open order** → tick
+5. **Refund one ticket at the box office.** **Box office** → *Refund a ticket* → your order (it carries your floor
+   customer's id from step 2) → **Open order** → tick
    one ticket → **Preview refund**. *You should see* the days before the show, the window that applies, and the amount:
    more than 30 days out it is the full $38.49, fee included. **Refund $38.49**: the recorded refund equals the preview
    to the cent, and the ticket goes back into the pool.
@@ -43,14 +59,9 @@ invented data. Payments are Stripe **test mode**: no real card works and no mone
    holds the same lines in integer cents.
 7. **The door.** **Door** → paste the balcony code → **Check in**. *You should see* **DO NOT ADMIT**: doors are not
    open yet, they open at 2027-03-20 19:00. Now the one-way step: **Event** → *Event clock* → set it to
-   `2027-03-20 19:00:05` → **Set clock**. Back on **Door**, the same code says **ADMIT**; scan it again and it is refused
+   20 March 2027, 7:00:05 PM (a 12-hour field shows `03/20/2027, 07:00:05 PM`; any time after 7 PM and before 8 PM
+   works) → **Set clock**. Back on **Door**, the same code says **ADMIT**; scan it again and it is refused
    with the time of the first scan; of your two floor codes one is admitted and the refunded one is refused as refunded.
-
-**Step 7 uses the demo up.** The event clock cannot be moved back past the last command, and sales close an hour after
-doors, so once someone has done step 7 in an org, the Buy screen there says *Sales closed* for everyone after them.
-If `acme` already says so, do the walk as `owner@globex.demo.test` in **Globex Labs**; if both do, the demo needs the
-owner's reset (`docs/DEPLOY.md`, "Resetting the demo"). The database is shared and is not reset between visitors, so
-counts and ledger totals include what earlier visitors bought.
 
 **What was checked, and where.** Steps 1 to 7 run as one browser session in `e2e/hosted-demo.spec.ts`, against a
 production build on a database holding only what a deploy puts there (2026-11-20, 36 e2e tests passed with and without
