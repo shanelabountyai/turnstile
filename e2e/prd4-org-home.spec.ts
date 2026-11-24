@@ -22,6 +22,7 @@ for (const width of [1280, 390]) {
     await expect(card.getByRole('link', { name: 'Open event' })).toHaveAttribute('href', `/o/acme/events/${EVENT}`);
     await expect(card.getByRole('heading', { level: 2 }).getByRole('link')).toHaveAttribute('href', `/o/acme/events/${EVENT}`);
     await expect(page.locator('main#main')).toHaveCount(1);
+    await expect(page.getByRole('navigation')).toHaveCount(1); // the org bar only: template demo.spec relies on it
 
     await page.keyboard.press('Tab');
     await expect(page.getByRole('link', { name: 'Skip to content' })).toBeFocused();

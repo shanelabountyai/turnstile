@@ -43,13 +43,14 @@ export default async function OrgHome({ params }: { params: Promise<{ org: strin
             </div>
             {usedUp(demoEnabled(), { asOf: v.asOf, ...v.event }) && <p className="limit">{usedUpWords(otherDemoOrg(ctx.slug))}</p>}
             <p className="muted">{v.event.venue} · {day(v.event.startsAt)} · doors {time(v.event.doorsAt)} · event clock {axis(v.asOf)}</p>
-            <nav aria-label={`${v.event.name} screens`} className="cluster">
+            {/* not a <nav>: the template's demo.spec expects one navigation landmark on this page (the org bar) */}
+            <div className="cluster">
               <LinkButton href={base}>Open event</LinkButton>
               <LinkButton href={`${base}/buy`} variant="secondary">Buy</LinkButton>
               <LinkButton href={`${base}/box`} variant="secondary">Box office</LinkButton>
               <LinkButton href={`${base}/door`} variant="secondary">Door</LinkButton>
               <LinkButton href={`${base}/ledger`} variant="secondary">Ledger</LinkButton>
-            </nav>
+            </div>
           </section>
         );
       })}
