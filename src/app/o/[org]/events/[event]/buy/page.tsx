@@ -244,7 +244,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                 })}
                 <ActionForm action={holdTickets.bind(null, slug)}>
                   {hidden}
-                  <div className="cluster" style={{ alignItems: 'flex-end' }}>
+                  <div className="cluster">
                     <label>Tier{' '}
                       <select name="tier" required>
                         {ga.map((t) => <option key={t.tier} value={t.tier}>{t.tier} · {dollars(t.priceCents)} · {t.available} available{t.onSale ? '' : ' · off sale'}</option>)}
@@ -294,7 +294,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                   <ActionForm action={joinWaitlist.bind(null, slug)}>
                     {hidden}
                     <input type="hidden" name="target" value={section.section} />
-                    <div className="cluster" style={{ alignItems: 'flex-end' }}>
+                    <div className="cluster">
                       <label>Seats together <input name="qty" type="number" min={1} max={rules.max_tickets_per_order} defaultValue={2} required /></label>
                       <button type="submit" className="secondary">Join the Section {section.section} waitlist</button>
                     </div>
@@ -323,7 +323,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                 )}
                 <ActionForm action={joinWaitlist.bind(null, slug)}>
                   {hidden}
-                  <div className="cluster" style={{ alignItems: 'flex-end' }}>
+                  <div className="cluster">
                     <label>For{' '}
                       <select name="target" required>
                         {ga.map((t) => <option key={t.tier} value={t.tier}>tier {t.tier}</option>)}

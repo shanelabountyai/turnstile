@@ -286,7 +286,10 @@ dl.figs dd { font: 600 var(--t-md)/1.2 var(--serif); font-variant-numeric: tabul
 .cluster { flex-direction: row; max-width: 100%; }
 form > fieldset > * { max-width: 100%; }
 form.cluster, .cluster:has(> label) { align-items: flex-end; }
-fieldset.plain { border: 0; padding: 0; }
+/* PRD-4 item 13 (DES-1): the base button rule's align-self: flex-start beat the line above, so a button beside a field
+   sat at the label's height. Inside a cluster a button takes the cluster's alignment: the field's bottom edge. */
+.cluster > button, .cluster > .button { align-self: auto; }
+fieldset.plain { border: 0; padding: 0; display: flex; flex-direction: column; gap: var(--s-3); }
 caption { text-align: left; padding-bottom: var(--s-2); }
 label, label > select, label > input { min-width: 0; }
 select { text-overflow: ellipsis; }
