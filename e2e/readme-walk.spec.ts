@@ -148,6 +148,11 @@ async function stepsOneToSix(page: Page, v: Visitor): Promise<Carried> {
   await page.getByRole('button', { name: 'Hold seats in A' }).click();
   await expect(result(page)).toContainText('REJECT ORPHAN_SEAT');
   await expect(page.locator('.notice').filter({ has: result(page) })).toContainText('stranded between two taken ones');
+  // PRD-4 item 19 (D-80): the page names the seat in the middle, and the two seats stay ticked; the README says to untick them.
+  const middle = seats.flatMap((r) => r).find((x) => x.seat > gap[0]! && x.seat < gap[1]!)!.seat;
+  await expect(page.getByTestId('stranded')).toContainText(middle);
+  for (const s of gap) await expect(page.getByLabel(`${s} open`)).toBeChecked();
+  for (const s of gap) await page.getByLabel(`${s} open`).uncheck();
   // Two open seats side by side. A second visitor has to pick a pair that strands nobody: next to taken seats or a row end.
   const taken = (r: { open: boolean }[], i: number) => i >= 0 && i < r.length && !r[i]!.open;
   const pair = seats.flatMap((r) => r.flatMap((s, i) => (s.open && r[i + 1]?.open && !(r[i - 1]?.open && taken(r, i - 2)) && !(r[i + 2]?.open && taken(r, i + 3)) ? [[s.seat, r[i + 1]!.seat]] : [])))[0]!;
