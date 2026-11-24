@@ -146,7 +146,10 @@ describe('payForms: what each PAYING hold is offered (PRD-3 item 11)', () => {
     { hold: 'H-B', state: 'PAYING', paymentId: 'pi_b' },
     { hold: 'H-C', state: 'HELD', paymentId: null },
   ];
-  const stub = (secret: (pi: string) => Promise<string | null>): StripeGateway => Object.assign(new StripeRecorded(), { clientSecret: secret });
+  // the Buy page reads each PaymentIntent once, through payView (item 10); the stub answers it from a client secret or null
+  const stub = (secret: (pi: string) => Promise<string | null>): StripeGateway => Object.assign(new StripeRecorded(), {
+    payView: async (pi: string) => { const clientSecret = await secret(pi); return clientSecret ? { kind: 'card' as const, clientSecret } : { kind: 'closed' as const }; },
+  });
 
   it('a clientSecret failure affects only that hold: the other hold still gets its card form', async () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});

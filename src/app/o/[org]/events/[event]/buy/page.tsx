@@ -6,7 +6,7 @@ import { stripePublishableKey } from '@/checkout/env';
 import { axis, day, duration, minutesFrom, refundWindows, saleState, stamp, tierState, time } from '@/checkout/format';
 import { dollars, eventByKey, readEvent } from '@/checkout/read';
 import { payForms } from '@/checkout/pay-form';
-import { PAY_FORM_UNAVAILABLE, usedUpWords } from '@/checkout/prd3-wording';
+import { PAY_FORM_UNAVAILABLE, PAY_RECEIVED, PAY_RECEIVED_NEXT, usedUpWords } from '@/checkout/prd3-wording';
 import { stripeGateway } from '@/checkout/stripe';
 import { codeKind, sayCode } from '@/checkout/words';
 import { demoEnabled } from '@/core/auth/demo';
@@ -40,7 +40,7 @@ const LATE: Record<string, { why: string; reason: string }> = {
 
 export const metadata = { title: 'Buy tickets · Turnstile' };
 
-export default async function BuyScreen({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ as?: string; r?: string; section?: string }> }) {
+export default async function BuyScreen({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ as?: string; r?: string; section?: string; payment_intent?: string; redirect_status?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const p = await params;
   const q = await searchParams;
@@ -70,7 +70,8 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const section = v.sections.find((s) => s.section === q.section) ?? v.sections[0];
   const balc = section && tierOfPool.get(section.pool);
   // One PAYING hold at a time (PRD-3 item 11): a Stripe failure for one PaymentIntent costs that hold its form, not the page.
-  const forms = await payForms(live, Boolean(pk), stripeGateway);
+  // Stripe's redirect back after confirmPayment carries the PaymentIntent and its status: that hold shows "Payment received", no form (item 10).
+  const forms = await payForms(live, Boolean(pk), stripeGateway, { paymentIntent: q.payment_intent, redirectStatus: q.redirect_status });
   const hidden = me && <><input type="hidden" name="event" value={ev.eventKey} /><input type="hidden" name="customer" value={me.customerId} /></>;
   const said = result && sayCode(result.code);
   const sales = saleState(v);
@@ -188,6 +189,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                           {h.state === 'PAYING' && (() => {
                             const f = forms.get(h.hold);
                             if (f?.kind === 'card') return <StripePay publishableKey={pk!} clientSecret={f.clientSecret} returnUrl={`${env.APP_URL}${self}`} />;
+                            if (f?.kind === 'received') return <p role="status" data-testid="pay-received"><strong>{PAY_RECEIVED}</strong> {PAY_RECEIVED_NEXT} <span className="muted">PaymentIntent {h.paymentId}.</span></p>;
                             if (f?.kind === 'unavailable') return <p role="alert" data-testid="pay-unavailable">{PAY_FORM_UNAVAILABLE} <span className="muted">PaymentIntent {h.paymentId}.</span></p>;
                             return <p className="hint" data-testid="paying">PaymentIntent {h.paymentId}. {f?.kind === 'closed' ? 'Stripe is not taking a card for this payment now (it was paid, refused or cancelled).' : 'Recorded Stripe (no publishable key here): the tickets are issued when the signed webhook arrives.'} Refresh to see it land.</p>;
                           })()}
