@@ -21,6 +21,7 @@ test('two minutes, then zero: one region, the hold id once, and it survives the 
 
   await page.clock.runFor('08:05'); // a 10-minute hold: 1:55 left
   await expect(voice).toHaveText(`Two minutes or less left on ${hold}.`);
+  await expect(page.locator('[aria-live]').filter({ hasText: 'Two minutes' })).toHaveCount(1); // one region, not one per hold
   await expect(page.getByText(/time left on/)).toHaveCount(0);
 
   // The server's clock passes the hold's expiry (in a second tab), then the page's countdown reaches zero and refreshes.

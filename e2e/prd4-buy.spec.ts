@@ -59,8 +59,11 @@ test('an orphan refusal names the stranded seat and keeps the pick ticked, in th
   await expect(page.getByLabel('A-A-01 open')).toBeChecked();
   await expect(page.getByLabel('A-A-03 open')).toBeChecked();
   await expect(page.getByLabel('A-A-02 open')).not.toBeChecked();
-  // pressing "Hold seats" again sends the same pick, and gets the same answer
+  // pressing "Hold seats" again sends the same pick, and gets the same answer (a new command: wait for its redirect)
+  const first = page.url();
   await page.getByRole('button', { name: 'Hold seats in A' }).click();
+  await page.waitForURL((u) => u.href !== first);
+  await expect(page.getByTestId('result')).toContainText('REJECT ORPHAN_SEAT');
   await expect(page.getByTestId('stranded')).toHaveText('Seat A-A-02 would be left on its own.');
 
   // In section B the refusal comes back on section B, not the first section.

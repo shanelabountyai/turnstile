@@ -36,9 +36,9 @@ export default async function Design({ params }: { params: Promise<{ org: string
             <li>
               <span className="row-id">Row [r]</span>
               <span className="seats" role="group" aria-label="Example row">
-                <label className="seat" data-k="hold"><input type="checkbox" aria-label="Example seat 1 open" />1</label>
-                <label className="seat" data-k="hold"><input type="checkbox" defaultChecked aria-label="Example seat 2 open, picked" />2</label>
-                <label className="seat" data-k="hold"><input type="checkbox" disabled aria-label="Example seat 3 sold" />3</label>
+                <label className="seat" data-k="hold"><input type="checkbox" aria-label="1, example seat open" />1</label>
+                <label className="seat" data-k="hold"><input type="checkbox" defaultChecked aria-label="2, example seat open, picked" />2</label>
+                <label className="seat" data-k="hold"><input type="checkbox" disabled aria-label="3, example seat sold" />3</label>
               </span>
             </li>
           </ol>
