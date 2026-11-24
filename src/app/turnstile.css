@@ -261,7 +261,12 @@ dl.figs dd { font: 600 var(--t-md)/1.2 var(--serif); font-variant-numeric: tabul
 .seat-rows > li { margin: 0; display: flex; flex-direction: column; gap: var(--s-1); }
 .seat-rows .row-head { display: flex; gap: var(--s-3); align-items: baseline; }
 .seat-rows .row-id { min-width: 4.5rem; font: 600 14px/1 var(--mono); color: var(--mu); }
-.seats { display: flex; flex-wrap: wrap; gap: var(--s-1); }
+.seats { display: flex; flex-wrap: nowrap; gap: var(--s-1); }
+/* PRD-4 item 15 (DES-2): a row of 12 never wraps; where it does not fit (a phone), the section's rows scroll sideways
+   inside this focusable region, never the page. */
+.seat-scroll { overflow-x: auto; padding: var(--s-2); margin: calc(-1 * var(--s-2)); }
+.seat-scroll > .seat-rows { width: max-content; min-width: 100%; }
+.seat-scroll:focus-visible { outline-offset: 0; }
 .seat {
   position: relative; flex-direction: row; gap: 0; width: 44px; height: 44px; border-radius: 6px; justify-content: center; align-items: center;
   font: 600 var(--t-xs)/1 var(--mono); background: var(--sf); color: var(--ink); border: 1px solid var(--ln-strong); cursor: pointer;

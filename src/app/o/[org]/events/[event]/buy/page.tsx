@@ -284,21 +284,25 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                     <input type="hidden" name="tier" value={balc.tier} />
                     <fieldset className="plain">
                       <legend className="sr-only">Section {section.section} seats</legend>
-                      <ol className="seat-rows" aria-label={`Section ${section.section} rows`}>
-                        {section.rows.map((r) => (
-                          <li key={r.row}>
-                            <span className="row-head"><span className="row-id">Row {r.row}</span><span className="muted">{r.seats.filter((st) => st.state === 'OPEN').length} open</span></span>
-                            <span className="seats" role="group" aria-label={`Section ${section.section} row ${r.row}`}>
-                              {r.seats.map((st) => (
-                                <label key={st.seat} className="seat" data-k="hold" title={`${st.seat} ${st.state.toLowerCase()}`}>
-                                  <input type="checkbox" name="seats[]" value={st.seat} disabled={st.state !== 'OPEN'} defaultChecked={st.state === 'OPEN' && picked.includes(st.seat)} aria-label={`${st.seat} ${st.state.toLowerCase()}`} />
-                                  {st.num}
-                                </label>
-                              ))}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
+                      {/* PRD-4 item 15: each row stays on one line; on a narrow screen the rows scroll sideways inside this region, which
+                          takes keyboard focus like ScrollTable does (DES-2). Seats keep their 44 px targets. */}
+                      <div className="seat-scroll" role="region" aria-label={`Section ${section.section} rows`} tabIndex={0}>
+                        <ol className="seat-rows">
+                          {section.rows.map((r) => (
+                            <li key={r.row}>
+                              <span className="row-head"><span className="row-id">Row {r.row}</span><span className="muted">{r.seats.filter((st) => st.state === 'OPEN').length} open</span></span>
+                              <span className="seats" role="group" aria-label={`Section ${section.section} row ${r.row}`}>
+                                {r.seats.map((st) => (
+                                  <label key={st.seat} className="seat" data-k="hold" title={`${st.seat} ${st.state.toLowerCase()}`}>
+                                    <input type="checkbox" name="seats[]" value={st.seat} disabled={st.state !== 'OPEN'} defaultChecked={st.state === 'OPEN' && picked.includes(st.seat)} aria-label={`${st.num}, ${st.seat} ${st.state.toLowerCase()}`} />
+                                    {st.num}
+                                  </label>
+                                ))}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
                       <button type="submit">Hold seats in {section.section}</button>
                     </fieldset>
                   </ActionForm>
