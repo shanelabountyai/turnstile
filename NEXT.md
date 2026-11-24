@@ -1,5 +1,30 @@
 # NEXT
 
+## ▶ 2026-11-23 (Opus 5.5, live with Shane): PR #11 merged; the five review decisions are recorded as D-60 to D-64 on branch `decisions/review-2026-11-21`. PR open, not merged.
+
+Shane chose "Merge PR #11 + take recs". PR #11 was merged as `8d11afc`. It was docs only, so the `ignoreCommand` should skip the production build.
+
+Recorded in `docs/decisions.md`. These start at D-60 because open draft PR #10 uses D-57 to D-59.
+- **D-60:** D-49 is decided. A nightly reset runs in demo mode only, with a D-21 exception for demo mode, and the seed always puts the clock at sales open.
+- **D-61:** the review's detail stays in the repo. No password goes out until #10 is merged and PRD-2 items 5, 6 and 8 are done.
+- **D-62:** every member is box-office staff.
+- **D-63:** the org home gets the event card and `id="main"`.
+- **D-64:** the paid-after-failed case is handled at the boundary for now, with the engine rule later (this also answers #10's call 1).
+
+`docs/prds/DECISIONS-NEEDED-2026-11-22.md` and the index are marked decided.
+
+**Update 2026-11-24:** #10 was merged (`debe645`). That was a code change, so it is a production deploy. This branch was then merged with main to resolve the conflicts in `NEXT.md` and `decisions.md`, keeping both sides.
+
+**Nothing from D-60 to D-64 is built.** Next, in order:
+1. Build PRD-3 item 18 (e2e sets its own clock) before 2026-12-01 10:00.
+2. Build PRD-2 items 5, 6 and 8 (the password gate, D-61).
+3. Build the rest of PRD-3, including the reset (D-60).
+4. Then PRD-4, then PRD-5.
+
+O-8 is still yours.
+
+---
+
 ## ▶ 2026-11-23 (Fable 5.2, scheduled run): post-merge review of PR #9. **1 must-fix, fixed on branch `review/money-boundary-2026-11-23`. Draft PR, not merged. Nothing deployed. Merging it deploys to production.**
 
 PR #9 was merged as `c957f7a` and is live. A separate agent reviewed it from the PR text and diff alone; each finding acted on was reproduced here first. **1 must-fix, 6 should-fix, 7 nits.** D-57 to D-59.
