@@ -8,6 +8,9 @@ import { pathToFileURL } from 'node:url';
 
 type Source = Record<string, string | undefined>;
 
+/** The shortest shared demo password a Production build accepts. */
+export const MIN_DEMO_PASSWORD = 16;
+
 /** What a deployed Turnstile needs beyond the core schema. Each entry is `NAME: what is wrong`. */
 export function turnstileProblems(source: Source): string[] {
   // As in the core parse: an empty `NAME=` is unset.
@@ -19,7 +22,10 @@ export function turnstileProblems(source: Source): string[] {
   };
 
   need('MIGRATE_URL', "the database owner's direct, unpooled connection string; migrations run with it during this build");
-  need('DEMO_ACCESS_PASSWORD', 'the shared demo password; without it every page of a Vercel deployment answers 503');
+  // PRD-2 item 8 (review SEC-4, D-66): the gate does one compare per request with no attempt limit, so the password's
+  // length is what makes guessing hopeless. Characters, not bytes. The reason names the rule; never the value or its length.
+  if (need('DEMO_ACCESS_PASSWORD', 'the shared demo password; without it every page of a Vercel deployment answers 503') && [...e.DEMO_ACCESS_PASSWORD!].length < MIN_DEMO_PASSWORD)
+    out.push(`DEMO_ACCESS_PASSWORD: must be at least ${MIN_DEMO_PASSWORD} characters (it is the only barrier in front of the demo's owner accounts, and the gate has no attempt limit)`);
   need('CRON_SECRET', 'Vercel Cron sends it to /api/cron once a day; without it the daily sweep is refused');
 
   const emailOn = e.EMAIL_ENABLED !== '0' && e.RESEND_API_KEY && e.EMAIL_FROM;
@@ -68,5 +74,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) 
     for (const p of problems) console.error(`  - ${p}`);
     process.exit(1);
   }
-  console.log('deploy-env: OK (core schema parses; migration URL, demo gate, cron secret and the three Stripe test-mode values are present).');
+  console.log(`deploy-env: OK (core schema parses; migration URL, demo gate (${MIN_DEMO_PASSWORD}+ characters), cron secret and the three Stripe test-mode values are present).`);
 }
