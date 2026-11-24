@@ -12,7 +12,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { castCommand } from '@/checkout/cast';
-import { payStart } from '@/checkout/checkout';
+import { payStart, requestRefundSettled, settleRefunds } from '@/checkout/checkout';
 import { loadFixtureEvent } from '@/checkout/load';
 import { unsettledRefundsWords } from '@/checkout/prd3-wording';
 import { pendingRefunds, RETRY_WINDOW_SECONDS, retryPendingRefunds } from '@/checkout/refund-retry';
@@ -158,6 +158,37 @@ describe('the refund retry job (PRD-3 item 12)', () => {
     expect(errors.mock.calls.flat().join('\n')).not.toContain('not a Stripe error'); // an error's text is not logged, only its class
     errors.mockRestore();
     expect(await retryPendingRefunds(() => new StripeRecorded())).toMatchObject({ settled: 1, stillPending: 0 });
+  });
+});
+
+describe('the same window guards the request paths, and a lost race does not throw (review, 2026-11-24)', () => {
+  it('a box-office refund does not sweep along an old unconfirmed refund in its event: only refunds inside the window are sent', async () => {
+    const a = evs[0]!; // R-90001 is still unconfirmed here, with an age that cannot be shown
+    const stripe = new StripeRecorded();
+    expect((await castCommand(a.orgId, a.eventId, cmd({ cmd_id: 'BX-1', at: '2026-12-01T15:00:00', kind: 'HOLD', customer: 'C-0001', ref: 'H-BX', tier_id: 'ADV', qty: 1 }))).code).toBe('HELD');
+    expect((await payStart(a.orgId, a.eventId, cmd({ cmd_id: 'BX-2', at: '2026-12-01T15:01:00', kind: 'PAY_START', customer: 'C-0001', ref: 'H-BX' }), stripe)).code).toBe('PAYING');
+    const paid = await castCommand(a.orgId, a.eventId, cmd({ cmd_id: 'BX-3', at: '2026-12-01T15:02:00', kind: 'PAY_SUCCEEDED', payment_id: 'pi_rec_H-BX' }));
+    const [order, ticket] = paid.detail.split(' ');
+    const out = await requestRefundSettled(a.orgId, a.eventId, cmd({ cmd_id: 'BX-4', at: '2026-12-01T15:03:00', kind: 'REFUND_REQUEST', customer: 'C-0001', ref: order!, tickets: [ticket!] }), stripe);
+    expect(out.result.code).toBe('REFUNDED');
+    expect(out.pending).toBe(0); // its own refund went to Stripe and was confirmed
+    const sent = refundCalls(stripe).map((c) => c.refundId);
+    expect(sent).toHaveLength(1);
+    expect(sent).not.toContain('R-90001');
+    expect((await stripeIds(a))['R-90001']).toBeNull(); // still waiting for the owner, not re-sent with an expired key
+  });
+
+  it('if another settle writes the Stripe id first, this one writes nothing and does not trip the append-only trigger', async () => {
+    const b = evs[1]!;
+    const [rid] = await pendingIn(b, 3, 1);
+    const stripe = new StripeRecorded();
+    const racing = Object.assign(stripe, { createRefund: async (x: Parameters<StripeRecorded['createRefund']>[0]) => {
+      // the other caller (same key, so the same Stripe answer) gets its row update in between this call and this update
+      await db.refund.updateMany({ where: { eventId: x.eventId, refundId: x.refundId, stripeRefundId: null }, data: { stripeRefundId: 're_first_writer' } });
+      return { id: 're_second_writer' };
+    } });
+    await expect(settleRefunds(b.orgId, b.eventId, racing, [rid!])).resolves.toEqual({ settled: 1, pending: 0 });
+    expect((await stripeIds(b))[rid!]).toBe('re_first_writer');
   });
 });
 

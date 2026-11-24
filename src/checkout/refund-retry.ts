@@ -21,42 +21,19 @@
 // before the row — is NOT retried: it is counted as "needs the owner", logged with its ids, and shown on the Ledger.
 // Whether to look the refund up at Stripe first and then retry is the owner's product call (D-70).
 //
-// Not covered here, on purpose: a box-office refund still runs settleRefunds for its whole event with no age check, as
-// it did before this change (D-70 lists it). The refund D-58 sends for a payment that succeeded after it failed has no
-// Refund row, so it is not seen here.
+// The same rule now guards the other two callers of settleRefunds (a box-office refund and a late-payment webhook):
+// they pass the event's retryable ids, which include the refunds they have just issued (checkout.ts, D-70). The refund
+// D-58 sends for a payment that succeeded after it failed has no Refund row, so it is not seen here.
+//
+// A limit to know: Stripe also stores and replays most FAILED answers for a key for 24 hours. So a retry helps where
+// the first attempt never reached Stripe or its answer was lost; a refund Stripe refused is refused again on the
+// replay and ends up as "needs the owner". None of Stripe's replay behaviour has been exercised here.
 import { db } from '@/core/db';
-import { withOrg } from '@/core/db/rls';
 import { settleRefunds } from './checkout';
+import { pendingRefunds, RETRY_WINDOW_SECONDS } from './refund-window';
+
+export { pendingRefunds, RETRY_WINDOW_SECONDS, type Pending, type PendingRefund } from './refund-window';
 import type { StripeGateway } from './stripe';
-
-/** How old a pending refund may be shown to be and still be retried: 23 hours. Stripe's idempotency window is 24. */
-export const RETRY_WINDOW_SECONDS = 23 * 60 * 60;
-
-export type PendingRefund = { eventId: string; refundId: string; paymentId: string; amountCents: number };
-export type Pending = { unsettled: number; retryable: PendingRefund[]; needsOwner: PendingRefund[] };
-
-type Row = PendingRefund & { firstLogged: Date | null; dbNow: Date };
-
-/**
- * The org's Refund rows Stripe has not confirmed, split by whether a retry can be shown to be safe (see the file
- * header). `now` defaults to the database's clock, the same clock that wrote CommandLog.createdAt; a test passes its own.
- */
-export async function pendingRefunds(orgId: string, eventId?: string, now?: Date): Promise<Pending> {
-  const rows = await withOrg({ orgId }, (tx) => tx.$queryRaw<Row[]>`
-    SELECT r."eventId"::text AS "eventId", r."refundId", r."paymentId", r."amountCents",
-           (SELECT min(c."createdAt") FROM "CommandLog" c WHERE c."eventId" = r."eventId" AND c."at" = r."at") AS "firstLogged",
-           now() AS "dbNow"
-      FROM "Refund" r
-     WHERE r."orgId" = ${orgId}::uuid AND r."stripeRefundId" IS NULL
-     ORDER BY r."eventId", r."refundId"`, { atomic: false });
-  const mine = eventId ? rows.filter((r) => r.eventId === eventId) : rows;
-  const out: Pending = { unsettled: mine.length, retryable: [], needsOwner: [] };
-  for (const { firstLogged, dbNow, ...r } of mine) {
-    const ageMs = firstLogged ? (now ?? dbNow).getTime() - firstLogged.getTime() : null;
-    (ageMs !== null && ageMs >= 0 && ageMs < RETRY_WINDOW_SECONDS * 1000 ? out.retryable : out.needsOwner).push(r);
-  }
-  return out;
-}
 
 /** Counts only: this object is the cron's HTTP answer and its log line. Ids go to the error log, never here. */
 export type RetryResult = { unsettled: number; retryable: number; settled: number; stillPending: number; needsOwner: number; failedEvents: number };

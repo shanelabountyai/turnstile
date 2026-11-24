@@ -7,7 +7,9 @@
 // tables; (3) it leaves exactly the state a fresh seed leaves. Plus the two refusals that keep money safe: it does not
 // wipe while a PaymentIntent could not be cancelled, or while a refund is still unconfirmed by Stripe.
 // Stripe is StripeRecorded (D-30). Nothing here reaches Stripe, and nothing here ran on Vercel or Neon.
-import { readFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { castCommand } from '@/checkout/cast';
 import { payStart } from '@/checkout/checkout';
@@ -63,6 +65,10 @@ async function useUp(orgId: string, eventId: string, stripe: StripeRecorded) {
   expect(paid.code).toBe('CONFIRMED');
   expect((await c({ cmd_id: 'D-4', at: '2026-12-01T10:03:00', kind: 'HOLD', customer: 'C-0002', ref: 'H-D2', tier_id: 'ADV', qty: 1 })).code).toBe('HELD');
   expect((await payStart(orgId, eventId, cmd({ cmd_id: 'D-5', at: '2026-12-01T10:04:00', kind: 'PAY_START', customer: 'C-0002', ref: 'H-D2' }), stripe)).code).toBe('PAYING'); // left open
+  // a declined card: the payment is FAILED and its hold released; its PaymentIntent is cancelled only best effort (D-56)
+  expect((await c({ cmd_id: 'D-5a', at: '2026-12-01T10:04:10', kind: 'HOLD', customer: 'C-0003', ref: 'H-D3', tier_id: 'ADV', qty: 1 })).code).toBe('HELD');
+  expect((await payStart(orgId, eventId, cmd({ cmd_id: 'D-5b', at: '2026-12-01T10:04:20', kind: 'PAY_START', customer: 'C-0003', ref: 'H-D3' }), stripe)).code).toBe('PAYING');
+  expect((await c({ cmd_id: 'D-5c', at: '2026-12-01T10:04:30', kind: 'PAY_FAILED', payment_id: 'pi_rec_H-D3' })).code).toBe('PAYMENT_FAILED_RELEASED');
   await db.event.update({ where: { id: eventId }, data: { clockOffsetSeconds: 9_999_999 } });
   return paid.detail.split(' ');
 }
@@ -127,8 +133,8 @@ describe('resetDemo (D-60)', () => {
     const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
     const before = await fingerprint(TURNSTILE_TABLES.slice());
     const refusing = Object.assign(new StripeRecorded(), { cancelPaymentIntent: async () => { throw new StripeProviderError('Stripe StripeAPIError status=500 on cancel'); } });
-    expect(await resetDemo({ demoMode: true, gateway: () => refusing, wall: WALL })).toEqual({ ran: false, why: 'open PaymentIntents could not be cancelled', open: 1, cancelled: 0 });
-    expect(await resetDemo({ demoMode: true, gateway: () => { throw new StripeNotConfigured(); }, wall: WALL })).toEqual({ ran: false, why: 'open PaymentIntents could not be cancelled', open: 1, cancelled: 0 });
+    expect(await resetDemo({ demoMode: true, gateway: () => refusing, wall: WALL })).toEqual({ ran: false, why: 'open PaymentIntents could not be cancelled', open: 2, cancelled: 0 });
+    expect(await resetDemo({ demoMode: true, gateway: () => { throw new StripeNotConfigured(); }, wall: WALL })).toEqual({ ran: false, why: 'open PaymentIntents could not be cancelled', open: 2, cancelled: 0 });
     expect(await fingerprint(TURNSTILE_TABLES.slice())).toEqual(before);
     expect(errors.mock.calls.flat().join('\n')).toContain('pi_rec_H-D2');
     errors.mockRestore();
@@ -146,6 +152,28 @@ describe('resetDemo (D-60)', () => {
     await db.refund.updateMany({ where: { eventId: e.id, stripeRefundId: null }, data: { stripeRefundId: 're_rec_test' } }); // as the retry job would, once Stripe confirms
   });
 
+  it('refuses before anything is cancelled when the fixture files cannot be read', async () => {
+    const errors = vi.spyOn(console, 'error').mockImplementation(() => {});
+    const before = await fingerprint(TURNSTILE_TABLES.slice());
+    const stripe = new StripeRecorded();
+    expect(await resetDemo({ demoMode: true, gateway: () => stripe, wall: WALL, dir: mkdtempSync(join(tmpdir(), 'turnstile-nofixture-')) })).toEqual({ ran: false, why: 'the fixture files could not be read' });
+    expect(stripe.calls).toEqual([]);
+    expect(await fingerprint(TURNSTILE_TABLES.slice())).toEqual(before);
+    errors.mockRestore();
+  });
+
+  it('is atomic: a re-load that fails after the TRUNCATE rolls the TRUNCATE back, and every table is as it was', async () => {
+    // event.json is the real one; customers.csv parses but has no customer_id column, so the re-load fails at the customers, after the wipe
+    const dir = mkdtempSync(join(tmpdir(), 'turnstile-badfixture-'));
+    writeFileSync(join(dir, 'event.json'), readFileSync('fixtures/event.json', 'utf8'));
+    writeFileSync(join(dir, 'customers.csv'), 'name,email\nNobody,nobody@example.test\n');
+    const all = await tables();
+    const before = await fingerprint(all);
+    await expect(resetDemo({ demoMode: true, gateway: () => new StripeRecorded(), wall: WALL, dir })).rejects.toThrow();
+    expect(await fingerprint(all)).toEqual(before);
+    expect(await db.commandLog.count()).toBeGreaterThan(0);
+  });
+
   it('in demo mode: cancels the open PaymentIntent, touches only the Turnstile tables, and leaves the same state as a fresh seed', async () => {
     const old = await acme();
     const all = await tables();
@@ -155,8 +183,9 @@ describe('resetDemo (D-60)', () => {
     expect(await turnstileState()).not.toEqual(fresh); // it really is used: orders, a refund, a PAYING hold, a moved clock
 
     const stripe = new StripeRecorded();
-    expect(await resetDemo({ demoMode: true, gateway: () => stripe, wall: WALL })).toEqual({ ran: true, cancelled: 1, orgs: [...DEMO_ORGS] });
-    expect(stripe.calls).toEqual([{ kind: 'cancel', eventId: old.id, paymentIntentId: 'pi_rec_H-D2' }]); // the paid one (SUCCEEDED) is not touched
+    expect(await resetDemo({ demoMode: true, gateway: () => stripe, wall: WALL })).toEqual({ ran: true, cancelled: 2, orgs: [...DEMO_ORGS] });
+    // the open one and the failed one; the paid one (SUCCEEDED) is not touched
+    expect(stripe.calls).toEqual([{ kind: 'cancel', eventId: old.id, paymentIntentId: 'pi_rec_H-D2' }, { kind: 'cancel', eventId: old.id, paymentIntentId: 'pi_rec_H-D3' }]);
 
     expect(await fingerprint(others)).toEqual(before); // (2) every other table, row for row
     expect(await turnstileState()).toEqual(fresh); // (3) the same state as a fresh seed
@@ -184,7 +213,7 @@ describe('resetDemo (D-60)', () => {
   it('with a demo org missing it does nothing (the seed has not run)', async () => {
     const before = await fingerprint(TURNSTILE_TABLES.slice());
     await db.org.update({ where: { slug: 'globex' }, data: { slug: 'globex-renamed' } });
-    expect(await resetDemo({ demoMode: true, gateway: () => new StripeRecorded(), wall: WALL })).toEqual({ ran: false, why: 'an event exists outside the demo orgs' });
+    expect(await resetDemo({ demoMode: true, gateway: () => new StripeRecorded(), wall: WALL })).toEqual({ ran: false, why: 'rows exist outside the demo orgs' });
     await db.org.update({ where: { slug: 'globex-renamed' }, data: { slug: 'globex' } });
     expect(await fingerprint(TURNSTILE_TABLES.slice())).toEqual(before);
   });
@@ -194,7 +223,7 @@ describe('resetDemo (D-60)', () => {
     await loadFixtureEvent(other.id);
     const before = await fingerprint(TURNSTILE_TABLES.slice());
     const stripe = new StripeRecorded();
-    expect(await resetDemo({ demoMode: true, gateway: () => stripe, wall: WALL })).toEqual({ ran: false, why: 'an event exists outside the demo orgs' });
+    expect(await resetDemo({ demoMode: true, gateway: () => stripe, wall: WALL })).toEqual({ ran: false, why: 'rows exist outside the demo orgs' });
     expect(stripe.calls).toEqual([]);
     expect(await fingerprint(TURNSTILE_TABLES.slice())).toEqual(before);
     // no clean-up: Seat rows are never deleted (D-21), so this stays the last test of the block; the next block starts from empty tables

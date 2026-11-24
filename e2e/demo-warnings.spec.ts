@@ -28,13 +28,9 @@ test('the one-way clock: confirmation before sales close, the used-up line after
   await expect(page.getByRole('button', { name: 'Back to the wall clock' })).toBeEnabled();
   await expect(page.getByTestId('wall-clock-off')).toHaveCount(0);
 
-  // Inside the sales window, with the wall clock still before sales open: going back would leave nothing to buy.
+  // (The "wall clock is before sales open" sentence depends on today's date, so it is pinned by the unit tests of
+  // wallClockBlock in tests/checkout/demo-warnings.test.ts, not asserted here on a calendar condition.)
   await setClock(page, '2026-12-01T10:05:30');
-  if (wallNow() < '2026-12-01T10:00:00') {
-    await expect(page.getByTestId('wall-clock-off')).toHaveText(WALL_CLOCK_BLOCKED['before-open']);
-    await expect(page.getByRole('button', { name: 'Back to the wall clock' })).toHaveCount(0);
-    await expect(page.locator('input[name="reset"]')).toHaveCount(0);
-  }
 
   // Show night, before the close: no confirmation is asked for (this is the README's step 7), and nothing says "used up".
   await setClock(page, '2027-03-20T19:00:05');
@@ -50,10 +46,12 @@ test('the one-way clock: confirmation before sales close, the used-up line after
   await page.getByRole('button', { name: 'Hold tickets' }).click();
   await expect(page.getByTestId('result')).toContainText('REJECT');
   await page.goto(eventPage);
-  if (wallNow() < '2027-03-20T19:00:05') {
-    await expect(page.getByTestId('wall-clock-off')).toHaveText(WALL_CLOCK_BLOCKED.fails);
-    await expect(page.getByRole('button', { name: 'Back to the wall clock' })).toHaveCount(0);
-  }
+  // This holds until the wall clock itself reaches show night, 2027-03-20 19:00, which is the fixture event's own end
+  // (the demo's calendar end); the guard makes a run after that date fail here by name instead of passing silently.
+  expect(wallNow() < '2027-03-20T19:00:05', 'the wall clock has passed the fixture event: this spec needs a new event date').toBe(true);
+  await expect(page.getByTestId('wall-clock-off')).toHaveText(WALL_CLOCK_BLOCKED.fails);
+  await expect(page.getByRole('button', { name: 'Back to the wall clock' })).toHaveCount(0);
+  await expect(page.locator('input[name="reset"]')).toHaveCount(0);
 
   // Setting the clock to the close of sales asks first. Nothing has moved yet.
   await page.getByLabel('Set the event clock to').fill(CLOSE.slice(0, 16));

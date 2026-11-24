@@ -189,3 +189,15 @@ it('StripeLive wraps a createPaymentIntent failure like every other Stripe call 
   expect(err).toBeInstanceOf(StripeProviderError);
   expect((err as Error).message).not.toContain('secret detail');
 });
+
+it('StripeLive.cancelPaymentIntent: a PaymentIntent Stripe says is already cancelled counts as cancelled; any other refusal is still a failure', async () => {
+  const Stripe = (await import('stripe')).default;
+  const refuse = async () => { throw new Stripe.errors.StripeInvalidRequestError({ type: 'invalid_request_error', message: 'cannot cancel' } as never); };
+  const liveWith = (status: string | null) => new StripeLive(undefined, {
+    paymentIntents: { cancel: refuse, retrieve: async () => { if (status === null) throw new Error('down'); return { status }; } }, refunds: {},
+  } as never);
+  await expect(liveWith('canceled').cancelPaymentIntent({ eventId: 'e', paymentIntentId: 'pi_x' })).resolves.toBeUndefined();
+  for (const status of ['succeeded', 'processing', 'requires_payment_method', null]) {
+    await expect(liveWith(status).cancelPaymentIntent({ eventId: 'e', paymentIntentId: 'pi_x' })).rejects.toBeInstanceOf(StripeProviderError);
+  }
+});

@@ -2,15 +2,17 @@
 //   payStart       — the command previewed in memory, then the PaymentIntent (idempotency key = event id + hold id,
 //                    D-56), PAYING recorded only after Stripe returns; a Stripe failure leaves the hold HELD (PRD-3 item 11).
 //   applyWebhook   — verify, map, cast (dedupe on event.id through the CommandLog), then settle any refund the engine issued.
-//   settleRefunds  — every Refund row still without a Stripe id gets the refunds.create call (idempotency key = event
+//   settleRefunds  — a Refund row still without a Stripe id gets the refunds.create call (idempotency key = event
 //                    id + refund id, D-56); any Stripe failure leaves it NULL (PENDING_PROVIDER), the loop goes on to the
-//                    next row, and the next call retries it. StripeLive maps every Stripe error to StripeProviderError.
+//                    next row, and a later call retries it, but only while the row is inside the 23-hour window in
+//                    which the same key is known to be replayed (D-70). StripeLive maps every Stripe error to StripeProviderError.
 //   A failed payment that releases its hold also cancels the PaymentIntent (D-56). The cancel is best effort: a success
 //   that still arrives for a FAILED payment is refunded in full at Stripe, with no order and no ledger row (D-58).
 import { withOrg } from '@/core/db/rls';
 import { log } from '@/core/log';
 import { castCommand, type CastOptions } from './cast';
 import { previewCommand } from './read';
+import { pendingRefunds } from './refund-window';
 import { StripeProviderError, type StripeGateway } from './stripe';
 import { verifyStripeSignature, webhookCommand, type StripeEvent } from './webhook';
 import type { Command, Result } from '@/inventory/types';
@@ -46,7 +48,9 @@ export async function payStart(orgId: string, eventId: string, cmd: Command, str
   const PREVIEW = `preview_${cmd.cmd_id}`;
   const preview = await previewCommand(orgId, eventId, { ...cmd, payment_id: PREVIEW }, opts.clock);
   const hold = preview.code === 'PAYING' ? await withOrg({ orgId }, (tx) => tx.hold.findUnique({ where: { eventId_holdId: { eventId, holdId: cmd.ref } } }), { atomic: false }) : null;
-  if (!hold) return castCommand(orgId, eventId, { ...cmd, payment_id: cmd.payment_id || `none_${cmd.cmd_id}` }, opts);
+  if (preview.code !== 'PAYING') return castCommand(orgId, eventId, { ...cmd, payment_id: cmd.payment_id || `none_${cmd.cmd_id}` }, opts);
+  // the engine would start the payment, so the hold exists; if its row cannot be read, nothing is cast and nothing is sent
+  if (!hold) throw new PaymentAmountMismatch(`hold ${cmd.ref} (event ${eventId}) previewed as PAYING but its row was not found; nothing was sent to Stripe`);
   const amountCents = hold.qty * (hold.priceCents + hold.feeCents); // P-3, from the stored row
   if (preview.detail !== `${PREVIEW} ${amountCents}`) throw new PaymentAmountMismatch(`hold ${hold.holdId} (event ${eventId}): the engine previewed "${preview.detail}", the stored hold comes to ${amountCents}; nothing was sent to Stripe`);
   const ev = await withOrg({ orgId }, (tx) => tx.event.findUniqueOrThrow({ where: { id: eventId }, select: { currency: true } }), { atomic: false });
@@ -62,8 +66,10 @@ export async function payStart(orgId: string, eventId: string, cmd: Command, str
     throw new PayStartError('stripe', e.message);
   }
   const res = await castCommand(orgId, eventId, { ...cmd, payment_id: pi.id }, opts);
-  // cannot differ unless the stored hold changed between the two reads; it has no transition that changes qty or price
-  if (res.code === 'PAYING' && res.detail !== `${pi.id} ${amountCents}`) throw new PaymentAmountMismatch(`engine said ${res.detail}, PaymentIntent is ${pi.id} ${amountCents}`);
+  // Cannot differ unless the stored hold changed between the two reads, and no transition changes qty or price. If it
+  // ever does, PAYING is already recorded, so this is not "payment not started": it is logged loudly and the recorded
+  // result is returned, and the screen shows the hold as the engine has it.
+  if (res.code === 'PAYING' && res.detail !== `${pi.id} ${amountCents}`) console.error(`[turnstile] BUG: amount mismatch after the cast for hold ${hold.holdId} (event ${eventId}): engine said "${res.detail}", PaymentIntent ${pi.id} was created for ${amountCents}`);
   return res;
 }
 
@@ -80,7 +86,7 @@ export async function applyWebhook(a: { orgId: string; eventId: string; rawBody:
   const result = await castCommand(a.orgId, a.eventId, cmd, { stripeEventId: ev.id, clock: a.clock });
   // the gateway is built only when money has to move, so a bad signature never needs a key
   const gateway = () => (typeof a.stripe === 'function' ? a.stripe() : a.stripe);
-  if (result.code === 'PAID_AFTER_TIMEOUT' || result.code === 'PAID_AFTER_CANCEL') await settleRefunds(a.orgId, a.eventId, gateway());
+  if (result.code === 'PAID_AFTER_TIMEOUT' || result.code === 'PAID_AFTER_CANCEL') await settleRefunds(a.orgId, a.eventId, gateway, await retryableIds(a.orgId, a.eventId));
   if (result.code === 'PAYMENT_FAILED_RELEASED') await cancelReleased(a.eventId, cmd.payment_id, gateway());
   if (cmd.kind === 'PAY_SUCCEEDED' && result.code === 'PAYMENT_DUPLICATE' && !(await refundPaidAfterFailed(a.orgId, a.eventId, cmd.payment_id, gateway))) return { status: 503, result };
   return { status: 200, result };
@@ -125,7 +131,7 @@ async function cancelReleased(eventId: string, paymentIntentId: string, stripe: 
 export async function requestRefundSettled(orgId: string, eventId: string, cmd: Command, stripe: StripeGateway | (() => StripeGateway), opts: CastOptions = {}): Promise<{ result: Result; pending: number }> {
   const result = await castCommand(orgId, eventId, cmd, opts);
   if (result.code !== 'REFUNDED') return { result, pending: 0 };
-  await settleRefunds(orgId, eventId, stripe);
+  await settleRefunds(orgId, eventId, stripe, await retryableIds(orgId, eventId));
   const mine = result.detail.split(' ').filter((w) => /^R-\d+$/.test(w));
   const pending = await withOrg({ orgId }, (tx) => tx.refund.count({ where: { eventId, refundId: { in: mine }, stripeRefundId: null } }), { atomic: false });
   return { result, pending };
@@ -134,6 +140,14 @@ export async function requestRefundSettled(orgId: string, eventId: string, cmd: 
 export async function requestRefund(orgId: string, eventId: string, cmd: Command, stripe: StripeGateway, opts: CastOptions = {}): Promise<Result> {
   return (await requestRefundSettled(orgId, eventId, cmd, stripe, opts)).result;
 }
+
+/**
+ * The event's unconfirmed refunds that may be sent to Stripe now: the ones just issued, and any older one still inside
+ * the 23-hour window in which a retry is known to reuse its idempotency key safely (refund-window.ts, D-70). A refund
+ * past the window is NOT swept along by a later refund or webhook in the same event: that was the remaining way to a
+ * second refund for one row. It waits, counted on the Ledger as needing the owner.
+ */
+const retryableIds = async (orgId: string, eventId: string): Promise<string[]> => (await pendingRefunds(orgId, eventId)).retryable.map((r) => r.refundId);
 
 /** Calls refunds.create for every Refund row without a Stripe id (or only the ones named); returns how many settled and how many are still pending. */
 export async function settleRefunds(orgId: string, eventId: string, given: StripeGateway | (() => StripeGateway), only?: string[]): Promise<{ settled: number; pending: number }> {

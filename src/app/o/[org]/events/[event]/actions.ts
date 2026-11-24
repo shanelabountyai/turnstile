@@ -47,8 +47,10 @@ export const setEventClock = refusingInline(orgAction(
       // The page does not offer the button in these cases; a post that arrives anyway gets the same sentence.
       const block = wallClockBlock({ ...window, demo: demoEnabled(), offsetSeconds: ev.clockOffsetSeconds, wall, asOf, logAt: (last?.at ?? null) as Timestamp | null });
       if (block) return { error: WALL_CLOCK_BLOCKED[block] };
-    } else if (!i.confirm && crossesSalesClose(asOf, target, window.salesCloseAt)) {
-      // One-way: this move closes sales. Nothing is written until the owner or admin confirms on the Event page.
+    }
+    if (!i.confirm && crossesSalesClose(asOf, target, window.salesCloseAt)) {
+      // One-way: this move closes sales, whichever button asked for it (outside demo mode "Back to the wall clock" can
+      // cross the close too). Nothing is written until the owner or admin confirms on the Event page.
       redirect(`/o/${ctx.slug}/events/${ev.eventKey}?confirm_clock=${target}#clock`);
     }
     const offset = toSeconds(target) - toSeconds(wall);

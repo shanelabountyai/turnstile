@@ -90,6 +90,15 @@ export class StripeLive implements StripeGateway {
     try {
       await this.s.paymentIntents.cancel(a.paymentIntentId, {}, { idempotencyKey: idempotencyKey(a.eventId, `cancel:${a.paymentIntentId}`) });
     } catch (e) {
+      // Stripe refuses to cancel a PaymentIntent that is already cancelled, and replays that refusal for the key. For
+      // every caller that is the outcome it wanted, so one read decides: `canceled` is success, anything else is the failure.
+      let status: string | null = null;
+      try {
+        status = (await this.s.paymentIntents.retrieve(a.paymentIntentId)).status;
+      } catch {
+        // the read failed too: report the cancel's own failure below
+      }
+      if (status === 'canceled') return;
       throw providerError(e, `cancel ${a.paymentIntentId}`);
     }
   }
