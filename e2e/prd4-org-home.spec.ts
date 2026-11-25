@@ -38,6 +38,7 @@ for (const width of [1280, 390]) {
 }
 
 test('an org with no event keeps the template text, now with id="main"', async ({ page }) => {
+  if (!/_test(\?|$)/.test(process.env.DATABASE_URL ?? '')) throw new Error('prd4-org-home.spec empties Turnstile rows; run it against a *_test database');
   await db.$executeRawUnsafe('TRUNCATE "Event", "Pool", "Tier", "Section", "Seat", "Hold", "Payment", "Order", "Ticket", "WaitlistEntry", "Refund", "CommandLog", "Customer"');
   await signIn(page);
   await page.goto('/o/acme');
