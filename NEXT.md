@@ -1,5 +1,17 @@
 # NEXT
 
+## ▶ 2026-11-24 (Opus 5.5, live with Shane): PRD-3 item 18 built on branch `fix/hosted-demo-clock`. PR open, not merged.
+
+- `e2e/hosted-demo.spec.ts` puts both freshly seeded demo events at the moment sales open itself (`clocksToSalesOpen`: the same stored offset `setEventClock` writes, on an empty log), so its hold/release branch runs whatever the wall date. The two `axisNow(new Date()) < '2026-12-01T10:00:00'` branches are gone.
+- `docs/DEPLOY.md` records the demo's calendar end, and corrects the reset note: after 2026-12-01 10:00 a reset leaves the clock on the wall clock until D-60's seed change lands.
+- No product code, engine, fixture or schema change.
+
+Gate here: `tsc` clean · eslint on the spec clean · `inventory:lint` OK. The e2e was not run here (no Postgres or browser build in this session). CI runs the whole Playwright suite on the PR, but before 2026-12-01 that only shows the spec still passes; the after-the-date path is the same code with a different offset.
+
+**Next:** PRD-2 items 5, 6 and 8 (the password gate, D-61), then the rest of PRD-3 including the D-60 reset.
+
+---
+
 ## ▶ 2026-11-24 (Fable 5.2, scheduled run, started 2026-11-23 about 10:25 PM CT): PRD-2 items 5, 6 and 8 built on branch `prd-2/demo-safe-to-share`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy. Two things must happen before the merge.**
 
 **Before merging, in this order:**

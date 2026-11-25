@@ -2,7 +2,8 @@ import { expect, test, type Page } from '@playwright/test';
 import { axisNow } from '@/checkout/clock';
 import { dollars } from '@/checkout/read';
 import { db } from '@/core/db';
-import { seedHosted } from '../scripts/seed-hosted';
+import { timestamp, toSeconds } from '@/inventory/time';
+import { DEMO_ORGS, seedHosted } from '../scripts/seed-hosted';
 import { EVENT, holdGa, paySucceeded, setClock } from './turnstile';
 
 // Deploy prep (D-47, D-49): the README's "Try the live demo" walk, in one browser session against the production
@@ -20,10 +21,22 @@ test.beforeAll(async () => {
   if (!/_test(\?|$)/.test(process.env.DATABASE_URL ?? '')) throw new Error('hosted-demo.spec empties Turnstile rows; run it against a *_test database');
   await db.$executeRawUnsafe('TRUNCATE "Event", "Pool", "Tier", "Section", "Seat", "Hold", "Payment", "Order", "Ticket", "WaitlistEntry", "Refund", "CommandLog", "Customer"');
   await seedHosted('fixtures');
+  await clocksToSalesOpen();
   const orgId = (await db.org.findUniqueOrThrow({ where: { slug: 'acme' }, select: { id: true } })).id;
   ids = { orgId, eventId: (await db.event.findFirstOrThrow({ where: { orgId }, select: { id: true } })).id };
 });
 test.afterAll(() => db.$disconnect());
+
+// The seed sets the clock to sales open only while the wall clock is still before it (D-47). From 2026-12-01 10:00 on
+// it leaves the event on the wall clock, and this spec's hold/release steps would silently stop running. So the spec
+// puts both freshly seeded events at the moment sales open itself, whatever the wall date (review item 18, CODE-9):
+// the same stored offset setEventClock writes, allowed because the CommandLog is still empty.
+async function clocksToSalesOpen() {
+  for (const ev of await db.event.findMany({ where: { org: { slug: { in: [...DEMO_ORGS] } } }, select: { id: true, timezoneLabel: true, salesOpenAt: true } })) {
+    const offset = toSeconds(timestamp(ev.salesOpenAt, 'salesOpenAt')) - toSeconds(axisNow(new Date(), ev.timezoneLabel));
+    await db.event.update({ where: { id: ev.id }, data: { clockOffsetSeconds: offset } });
+  }
+}
 
 async function payFor(page: Page, hold: string) {
   await page.getByTestId(`hold-${hold}`).getByRole('button', { name: /^Pay \$/ }).click();
@@ -47,13 +60,11 @@ test('a demo member can hold and release a ticket, and is refused the event cloc
   await page.getByRole('link', { name: 'Acme Studio' }).click();
   await page.goto(`/o/acme/events/${EVENT}`);
   const before = await page.getByTestId('event-clock').textContent();
-  if (axisNow(new Date(), 'America/Chicago') < '2026-12-01T10:00:00') {
-    await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0003`);
-    const hold = await holdGa(page, 'ADV', 1);
-    await page.getByTestId(`hold-${hold}`).getByRole('button', { name: 'Release' }).click();
-    await expect(page.getByTestId('result')).toContainText('OK RELEASED');
-    await page.goto(`/o/acme/events/${EVENT}`);
-  }
+  await page.goto(`/o/acme/events/${EVENT}/buy?as=C-0003`);
+  const hold = await holdGa(page, 'ADV', 1);
+  await page.getByTestId(`hold-${hold}`).getByRole('button', { name: 'Release' }).click();
+  await expect(page.getByTestId('result')).toContainText('OK RELEASED');
+  await page.goto(`/o/acme/events/${EVENT}`);
   // A member is not offered the clock form and is told who can move it (D-65); e2e/event-clock.spec.ts posts the action anyway.
   await expect(page.getByTestId('clock-movers')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Set clock' })).toHaveCount(0);
@@ -69,13 +80,12 @@ test('the live-demo walk on a freshly deployed database: sign in, buy GA and a r
   await page.getByRole('navigation').getByRole('link', { name: 'Events' }).click();
   await page.getByRole('link', { name: 'Synthetic Night (fixture)' }).first().click();
 
-  // 2. The event page. Nothing is sold; the seed left the event clock at the moment sales open (while the wall clock
-  // is still before it), so the visitor can buy without touching the clock.
+  // 2. The event page. Nothing is sold; the event clock is at the moment sales open (the seed does that before
+  // 2026-12-01 10:00, clocksToSalesOpen above whatever the date), so the visitor can buy without touching the clock.
   await expect(page).toHaveURL(new RegExp(`/o/acme/events/${EVENT}$`));
   await expect(page.getByTestId('pool-FLOOR')).toBeVisible();
   await expect(page.getByTestId('tier-ADV')).toContainText('400 remaining · 400 available');
-  if (axisNow(new Date(), 'America/Chicago') < '2026-12-01T10:00:00') await expect(page.getByTestId('event-clock')).toHaveText(/^2026-12-01 10:[0-2]\d/);
-  else await setClock(page, '2026-12-01T10:00:30'); // run after sales opened for real: put the empty event back at the start so the amounts below hold
+  await expect(page.getByTestId('event-clock')).toHaveText(/^2026-12-01 10:[0-2]\d/);
 
   // 3. A GA purchase: two Advance tickets, 2 × (3,499 + 350) ¢.
   await page.getByRole('navigation', { name: 'Event screens' }).getByRole('link', { name: 'Buy' }).click();
