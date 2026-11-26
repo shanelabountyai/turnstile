@@ -15,6 +15,7 @@ import { db } from '@/core/db';
 import { timestamp } from '@/inventory/time';
 import type { Command, Result } from '@/inventory/types';
 import { resetAuthTables, signInAs } from '../helpers/auth';
+import { pinEventClock } from '../helpers/clock';
 import { addMember, makeOrg } from '../helpers/org';
 
 const wrong = vi.hoisted(() => ({ on: false }));
@@ -47,6 +48,9 @@ beforeAll(async () => {
   writeFileSync(join(dir, 'event.json'), readFileSync('fixtures/event.json', 'utf8'));
   writeFileSync(join(dir, 'customers.csv'), 'customer_id,name,email\nC-0001,One,one@example.test\n');
   eventId = (await loadFixtureEvent(org.id, dir)).eventId;
+  // the Buy action stamps on the event clock; pinned before H-AMT (2026-12-01T10:00, 10 minutes), so it lands at the
+  // log's end on any date
+  await pinEventClock(eventId, '2026-11-01T00:00:00');
   member = (await addMember(org.id, 'member', 'member@example.test')).id;
   expect((await castCommand(org.id, eventId, cmd({ cmd_id: 'A-1', at: '2026-12-01T10:00:00', kind: 'HOLD', customer: 'C-0001', ref: 'H-AMT', tier_id: 'ADV', qty: 2 }))).code).toBe('HELD');
 });
