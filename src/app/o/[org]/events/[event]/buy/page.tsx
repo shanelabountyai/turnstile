@@ -4,6 +4,7 @@ import { eventNow } from '@/checkout/clock';
 import { otherDemoOrg, usedUp } from '@/checkout/demo';
 import { stripePublishableKey } from '@/checkout/env';
 import { axis, day, duration, minutesFrom, refundWindows, saleState, stamp, tierState, time } from '@/checkout/format';
+import { movedOn, refusedPick, sectionOfPick, strandedBy, strandedWords } from '@/checkout/buy-view';
 import { dollars, eventByKey, readEvent } from '@/checkout/read';
 import { payForms } from '@/checkout/pay-form';
 import { PAY_FORM_UNAVAILABLE, PAY_RECEIVED, PAY_RECEIVED_NEXT, usedUpWords } from '@/checkout/prd3-wording';
@@ -14,7 +15,7 @@ import { requireOrg } from '@/core/authz/guards';
 import { withOrg } from '@/core/db/rls';
 import { env } from '@/core/env';
 import { ActionForm } from '@/core/ui/action-form';
-import { Countdown } from '@/components/countdown';
+import { Countdown, CountdownVoice } from '@/components/countdown';
 import { StripePay } from '@/components/stripe-pay';
 import { Announce } from '@/components/announce';
 import { EmptyState, EventTabs, Notice, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
@@ -49,7 +50,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const v = await readEvent(ctx.orgId, ev.id, eventNow(new Date(), ev));
   const { customers, result } = await withOrg(ctx, async (tx) => ({
     customers: await tx.customer.findMany({ where: { orgId: ctx.orgId }, orderBy: { customerId: 'asc' }, select: { customerId: true, name: true } }),
-    result: q.r ? await tx.commandLog.findUnique({ where: { eventId_cmdId: { eventId: ev.id, cmdId: q.r } }, select: { kind: true, status: true, code: true, detail: true, at: true } }) : null,
+    result: q.r ? await tx.commandLog.findUnique({ where: { eventId_cmdId: { eventId: ev.id, cmdId: q.r } }, select: { kind: true, status: true, code: true, detail: true, at: true, payload: true } }) : null,
   }), { atomic: false });
   const me = customers.find((c) => c.customerId === q.as);
   const slug = ctx.slug;
@@ -67,13 +68,19 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
   const ga = v.tiers.filter((t) => v.pools.find((x) => x.pool === t.pool)?.kind === 'GA');
   const tierOfPool = new Map(v.tiers.map((t) => [t.pool, t]));
   const poolOf = new Map(v.pools.map((x) => [x.pool, x]));
-  const section = v.sections.find((s) => s.section === q.section) ?? v.sections[0];
+  // PRD-4 item 19 (UX-14): an ORPHAN_SEAT refusal comes back with its pick ticked, in its section, naming the seat it
+  // would strand. Worked out for display from the refused command and the rows as read now; the engine decided.
+  const picked = refusedPick(result);
+  const section = v.sections.find((s) => s.section === (q.section ?? sectionOfPick(v.sections, picked))) ?? v.sections[0];
+  const stranded = strandedWords(section ? strandedBy(section.rows, picked) : []);
   const balc = section && tierOfPool.get(section.pool);
   // One PAYING hold at a time (PRD-3 item 11): a Stripe failure for one PaymentIntent costs that hold its form, not the page.
   // Stripe's redirect back after confirmPayment carries the PaymentIntent and its status: that hold shows "Payment received", no form (item 10).
   const forms = await payForms(live, Boolean(pk), stripeGateway, { paymentIntent: q.payment_intent, redirectStatus: q.redirect_status });
   const hidden = me && <><input type="hidden" name="event" value={ev.eventKey} /><input type="hidden" name="customer" value={me.customerId} /></>;
   const said = result && sayCode(result.code);
+  // PRD-4 item 17 (UX-11, DES-11): an accepted hold or payment whose hold has since moved on (paid, expired) is not echoed
+  const echo = result && !movedOn(result, v.holds) ? result : null;
   const sales = saleState(v);
 
   // Where the customer is, for the step list: the latest thing that happened to them, read off the view.
@@ -112,15 +119,19 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
           eyebrow={`${v.event.name} · ${day(v.event.startsAt)} · doors ${time(v.event.doorsAt)}`}
           title={me ? <>Buy tickets · acting as {me.customerId}</> : 'Buy tickets'}
           status={<Pill k="info">Event clock {axis(v.asOf)}</Pill>}
+          actions={me && <a className="button secondary" href="#as">Change customer</a>}
           lead="Every count below is worked out from sold and held tickets when the page loads. Nothing is reserved until you have a hold."
         />
+        {/* PRD-4 item 16: the countdowns' spoken warnings, in a region that outlives an expired hold's refresh */}
+        <CountdownVoice />
 
-        {result && (
+        {echo && (
           <>
-            <Notice k={codeKind(result.status, result.code)} title={said ?? `${result.kind} → ${result.code}`}>
-              <span className="muted" data-testid="result">{result.status} {result.code}{result.detail && ` · ${result.detail}`} · at {axis(result.at)}</span>
+            <Notice k={codeKind(echo.status, echo.code)} title={said ?? `${echo.kind} → ${echo.code}`}>
+              {stranded && <p data-testid="stranded">{stranded}</p>}
+              <span className="muted" data-testid="result">{echo.status} {echo.code}{echo.detail && ` · ${echo.detail}`} · at {axis(echo.at)}</span>
             </Notice>
-            <Announce assertive={result.status !== 'OK'} text={said ?? `${result.kind}: ${result.code}`} />
+            <Announce assertive={echo.status !== 'OK'} text={`${said ?? `${echo.kind}: ${echo.code}`}${stranded && ` ${stranded}`}`} />
           </>
         )}
 
@@ -173,7 +184,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                           <p className="cluster"><Pill k="hold">{h.state}</Pill><span>{h.kind === 'OFFER' ? 'Offer' : 'Hold'} {h.hold} · {h.tier}</span></p>
                           {h.kind === 'OFFER' && h.state === 'HELD' && <p>A seat came back and you were first in line. It is held for you until the timer runs out, then it goes to the next person.</p>}
                           {h.secondsLeft !== null && (
-                            <p><span className="fig-lg"><Countdown key={h.deadline} seconds={h.secondsLeft} label={`time left on ${h.hold}`} /></span>{' '}
+                            <p><span className="fig-lg"><Countdown key={h.deadline} seconds={h.secondsLeft} label={h.hold} /></span>{' '}
                               <span className="muted">{h.state === 'HELD' ? (h.kind === 'OFFER' ? 'to accept' : 'to pay') : 'for the payment to land'} · until {axis(h.deadline!)}</span></p>
                           )}
                           <p>{sum}</p>
@@ -244,7 +255,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                 })}
                 <ActionForm action={holdTickets.bind(null, slug)}>
                   {hidden}
-                  <div className="cluster" style={{ alignItems: 'flex-end' }}>
+                  <div className="cluster">
                     <label>Tier{' '}
                       <select name="tier" required>
                         {ga.map((t) => <option key={t.tier} value={t.tier}>{t.tier} · {dollars(t.priceCents)} · {t.available} available{t.onSale ? '' : ' · off sale'}</option>)}
@@ -273,28 +284,32 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                     <input type="hidden" name="tier" value={balc.tier} />
                     <fieldset className="plain">
                       <legend className="sr-only">Section {section.section} seats</legend>
-                      <ol className="seat-rows" aria-label={`Section ${section.section} rows`}>
-                        {section.rows.map((r) => (
-                          <li key={r.row}>
-                            <span className="row-head"><span className="row-id">Row {r.row}</span><span className="muted">{r.seats.filter((st) => st.state === 'OPEN').length} open</span></span>
-                            <span className="seats" role="group" aria-label={`Section ${section.section} row ${r.row}`}>
-                              {r.seats.map((st) => (
-                                <label key={st.seat} className="seat" data-k="hold" title={`${st.seat} ${st.state.toLowerCase()}`}>
-                                  <input type="checkbox" name="seats[]" value={st.seat} disabled={st.state !== 'OPEN'} aria-label={`${st.seat} ${st.state.toLowerCase()}`} />
-                                  {st.num}
-                                </label>
-                              ))}
-                            </span>
-                          </li>
-                        ))}
-                      </ol>
+                      {/* PRD-4 item 15: each row stays on one line; on a narrow screen the rows scroll sideways inside this region, which
+                          takes keyboard focus like ScrollTable does (DES-2). Seats keep their 44 px targets. */}
+                      <div className="seat-scroll" role="region" aria-label={`Section ${section.section} rows`} tabIndex={0}>
+                        <ol className="seat-rows">
+                          {section.rows.map((r) => (
+                            <li key={r.row}>
+                              <span className="row-head"><span className="row-id">Row {r.row}</span><span className="muted">{r.seats.filter((st) => st.state === 'OPEN').length} open</span></span>
+                              <span className="seats" role="group" aria-label={`Section ${section.section} row ${r.row}`}>
+                                {r.seats.map((st) => (
+                                  <label key={st.seat} className="seat" data-k="hold" title={`${st.seat} ${st.state.toLowerCase()}`}>
+                                    <input type="checkbox" name="seats[]" value={st.seat} disabled={st.state !== 'OPEN'} defaultChecked={st.state === 'OPEN' && picked.includes(st.seat)} aria-label={`${st.num}, ${st.seat} ${st.state.toLowerCase()}`} />
+                                    {st.num}
+                                  </label>
+                                ))}
+                              </span>
+                            </li>
+                          ))}
+                        </ol>
+                      </div>
                       <button type="submit">Hold seats in {section.section}</button>
                     </fieldset>
                   </ActionForm>
                   <ActionForm action={joinWaitlist.bind(null, slug)}>
                     {hidden}
                     <input type="hidden" name="target" value={section.section} />
-                    <div className="cluster" style={{ alignItems: 'flex-end' }}>
+                    <div className="cluster">
                       <label>Seats together <input name="qty" type="number" min={1} max={rules.max_tickets_per_order} defaultValue={2} required /></label>
                       <button type="submit" className="secondary">Join the Section {section.section} waitlist</button>
                     </div>
@@ -323,7 +338,7 @@ export default async function BuyScreen({ params, searchParams }: { params: Prom
                 )}
                 <ActionForm action={joinWaitlist.bind(null, slug)}>
                   {hidden}
-                  <div className="cluster" style={{ alignItems: 'flex-end' }}>
+                  <div className="cluster">
                     <label>For{' '}
                       <select name="target" required>
                         {ga.map((t) => <option key={t.tier} value={t.tier}>tier {t.tier}</option>)}

@@ -9,6 +9,75 @@
 - **Gate on this branch** (cloud sandbox; Postgres 16 started by hand, migrations by `psql`; `npm ci` with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true`): lint 0 · typecheck clean · vitest 65 files, 577 passed, 33 skipped, 4 failed (template `inv-34-export`: `_prisma_migrations` does not exist when migrated by `psql`; CI-only) · inventory:lint OK · inventory:eval match (2,662, commitment `d4d64203…61d43`) · fixtures:check OK · inventory:eval:db match (2,662; 483 PaymentIntents, 48 refund calls, 0 pending) · `build:test` rc 0 · Playwright 46 passed. Not run: `foundation:drift` (template tag not reachable; no template-owned path changed). CI decides.
 - **Should-fixes left for you** (behaviour or wording) are in D-87 (5) and the three reviews.
 
+---
+
+## ▶ 2026-11-26 (Fable 5.2, scheduled follow-through run, Thanksgiving morning CT): the three stacked draft PRs are merged up to date and their review should-fix items are applied. **Documents and merges only. Nothing merged to `main`, nothing deployed, all three still drafts.**
+
+**Where the three stand.** The "Gated" column is the commit the local gate ran on. Every commit after it on each branch changes documents only (the delta-review rows D-85 and D-86, the merges that carry them up, and this section), so the branch heads are later than these; the PR comments name them.
+
+| PR | Branch, base | Gated | What this run did | Local gate |
+|---|---|---|---|---|
+| #14 PRD-2 | `prd-2/demo-safe-to-share` → `main` | `ed0d81c` | Confirmed the `445f47a` merge of `main` (#13) kept both sides in `e2e/hosted-demo.spec.ts` and `NEXT.md`. D-82 corrects D-68 (1); acceptance test 2 is partly met, by design. | vitest 500 passed, 33 skipped, 4 failed (sandbox only); Playwright 42 passed |
+| #15 PRD-3 | `prd-3/payment-refund-resilience` → `prd-2/demo-safe-to-share` | `c915839` | Merged PRD-2 in (`cfacf14`): **the conflict with its base is resolved**, in three documents, both sides kept. D-83 states the refund retry's limits; the acceptance line on the retry is not fully met. | vitest 577 passed, 33 skipped, 4 failed (sandbox only); Playwright 45 passed and 1 failed, then 46 passed on a second full run |
+| #16 PRD-4 | `prd-4/first-impression-polish` → `prd-3/payment-refund-resilience` | `660ce6c` | Merged PRD-3 in (`660ce6c`), conflicts in two documents, both sides kept. D-84: item 13's acceptance is every same-row pair. | vitest 589 passed, 33 skipped, 4 failed (sandbox only); Playwright 59 passed |
+
+On all three: lint 0, typecheck clean, `inventory:lint` OK, `inventory:eval` match (2,662 commands, commitment `d4d64203…61d43`), `fixtures:check` OK, `design:contrast` 0 pairs under the floor, `inventory:eval:db` match (2,662), `next build` rc 0 (as `npm run build:test`). The 4 vitest failures are the template's `inv-34-export` tests, as in every sandbox run before (`_prisma_migrations` does not exist when migrations go in by `psql`); they pass in CI. Exact figures and the sandbox notes are in D-84. **CI decides:** the check results on the pushed heads are in each PR's "Merge checklist (2026-11-26 follow-through)" comment, not here, because they did not exist when this was written.
+
+**One thing to know about the tests:** `e2e/event-clock.spec.ts:49` failed once in a full run on the PRD-3 tree (two alerts matched one locator) and passed 6 of 6 alone and in a second full run. It is intermittent and older than this run (D-84 (4)). If CI goes red on it, re-run the job first.
+
+**No behaviour changed.** Nothing under `src/`, `tests/`, `fixtures/` or `prisma/` was edited by hand; in this run the only code-file change on any branch is `e2e/hosted-demo.spec.ts` arriving from `main` (#13) through the merges. No test was deleted, skipped or weakened. An independent agent given only the commits since each reviewed head found no behaviour change, no weakened test and no dropped side of a merge; its precision points on the record are D-85 and D-86.
+
+**Not done, because it is yours or needs a behaviour change:**
+- Closing the refund-retry gap (D-83, D-86) is a change in `src/checkout`: D-70's options (b) or (c).
+- Wording: `README.md` ("not reset between visitors", "needs the owner's reset", the *Sales closed* sentence, step 4's "side by side"), `docs/DEPLOY.md` ("leaves the clock on the wall clock", "until the D-60 seed change lands", "decided but not built": all untrue once #15 merges; D-86), `src/checkout/prd3-wording.ts`, the Ledger's "1 refund, 0 of them late money", and the two wording tables in #15 and #16.
+- The intermittent `event-clock.spec.ts:49` locator (D-84 (4)).
+- The "same hour" assertion in `e2e/hosted-demo.spec.ts` that is now trivially true (D-82 (3)).
+
+**You, in order (carried forward from the 2026-11-25 reviews; none of these was checked by this run):**
+1. You: confirm `DEMO_ACCESS_PASSWORD` is 16 or more characters in Vercel. The Production build refuses a shorter one (D-66).
+2. You: read #14's "README wording for Shane to approve"; keep it or revert `a7654ad`.
+3. You: mark #14 ready and merge it. **That deploys.** Look at the live Event page as `member@acme.demo.test`.
+4. You: retarget #15 to `main`. Confirm `STRIPE_SECRET_KEY` is set for Production in Vercel (D-69).
+5. You: decide whether merging #15 should turn on the nightly 06:00 UTC reset of the live demo. It also wipes any O-8 test orders from the Ledger. If yes, reword `README.md:26` and the `docs/DEPLOY.md` sentences above; if no, leave #15 unmerged or revert `9eeb816` and the reset parts of `e06da89`.
+6. You: read #15's wording table and the refund product call (D-70, D-83), including the Ledger sentence.
+7. You: mark #15 ready and merge it. **That deploys.** The next morning read the cron's `cron.done` line: `demoReset` should say `"ran": true`.
+8. You: D-76 is recorded as confirmed by you in the PRD-4 session (D-81); say so if that record is wrong. Read #16's wording table.
+9. You: retarget #16 to `main`, let CI re-run, mark it ready and merge it. **That deploys.** Look at Buy on a phone and at `/o/acme`.
+10. You: O-8, the live Stripe round trip, is still open (`docs/EVAL.md`).
+
+The sections below are the three build runs' own notes. Each of the PRD-3 and PRD-2 sections carries a 2026-11-26 update block; the PRD-4 section's "You, in order" is replaced by the list above.
+
+---
+
+## ▶ 2026-11-24 (Opus 5.5, scheduled run, about 3:30 AM CT): PRD-4 items 13, 14, 15, 16, 17 and 19 built on branch `prd-4/first-impression-polish`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy.**
+
+**Base and merge order (case 1 of the brief).** Open draft PR #15 (`prd-3/payment-refund-resilience`) had "Gate results" in its body, so this branch was cut from it (`a2a361d`) and its PR is based on it. **Merge PRD-2 (#14), then PRD-3 (#15), then this.** `main` had not moved (`4262a62`). PRD-2's and PRD-3's changes are intact.
+
+Built (D-75 to D-80):
+- **Item 13, buttons.** `.cluster > button, .cluster > .button { align-self: auto }`; the six dead inline `alignItems` styles deleted; `fieldset.plain` is a flex column with `gap: var(--s-3)`. No new token.
+- **Item 16, countdown.** The warning names the hold once ("Two minutes or less left on H-…"). One `<CountdownVoice>` region on the Buy page, outside the holds list, so the zero message survives the refresh (D-78).
+- **Item 17.** An accepted hold or payment result whose hold has moved on is no longer echoed (the stale "Payment started" banner is gone once the order exists); the Ledger says "1 order", "1 line", "1 refund"; "Change customer" in the Buy header jumps to the picker (`#as`; D-38's placement kept).
+- **Item 19.** An `ORPHAN_SEAT` refusal comes back with the pick ticked, in its section, and names the seat it would strand. Worked out for display from the refused command and the rows; a unit test checks it against `Engine.createsOrphan` on 80,000+ picks. Engine untouched. **This changed README step 4 by one sentence (D-80, its own commit, for you to approve).**
+- **Item 15.** Rows stay on one line in a focusable scroll region per section (not 24 px seats: D-75). Seat names start with the visible number ("1, A-A-01 open").
+- **Item 14 (D-63).** `/o/acme` shows the event card under a `PageHeader` and has `id="main"`. An org with no event keeps "Nothing here yet" (what `onboarding.spec` asserts for a new org). **That is a reading of D-63 (D-76): confirm it or ask for the heading on both.** The org bar is **not** trimmed (follow-up).
+
+Not built, by the brief: the org bar trim; PRD-5 (items 26, 27, 28); any schema, migration, dependency, engine, fixture or `vercel.json` change.
+
+Independent review (a separate agent, the diff against PRD-4's acceptance tests): 0 must-fix, 5 should-fix, 6 nits. Acted on: two specs that could pass vacuously were tightened, the design page's example seats follow the new naming, D-75 records the always-on tab stop. The rest are listed in the PR.
+
+Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` with CI's public values), **base `a2a361d` → branch**: tsc clean → clean · lint 0 → 0 · inventory:eval match (2,662, commitment `d4d64203…61d43`) → same · inventory:lint OK → OK · fixtures:check OK → OK · design:contrast 0 pairs under floor → same · vitest 65 files, 577 passed, 33 skipped, 4 failed → 68 files, **589 passed**, 33 skipped, 4 failed (the same 4 template `inv-34-export` tests on both; confirmed on the base in this run: `relation "_prisma_migrations" does not exist`) · inventory:eval:db match on the branch (2,662, 483 PaymentIntents, 48 refunds, 0 pending) · `next build` (`build:test`) rc 0 on the branch · e2e full run on the base with the 11 new PRD-4 tests copied in: 45 passed, 12 failed of 57 (the 11 new ones and the hosted-demo member test) → branch **58 passed, 1 failed** of 59 (the hosted-demo member test, red on the base too; D-68). **Update, 2026-11-24 afternoon:** Shane put the hosted-demo fix on #14 (`3e24bb2`) and it was merged into this branch (`815fbac`): CI on `815fbac` is all green (`ci (off)`, `modules-removed`). D-76 and D-80 confirmed (D-81). axe: 40 runs, 0 violations, including `/o/acme` at 1280 and 390, light and dark. Not run: `foundation:drift` (tag `v1.7.0` not reachable here; no changed path is in `OWNED`, checked by hand). CI per check is in the PR body. CI decides.
+
+**Not verified:** the live site; anything on a real phone (390 px was Chromium's viewport only); anything with a screen reader (the countdown's words and the seat names were checked in the DOM, not heard); Stripe (nothing here touches it).
+
+**You, in order:**
+1. You: merge PRD-2 (#14), then PRD-3 (#15), with their own steps (the sections below).
+2. You: read "Wording for Shane to approve" in this PR, including README step 4 (D-80). Revert `94432df` only together with item 19's commit `12be10c`.
+3. You: confirm D-76 (no "Nothing here yet" above the event card) or ask for the heading on both.
+4. You: mark ready, merge. That deploys. (Updated 2026-11-26: the hosted-demo member test has PRD-2's three lines since `815fbac`; nothing waits on it.)
+5. You: on the live site, look at Buy on a phone (rows scroll sideways) and `/o/acme` once.
+
+---
+
 ## ▶ 2026-11-24 (Fable 5.2, scheduled run, about 12:45 AM CT): PRD-3 items 11, 10, 12 and 9 and the nightly demo reset (D-60) built on branch `prd-3/payment-refund-resilience`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy, and it turns on a nightly wipe and re-seed of the demo orgs.**
 
 **Update 2026-11-26 (Fable 5.2, scheduled follow-through run; a merge and documents only on this branch; D-83).** This section was written for head `a2a361d`. What has changed since:

@@ -47,7 +47,8 @@ by the refund windows on the Event page.
 4. **Two balcony seats, and the seat you cannot strand.** Change *Acting as* (at the foot of the page) to a second
    customer nobody has used. In a balcony row, tick two
    open seats with **one open seat between them** → **Hold seats in A**. *You should see* it refused: `ORPHAN_SEAT`,
-   the seat in the middle would be stranded between two taken ones. Now tick two open seats **side by side**, hold them,
+   the seat in the middle would be stranded between two taken ones, and the page names that seat. Your two seats stay
+   ticked: untick them, then tick two open seats **side by side**, hold them,
    and pay $127.00 (2 × $60.00 + 2 × $3.50) the same way. Copy one of the two codes.
 5. **Refund one ticket at the box office.** **Box office** → *Refund a ticket* → your order (it carries your floor
    customer's id from step 2) → **Open order** → tick

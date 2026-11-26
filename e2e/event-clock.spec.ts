@@ -69,8 +69,14 @@ test('a member who posts Set clock anyway is refused inline: the org bar stays a
   });
   for (const press of ['Set clock', 'Back to the wall clock']) {
     if (press === 'Set clock') await page.getByLabel('Set the event clock to').fill('2027-03-20T19:00:05');
+    // wait for this press's own post: after the first press the refusal is already on screen, so the alert check below
+    // could pass before the second post was sent (CI run 45891217264: posts had length 1)
+    const posted = page.waitForResponse((r) => r.request().method() === 'POST');
     await page.getByRole('button', { name: press }).click();
-    await expect(page.getByRole('alert').filter({ hasText: CLOCK_MOVERS })).toBeVisible();
+    await posted;
+    // the refusal shown in the form that was pressed (after the second press both forms can show it: one locator for two
+    // alerts was the strict-mode failure in D-84 (4))
+    await expect(page.locator('form').filter({ has: page.getByRole('button', { name: press }) }).getByRole('alert').filter({ hasText: CLOCK_MOVERS })).toBeVisible();
     await expect(page.getByText('Something went wrong')).toHaveCount(0);
     await expect(page.getByText(/^Error id:/)).toHaveCount(0);
     await expect(orgBar(page)).toContainText('Acme Studio');

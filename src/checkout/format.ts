@@ -50,6 +50,9 @@ export const axis = (t: string) => t.replace('T', ' ');
 /** 4618132 → "4,618,132" */
 export const count = (n: number) => String(n).replace(/\B(?=(\d{3})+$)/g, ',');
 
+/** A count and its noun (PRD-4 item 17): 1 → "1 order", anything else → "2 orders", "1,051 orders". */
+export const counted = (n: number, noun: string) => `${count(n)} ${n === 1 ? noun : `${noun}s`}`;
+
 /** Whole minutes as words: 10 → "10 min", 1440 → "24 h", 90 → "1 h 30 min". */
 export function duration(minutes: number): string {
   const h = Math.floor(minutes / 60);

@@ -100,7 +100,7 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
             })}
             <ActionForm action={holdTickets.bind(null, ctx.slug)}>
               <input type="hidden" name="event" value={ev.eventKey} />
-              <div className="cluster" style={{ alignItems: 'flex-end' }}>
+              <div className="cluster">
                 {customerSelect}
                 <label>Tier{' '}
                   <select name="tier" required>
@@ -112,7 +112,7 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
               <button type="submit">Hold, then take payment on Buy</button>
             </ActionForm>
             <p className="hint">The hold is cast as the customer and opens on the Buy screen, where it is paid; a refusal is shown there in words. The Box office tab brings you back.</p>
-            <form method="get" action={`${base}/buy`} className="cluster" style={{ alignItems: 'flex-end' }}>
+            <form method="get" action={`${base}/buy`} className="cluster">
               <label>Customer for balcony seats{' '}
                 <select name="as" defaultValue="" required>
                   <option value="" disabled>Pick one</option>
@@ -137,7 +137,7 @@ export default async function BoxOffice({ params, searchParams }: { params: Prom
                 )}
               </>
             )}
-            <form method="get" action={`${base}/box#refund`} className="cluster" style={{ alignItems: 'flex-end' }}>
+            <form method="get" action={`${base}/box#refund`} className="cluster">
               <label>Order{' '}
                 <select name="order" defaultValue={order?.order ?? ''} required>
                   <option value="" disabled>Pick one</option>

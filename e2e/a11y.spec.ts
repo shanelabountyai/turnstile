@@ -23,6 +23,7 @@ test.afterAll(() => db.$disconnect());
 
 const base = `/o/acme/events/${EVENT}`;
 const pages: [string, string, string | RegExp][] = [
+  ['org home (PRD-4 item 14)', '/o/acme', 'Open event'],
   ['design system', '/o/acme/design', 'Turnstile design system'],
   ['events list', '/o/acme/events', 'One card per event'],
   ['event', base, 'Rules'],

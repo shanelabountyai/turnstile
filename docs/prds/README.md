@@ -7,7 +7,7 @@ These PRDs are written from `docs/audits/FIVE-LENS-2026-11-21.md` §3 (titles, g
 | [PRD-1 Money boundary before O-8](PRD-1-money-boundary.md) | 1, 2, 4, 7 | Covered by #9 (merged, `c957f7a`). O-8 is still open (Shane). Open draft #10 refines item 2. |
 | [PRD-2 Demo safe to share](PRD-2-demo-safe-to-share.md) | 3 (refuted, D-55), 5, 6, 8, 20 | Built (draft PR), 2026-11-24: items 5, 6, 8 (D-65 to D-68; D-82 corrects D-68 (1)). Not merged. Item 20 is done by D-62 (a decisions row). |
 | [PRD-3 Live payment and refund resilience](PRD-3-payment-refund-resilience.md) | 9, 10, 11, 12, 18 | Built (draft PR), 2026-11-24: items 9, 10, 11, 12 and the nightly reset (D-69 to D-74). Not merged. Left out: the retry of refunds older than 23 hours (owner's call, D-70; the acceptance line on the retry is not fully met, D-83). Item 18 came in with #13. Item 10 is inferred from code until O-8. |
-| [PRD-4 First impression and screen polish](PRD-4-first-impression-polish.md) | 13, 14, 15, 16, 17, 19 | Proposed. Item 14 follows D-63. |
+| [PRD-4 First impression and screen polish](PRD-4-first-impression-polish.md) | 13, 14, 15, 16, 17, 19 | Built (draft PR), 2026-11-24: all six items (D-75 to D-81; item 13's acceptance is read as every same-row pair, D-84). Not merged; stacked on PRD-3. Left out: the org bar trim (item 14's optional part). Wording changes are proposals for Shane. |
 | [PRD-5 Later hardening](PRD-5-later-hardening.md) | 21–28 (plus calls on 29, 30) | Proposed. |
 
 Decisions for Shane, each written once: [DECISIONS-NEEDED-2026-11-22.md](DECISIONS-NEEDED-2026-11-22.md). **All five were taken as recommended on 2026-11-23: D-60 to D-64 in `docs/decisions.md`.** This means:
