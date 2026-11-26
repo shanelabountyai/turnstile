@@ -2,6 +2,13 @@
 
 ## ▶ 2026-11-24 (Fable 5.2, scheduled run, about 12:45 AM CT): PRD-3 items 11, 10, 12 and 9 and the nightly demo reset (D-60) built on branch `prd-3/payment-refund-resilience`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy, and it turns on a nightly wipe and re-seed of the demo orgs.**
 
+**Update 2026-11-26 (Fable 5.2, scheduled follow-through run; a merge and documents only on this branch; D-83).** This section was written for head `a2a361d`. What has changed since:
+- **`prd-2/demo-safe-to-share` is merged in** (`cfacf14`; it carries `main`'s #13). Conflicts were in `NEXT.md`, `docs/decisions.md` and `docs/prds/README.md` only, each resolved keeping both sides; nothing under `src/` conflicted or changed. PR #15 no longer conflicts with its base.
+- So "Item 18 is not built here: covered by #13 (open)", "`e2e/hosted-demo.spec.ts` untouched", "45 passed, 1 failed" and step 5's "the hosted-demo member test needs the three lines from #14" describe `a2a361d`, not this head: #13 is merged, the spec is PRD-2's, and that test is not red.
+- **The refund retry's limits are now stated in the review's words (D-83):** one automatic retry at most; a refund created between 06:00 and 07:00 UTC gets none; a "needs the owner" refund holds the nightly reset back. **PRD-3's acceptance line on the retry is not fully met.** No behaviour changed.
+- **Wording left for you:** `docs/DEPLOY.md` ("until the D-60 seed change lands", "decided but not built") and `README.md` ("not reset between visitors", "needs the owner's reset") stop being true when this merges.
+- The gate and CI on the follow-through head, and your steps in order, are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
+
 **Read these two before anything else:**
 1. **Merging this turns on a nightly wipe and re-seed of the demo orgs on production through the existing 06:00 UTC cron** (only while `DEMO_MODE=1`; D-60, D-73).
 2. **You: confirm `STRIPE_SECRET_KEY` is set for Production in Vercel before merging.** With it missing, Pay now fails on the form instead of pretending to work (D-69). The live value was not read here and cannot be.
