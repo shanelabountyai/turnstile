@@ -14,6 +14,13 @@ Gate here: `tsc` clean · eslint on the spec clean · `inventory:lint` OK. The e
 
 ## ▶ 2026-11-24 (Fable 5.2, scheduled run, started 2026-11-23 about 10:25 PM CT): PRD-2 items 5, 6 and 8 built on branch `prd-2/demo-safe-to-share`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy. Two things must happen before the merge.**
 
+**Update 2026-11-26 (Fable 5.2, scheduled follow-through run; documents only on this branch; D-82).** This section was written for head `ccb15c0`. What has changed since:
+- **Item 2 below is done.** Shane put the three-line `hosted-demo.spec.ts` change on this branch (`3e24bb2`, 2026-11-24). PR #13 merged to `main` (`7d68ca5`) and `main` was merged in here (`445f47a`), keeping #13's `clocksToSalesOpen()` and unconditional hold/release and this branch's `clock-movers` / no-Set-clock assertions; both `NEXT.md` sections are kept. CI on `445f47a` was green (`ci (off)`, `modules-removed`).
+- So "`e2e/hosted-demo.spec.ts` … untouched", "41 passed, 1 failed", "Likely conflict" and step 3 below describe `ccb15c0`, not this head. `docs/decisions.md` D-82 corrects D-68 (1).
+- **PRD-2 acceptance test 2 is partly met, by design** (D-67, D-82), not "Met": two visitors on one database, but not two complete walks in one org.
+- **One thing is left before the merge, and it is yours:** confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel (item 1 below). Not checked by any run.
+- The gate and CI on the follow-through head are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
+
 **Before merging, in this order:**
 1. **You: confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel.** The build now refuses a shorter one (D-66). `deploy-env` runs first in the Vercel Production build, so a short live password fails the next Production build (the previous deployment keeps serving). The live value was not read here and cannot be.
 2. **One existing e2e test is red on this branch and CI will show it:** `e2e/hosted-demo.spec.ts`, "a demo member can hold and release a ticket, and is refused the event clock". It asserts the error page item 5 removes. The brief forbade editing that file (PR #13 is changing it), so it was left (D-68). The three-line replacement is in the PR body; it goes on whichever of this PR and #13 merges second. Do not merge with it red.

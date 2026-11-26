@@ -5,7 +5,7 @@ These PRDs are written from `docs/audits/FIVE-LENS-2026-11-21.md` §3 (titles, g
 | PRD | Review items | Status on 2026-11-23 |
 |---|---|---|
 | [PRD-1 Money boundary before O-8](PRD-1-money-boundary.md) | 1, 2, 4, 7 | Covered by #9 (merged, `c957f7a`). O-8 is still open (Shane). Open draft #10 refines item 2. |
-| [PRD-2 Demo safe to share](PRD-2-demo-safe-to-share.md) | 3 (refuted, D-55), 5, 6, 8, 20 | Built (draft PR), 2026-11-24: items 5, 6, 8 (D-65 to D-68). Not merged. Item 20 is done by D-62 (a decisions row). |
+| [PRD-2 Demo safe to share](PRD-2-demo-safe-to-share.md) | 3 (refuted, D-55), 5, 6, 8, 20 | Built (draft PR), 2026-11-24: items 5, 6, 8 (D-65 to D-68; D-82 corrects D-68 (1)). Not merged. Item 20 is done by D-62 (a decisions row). |
 | [PRD-3 Live payment and refund resilience](PRD-3-payment-refund-resilience.md) | 9, 10, 11, 12, 18 | Proposed. Item 9 and the nightly reset follow D-60. |
 | [PRD-4 First impression and screen polish](PRD-4-first-impression-polish.md) | 13, 14, 15, 16, 17, 19 | Proposed. Item 14 follows D-63. |
 | [PRD-5 Later hardening](PRD-5-later-hardening.md) | 21–28 (plus calls on 29, 30) | Proposed. |
