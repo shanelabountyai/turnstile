@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 import { axisNow } from '@/checkout/clock';
 import { eventByKey } from '@/checkout/read';
+import { CLOCK_MOVERS, refusingInline } from '@/checkout/refusal';
 import { audit } from '@/core/audit';
 import { orgAction } from '@/core/authz/action';
 import { withOrg } from '@/core/db/rls';
@@ -10,7 +11,9 @@ import { isTimestamp, toSeconds, type Timestamp } from '@/inventory/time';
 
 // D-35: staff set the event clock. Stored as an offset from the wall clock on the axis, so it keeps ticking; never set
 // before the CommandLog's last command (the engine cannot run backwards). The server still decides every expiry (D-34).
-export const setEventClock = orgAction(
+// A role without `org.update` is refused by the same guard as before, and told so on the form (D-65): the refusal is
+// returned as `{ error }` instead of thrown to the app's error page.
+export const setEventClock = refusingInline(orgAction(
   'org.update',
   z.object({
     event: z.string().min(1).max(64),
@@ -33,4 +36,4 @@ export const setEventClock = orgAction(
     });
     redirect(`/o/${ctx.slug}/events/${ev.eventKey}`);
   },
-);
+), CLOCK_MOVERS);

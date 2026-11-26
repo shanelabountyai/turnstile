@@ -65,10 +65,9 @@ test('a demo member can hold and release a ticket, and is refused the event cloc
   await page.getByTestId(`hold-${hold}`).getByRole('button', { name: 'Release' }).click();
   await expect(page.getByTestId('result')).toContainText('OK RELEASED');
   await page.goto(`/o/acme/events/${EVENT}`);
-  await page.getByLabel('Set the event clock to').fill('2027-03-20T19:00:05');
-  await page.getByRole('button', { name: 'Set clock' }).click();
-  // The action refuses (org.update). A member is shown the app's error page for it, which is not pretty (noted in NEXT.md).
-  await expect(page.getByText(/^Error id:/)).toBeVisible();
+  // A member is not offered the clock form and is told who can move it (D-65); e2e/event-clock.spec.ts posts the action anyway.
+  await expect(page.getByTestId('clock-movers')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Set clock' })).toHaveCount(0);
   await page.goto(`/o/acme/events/${EVENT}`);
   await expect(page.getByTestId('event-clock')).toHaveText(new RegExp(`^${before!.slice(0, 13)}`)); // same hour: the clock did not jump to show night
 });

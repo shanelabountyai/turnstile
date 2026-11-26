@@ -12,6 +12,46 @@ Gate here: `tsc` clean · eslint on the spec clean · `inventory:lint` OK. The e
 
 ---
 
+## ▶ 2026-11-24 (Fable 5.2, scheduled run, started 2026-11-23 about 10:25 PM CT): PRD-2 items 5, 6 and 8 built on branch `prd-2/demo-safe-to-share`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy. Two things must happen before the merge.**
+
+**Update 2026-11-26 (Fable 5.2, scheduled follow-through run; documents only on this branch; D-82).** This section was written for head `ccb15c0`. What has changed since:
+- **Item 2 below is done.** Shane put the three-line `hosted-demo.spec.ts` change on this branch (`3e24bb2`, 2026-11-24). PR #13 merged to `main` (`7d68ca5`) and `main` was merged in here (`445f47a`), keeping #13's `clocksToSalesOpen()` and unconditional hold/release and this branch's `clock-movers` / no-Set-clock assertions; both `NEXT.md` sections are kept. CI on `445f47a` was green (`ci (off)`, `modules-removed`).
+- So "`e2e/hosted-demo.spec.ts` … untouched", "41 passed, 1 failed", "Likely conflict" and step 3 below describe `ccb15c0`, not this head. `docs/decisions.md` D-82 corrects D-68 (1).
+- **PRD-2 acceptance test 2 is partly met, by design** (D-67, D-82), not "Met": two visitors on one database, but not two complete walks in one org.
+- **One thing is left before the merge, and it is yours:** confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel (item 1 below). Not checked by any run.
+- The gate and CI on the follow-through head are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
+
+**Before merging, in this order:**
+1. **You: confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel.** The build now refuses a shorter one (D-66). `deploy-env` runs first in the Vercel Production build, so a short live password fails the next Production build (the previous deployment keeps serving). The live value was not read here and cannot be.
+2. **One existing e2e test is red on this branch and CI will show it:** `e2e/hosted-demo.spec.ts`, "a demo member can hold and release a ticket, and is refused the event clock". It asserts the error page item 5 removes. The brief forbade editing that file (PR #13 is changing it), so it was left (D-68). The three-line replacement is in the PR body; it goes on whichever of this PR and #13 merges second. Do not merge with it red.
+
+Built (D-65 to D-68; cut from main `4262a62`, which had not moved):
+- **Item 5, Set clock for members.** Without `org.update` the Event page shows no clock form and the sentence "Only the organisation’s owner or an admin can move the event clock." The action returns that sentence as `{ error }` instead of throwing; the guard is unchanged. New: `src/checkout/refusal.ts`, `tests/checkout/event-clock.test.ts` (6), `e2e/event-clock.spec.ts` (4).
+- **Item 8, password length.** `turnstileProblems` refuses under 16 characters by name; value and length never printed. 2 tests added to `tests/checkout/deploy-env.test.ts`; `docs/DEPLOY.md` row 7.
+- **Item 6, the walk for the second visitor.** `e2e/readme-walk.spec.ts` (2 tests): two visitors on one database, every "You should see" line for both. **The walk passed twice** with customers nobody had used. With the README's old `C-0001`/`C-0002` the second visitor fails at step 2 (reproduced). No product code changed for this item. The README edits PRD-2 lists are one commit of their own, **for you to approve** (old and new sentences are in the PR body; revert that commit alone if you do not want them).
+- Docs: PRD-2 and the PRD index say "Built (draft PR)"; decisions D-65 to D-68.
+
+Not built, by the brief: nothing from PRD-3, PRD-4 or PRD-5; `e2e/hosted-demo.spec.ts` and branch `fix/hosted-demo-clock` untouched; no schema change, no dependency, no template-owned path.
+
+Found and left for you (README wording PRD-2 does not name; D-67):
+- "once someone has done step 7 in an org, the Buy screen there says *Sales closed*" is true only once the event clock passes 20:00, up to an hour later. Straight away ADV reads "off sale" and a hold is refused. The spec asserts both.
+- Step 4's "tick two open seats side by side": a second visitor's pair that leaves one open seat beside taken seats is itself refused `ORPHAN_SEAT`.
+
+Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` written locally with CI's public values), **main `4262a62` → branch**: tsc clean → clean · lint 0 → 0 · inventory:eval match (2,662, commitment `d4d64203…61d43`) → same · inventory:lint OK → OK · fixtures:check OK → OK · vitest 58 files, 492 passed, 33 skipped, 4 failed → 59 files, **500 passed**, 33 skipped, 4 failed (the same 4 template `inv-34-export` tests on both; confirmed on untouched main: `relation "_prisma_migrations" does not exist`) · `next build` (`build:test`) rc 0 → rc 0 · e2e full run 36 passed → **41 passed, 1 failed** of 42 (the hosted-demo member test above; the 6 new tests pass). Mutation checks: the old throwing action with the new page → the direct-post e2e test red; the README's old customers for the second visitor → walk test B red at step 2. Not run: `foundation:drift` (tag `v1.7.0` is not reachable here; the 14 changed paths were compared with its `OWNED` list by hand, none matches), `inventory:eval:db`, anything at Stripe. CI per check is in the PR body. CI decides.
+
+**Not verified:** the live site (nothing was fetched or clicked); the length of the live password; a real Stripe test payment (step 3's card form; O-8 is still yours); how the datetime field displays on a phone or a non-US locale (the spec types the 12-hour form in en-US Chromium only).
+
+**Likely conflict:** PR #13 also adds a section at the top of this file. Keep both.
+
+**You, in order:**
+1. You: confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel (rotate it if not; that needs a deployment).
+2. You: read the PR's "README wording for Shane to approve"; keep or revert that one commit.
+3. You: decide where the three-line `hosted-demo.spec.ts` change goes (this PR after #13 merges, or #13), and get CI green.
+4. You: merge (that deploys). Then check the live Event page as `member@acme.demo.test`.
+5. Before the password goes out, D-61 still needs: #10 merged (done, `debe645`) and PRD-2 items 5, 6 and 8 **done**, meaning this PR merged and deployed with a 16+ character password. O-8 is still open and still yours.
+
+---
+
 ## ▶ 2026-11-23 (Opus 5.5, live with Shane): PR #11 merged; the five review decisions are recorded as D-60 to D-64 on branch `decisions/review-2026-11-21`. PR open, not merged.
 
 Shane chose "Merge PR #11 + take recs". PR #11 was merged as `8d11afc`. It was docs only, so the `ignoreCommand` should skip the production build.

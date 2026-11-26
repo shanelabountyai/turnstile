@@ -55,6 +55,32 @@ describe('deploy-env: a Production build is refused with a list of names (D-45)'
     expect(turnstileProblems({ ...without('DEMO_MODE', 'EMAIL_ENABLED'), RESEND_API_KEY: filler, EMAIL_FROM: 'Turnstile <no-reply@turnstile.invalid>' })).toEqual([]);
   });
 
+  // PRD-2 item 8 (review SEC-4, D-66): the shared password is the only thing in front of the demo's owner accounts and
+  // the gate has no attempt limit, so a short one is refused at build time. Counted in characters, not bytes.
+  it('refuses a DEMO_ACCESS_PASSWORD shorter than 16 characters, and accepts 16', () => {
+    for (const short of ['x', 'x'.repeat(15), 'pässwörd-15-chr', '🎟'.repeat(8)]) {
+      const problems = turnstileProblems({ ...good, DEMO_ACCESS_PASSWORD: short });
+      expect(names(problems)).toEqual(['DEMO_ACCESS_PASSWORD']);
+      expect(problems[0]).toContain('at least 16 characters');
+      expect(problems[0]).not.toContain(short);
+    }
+    for (const fine of ['x'.repeat(16), 'pässwörd-16-chrs', '🎟'.repeat(16), 'x'.repeat(200)]) expect(turnstileProblems({ ...good, DEMO_ACCESS_PASSWORD: fine })).toEqual([]);
+    // Unset stays one line, the "not set" one: a missing password is not also reported as a short one.
+    expect(turnstileProblems(without('DEMO_ACCESS_PASSWORD'))).toHaveLength(1);
+    expect(turnstileProblems({ ...good, DEMO_ACCESS_PASSWORD: '' })[0]).toContain('DEMO_ACCESS_PASSWORD: not set');
+  });
+
+  it('a short password fails the script by name: exit 1, the variable named, the value and its length nowhere in the output', () => {
+    const short = 'Zq7-short-value'; // 15 characters
+    expect([...short]).toHaveLength(15);
+    const r = script({ ...good, DEMO_ACCESS_PASSWORD: short });
+    expect(r.status).toBe(1);
+    expect(r.stderr).toContain('1 problem(s)');
+    expect(r.stderr).toContain('DEMO_ACCESS_PASSWORD: must be at least 16 characters');
+    expect(r.stdout + r.stderr).not.toContain(short);
+    expect(r.stdout + r.stderr).not.toMatch(/\b15\b/);
+  }, 60_000);
+
   it('never prints a value: the script exits 1 naming names, and the output holds none of the values it was given', () => {
     const marker = `leak-${filler}`;
     const r = script({ ...without('MIGRATE_URL', 'STRIPE_WEBHOOK_SECRET'), STRIPE_SECRET_KEY: `sk_live_${marker}`, DEMO_ACCESS_PASSWORD: marker });

@@ -2,7 +2,9 @@ import { notFound } from 'next/navigation';
 import { axisNow, eventNow } from '@/checkout/clock';
 import { axis, count, date, day, duration, refundWords, tierState, time } from '@/checkout/format';
 import { dollars, eventByKey, percent, readEvent, type EventView } from '@/checkout/read';
+import { CLOCK_MOVERS } from '@/checkout/refusal';
 import { requireOrg } from '@/core/authz/guards';
+import { can } from '@/core/authz/permissions';
 import { ActionForm } from '@/core/ui/action-form';
 import { EventTabs, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
 import { setEventClock } from './actions';
@@ -30,6 +32,9 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
   const pool = new Map(v.pools.map((x) => [x.pool, x]));
   const r = v.event.rules;
   const base = `/o/${ctx.slug}/events/${ev.eventKey}`;
+  // D-35: only `org.update` moves the clock. A role without it reads the clock and is told who can move it (D-65);
+  // the action refuses the same roles itself, so this is what the screen offers, not the check.
+  const mayMoveClock = can(ctx.role, 'org.update');
 
   return (
     <>
@@ -111,24 +116,30 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
           </ScrollTable>
         </Section>
 
-        <Section id="clock" title="Event clock" aside={<span className="muted">Staff only</span>}>
+        <Section id="clock" title="Event clock" aside={<span className="muted">{mayMoveClock ? 'Staff only' : 'Owner or admin only'}</span>}>
           <p className="hint">
             Every command and screen reads this clock, which runs at wall-clock speed from where staff set it (D-35). The server decides each expiry at the
             inclusive second; it can only move forward past the log{v.logAt && <> (last command {axis(v.logAt)})</>}.
           </p>
           <p>Wall clock {axis(axisNow(wall, ev.timezoneLabel))} · event clock <strong data-testid="event-clock">{axis(v.asOf)}</strong></p>
-          <ActionForm action={setEventClock.bind(null, ctx.slug)}>
-            <input type="hidden" name="event" value={ev.eventKey} />
-            <div className="cluster">
-              <label>Set the event clock to <input name="to" type="datetime-local" step={1} defaultValue={v.asOf} required /></label>
-              <button type="submit">Set clock</button>
-            </div>
-          </ActionForm>
-          <ActionForm action={setEventClock.bind(null, ctx.slug)}>
-            <input type="hidden" name="event" value={ev.eventKey} />
-            <input type="hidden" name="reset" value="1" />
-            <button type="submit" className="secondary">Back to the wall clock</button>
-          </ActionForm>
+          {mayMoveClock ? (
+            <>
+              <ActionForm action={setEventClock.bind(null, ctx.slug)}>
+                <input type="hidden" name="event" value={ev.eventKey} />
+                <div className="cluster">
+                  <label>Set the event clock to <input name="to" type="datetime-local" step={1} defaultValue={v.asOf} required /></label>
+                  <button type="submit">Set clock</button>
+                </div>
+              </ActionForm>
+              <ActionForm action={setEventClock.bind(null, ctx.slug)}>
+                <input type="hidden" name="event" value={ev.eventKey} />
+                <input type="hidden" name="reset" value="1" />
+                <button type="submit" className="secondary">Back to the wall clock</button>
+              </ActionForm>
+            </>
+          ) : (
+            <p data-testid="clock-movers">{CLOCK_MOVERS}</p>
+          )}
         </Section>
       </main>
     </>

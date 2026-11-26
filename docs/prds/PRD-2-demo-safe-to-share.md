@@ -1,6 +1,6 @@
 # PRD-2 — Demo safe to share
 
-**Status:** proposed. Not built. Item 3 is refuted (D-55), so it is dropped. Item 20 waits for Decision 4.
+**Status:** Built (draft PR), 2026-11-24: items 5, 6 and 8 on branch `prd-2/demo-safe-to-share` (D-65 to D-68), not merged, not deployed. The README wording of item 6 waits for Shane's approval. The `e2e/hosted-demo.spec.ts` member test was updated on this branch on 2026-11-24 (`3e24bb2`, Shane's call) and PR #13 is merged in (`445f47a`), so no test waits on the merge (D-82 corrects D-68 (1)). Acceptance test 2 (the README walk twice on one database) is partly met, by design (D-67, D-82). Still before the merge: the owner confirms the live `DEMO_ACCESS_PASSWORD` is 16 or more characters (D-66). Item 3 is refuted (D-55), so it is dropped. Item 20 is done by D-62.
 **Source:** `docs/audits/FIVE-LENS-2026-11-21.md` §3 PRD-2; review items 3, 5, 6, 8, 20.
 **Evidence:** file:line at `9d8b434`, as the review cites it. #9 did not touch these files.
 **Gate:** the review ranks items 5, 6 and 8 "before the password", meaning before anyone but Shane can sign in.
