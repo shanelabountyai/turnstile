@@ -73,6 +73,7 @@ Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` with CI's pu
 - **`prd-2/demo-safe-to-share` is merged in** (`cfacf14`; it carries `main`'s #13). Conflicts were in `NEXT.md`, `docs/decisions.md` and `docs/prds/README.md` only, each resolved keeping both sides; nothing under `src/` conflicted or changed. PR #15 no longer conflicts with its base.
 - So "Item 18 is not built here: covered by #13 (open)", "`e2e/hosted-demo.spec.ts` untouched", "45 passed, 1 failed" and step 5's "the hosted-demo member test needs the three lines from #14" describe `a2a361d`, not this head: #13 is merged, the spec is PRD-2's, and that test is not red.
 - **The refund retry's limits are now stated in the review's words (D-83):** one automatic retry at most; a refund created between 06:00 and 07:00 UTC gets none; a "needs the owner" refund holds the nightly reset back. **PRD-3's acceptance line on the retry is not fully met.** No behaviour changed.
+- **D-86 makes that exact:** "one automatic retry" is the nightly job; a box-office refund or a late-payment webhook in the same event still re-sends in-window rows, as D-70 says. `docs/DEPLOY.md` has a third stale clause ("leaves the clock on the wall clock").
 - **Wording left for you:** `docs/DEPLOY.md` ("until the D-60 seed change lands", "decided but not built") and `README.md` ("not reset between visitors", "needs the owner's reset") stop being true when this merges.
 - The gate and CI on the follow-through head, and your steps in order, are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
 
