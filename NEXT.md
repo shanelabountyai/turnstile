@@ -2,23 +2,23 @@
 
 ## ▶ 2026-11-26 (Fable 5.2, scheduled follow-through run, Thanksgiving morning CT): the three stacked draft PRs are merged up to date and their review should-fix items are applied. **Documents and merges only. Nothing merged to `main`, nothing deployed, all three still drafts.**
 
-**Where the three stand (branch heads before this section's own commit; that commit changes documents only):**
+**Where the three stand.** The "Gated" column is the commit the local gate ran on. Every commit after it on each branch changes documents only (the delta-review rows D-85 and D-86, the merges that carry them up, and this section), so the branch heads are later than these; the PR comments name them.
 
-| PR | Branch, base | Head | What this run did | Local gate |
+| PR | Branch, base | Gated | What this run did | Local gate |
 |---|---|---|---|---|
 | #14 PRD-2 | `prd-2/demo-safe-to-share` → `main` | `ed0d81c` | Confirmed the `445f47a` merge of `main` (#13) kept both sides in `e2e/hosted-demo.spec.ts` and `NEXT.md`. D-82 corrects D-68 (1); acceptance test 2 is partly met, by design. | vitest 500 passed, 33 skipped, 4 failed (sandbox only); Playwright 42 passed |
 | #15 PRD-3 | `prd-3/payment-refund-resilience` → `prd-2/demo-safe-to-share` | `c915839` | Merged PRD-2 in (`cfacf14`): **the conflict with its base is resolved**, in three documents, both sides kept. D-83 states the refund retry's limits; the acceptance line on the retry is not fully met. | vitest 577 passed, 33 skipped, 4 failed (sandbox only); Playwright 45 passed and 1 failed, then 46 passed on a second full run |
-| #16 PRD-4 | `prd-4/first-impression-polish` → `prd-3/payment-refund-resilience` | `660ce6c` plus this commit | Merged PRD-3 in (`660ce6c`), conflicts in two documents, both sides kept. D-84: item 13's acceptance is every same-row pair. | vitest 589 passed, 33 skipped, 4 failed (sandbox only); Playwright 59 passed |
+| #16 PRD-4 | `prd-4/first-impression-polish` → `prd-3/payment-refund-resilience` | `660ce6c` | Merged PRD-3 in (`660ce6c`), conflicts in two documents, both sides kept. D-84: item 13's acceptance is every same-row pair. | vitest 589 passed, 33 skipped, 4 failed (sandbox only); Playwright 59 passed |
 
 On all three: lint 0, typecheck clean, `inventory:lint` OK, `inventory:eval` match (2,662 commands, commitment `d4d64203…61d43`), `fixtures:check` OK, `design:contrast` 0 pairs under the floor, `inventory:eval:db` match (2,662), `next build` rc 0 (as `npm run build:test`). The 4 vitest failures are the template's `inv-34-export` tests, as in every sandbox run before (`_prisma_migrations` does not exist when migrations go in by `psql`); they pass in CI. Exact figures and the sandbox notes are in D-84. **CI decides:** the check results on the pushed heads are in each PR's "Merge checklist (2026-11-26 follow-through)" comment, not here, because they did not exist when this was written.
 
 **One thing to know about the tests:** `e2e/event-clock.spec.ts:49` failed once in a full run on the PRD-3 tree (two alerts matched one locator) and passed 6 of 6 alone and in a second full run. It is intermittent and older than this run (D-84 (4)). If CI goes red on it, re-run the job first.
 
-**No behaviour changed.** Nothing under `src/`, `tests/`, `fixtures/` or `prisma/` was edited by hand; the only code-file change on any branch is `e2e/hosted-demo.spec.ts` arriving from `main` (#13) through the merges. No test was deleted, skipped or weakened.
+**No behaviour changed.** Nothing under `src/`, `tests/`, `fixtures/` or `prisma/` was edited by hand; in this run the only code-file change on any branch is `e2e/hosted-demo.spec.ts` arriving from `main` (#13) through the merges. No test was deleted, skipped or weakened. An independent agent given only the commits since each reviewed head found no behaviour change, no weakened test and no dropped side of a merge; its precision points on the record are D-85 and D-86.
 
 **Not done, because it is yours or needs a behaviour change:**
-- Closing the refund-retry gap (D-83) is a change in `src/checkout`: D-70's options (b) or (c).
-- Wording: `README.md` ("not reset between visitors", "needs the owner's reset", the *Sales closed* sentence, step 4's "side by side"), `docs/DEPLOY.md` ("until the D-60 seed change lands", "decided but not built": both untrue once #15 merges), `src/checkout/prd3-wording.ts`, the Ledger's "1 refund, 0 of them late money", and the two wording tables in #15 and #16.
+- Closing the refund-retry gap (D-83, D-86) is a change in `src/checkout`: D-70's options (b) or (c).
+- Wording: `README.md` ("not reset between visitors", "needs the owner's reset", the *Sales closed* sentence, step 4's "side by side"), `docs/DEPLOY.md` ("leaves the clock on the wall clock", "until the D-60 seed change lands", "decided but not built": all untrue once #15 merges; D-86), `src/checkout/prd3-wording.ts`, the Ledger's "1 refund, 0 of them late money", and the two wording tables in #15 and #16.
 - The intermittent `event-clock.spec.ts:49` locator (D-84 (4)).
 - The "same hour" assertion in `e2e/hosted-demo.spec.ts` that is now trivially true (D-82 (3)).
 
@@ -27,10 +27,10 @@ On all three: lint 0, typecheck clean, `inventory:lint` OK, `inventory:eval` mat
 2. You: read #14's "README wording for Shane to approve"; keep it or revert `a7654ad`.
 3. You: mark #14 ready and merge it. **That deploys.** Look at the live Event page as `member@acme.demo.test`.
 4. You: retarget #15 to `main`. Confirm `STRIPE_SECRET_KEY` is set for Production in Vercel (D-69).
-5. You: decide whether merging #15 should turn on the nightly 06:00 UTC reset of the live demo. It also wipes any O-8 test orders from the Ledger. If yes, reword `README.md:26` and the two `docs/DEPLOY.md` sentences above; if no, leave #15 unmerged or revert `9eeb816` and the reset parts of `e06da89`.
+5. You: decide whether merging #15 should turn on the nightly 06:00 UTC reset of the live demo. It also wipes any O-8 test orders from the Ledger. If yes, reword `README.md:26` and the `docs/DEPLOY.md` sentences above; if no, leave #15 unmerged or revert `9eeb816` and the reset parts of `e06da89`.
 6. You: read #15's wording table and the refund product call (D-70, D-83), including the Ledger sentence.
 7. You: mark #15 ready and merge it. **That deploys.** The next morning read the cron's `cron.done` line: `demoReset` should say `"ran": true`.
-8. You: confirm D-76 (D-81 records it as confirmed in the PRD-4 session) and read #16's wording table.
+8. You: D-76 is recorded as confirmed by you in the PRD-4 session (D-81); say so if that record is wrong. Read #16's wording table.
 9. You: retarget #16 to `main`, let CI re-run, mark it ready and merge it. **That deploys.** Look at Buy on a phone and at `/o/acme`.
 10. You: O-8, the live Stripe round trip, is still open (`docs/EVAL.md`).
 
@@ -62,7 +62,7 @@ Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` with CI's pu
 1. You: merge PRD-2 (#14), then PRD-3 (#15), with their own steps (the sections below).
 2. You: read "Wording for Shane to approve" in this PR, including README step 4 (D-80). Revert `94432df` only together with item 19's commit `12be10c`.
 3. You: confirm D-76 (no "Nothing here yet" above the event card) or ask for the heading on both.
-4. You: get CI green (the hosted-demo member test still needs PRD-2's three lines), mark ready, merge. That deploys.
+4. You: mark ready, merge. That deploys. (Updated 2026-11-26: the hosted-demo member test has PRD-2's three lines since `815fbac`; nothing waits on it.)
 5. You: on the live site, look at Buy on a phone (rows scroll sideways) and `/o/acme` once.
 
 ---
