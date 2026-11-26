@@ -1,5 +1,16 @@
 # NEXT
 
+## ▶ 2026-11-26, afternoon (scheduled independent pre-merge review of #14, #15, #16; D-87)
+
+- **Reviews posted** on all three PRs (comment only). Verdicts: **#14 merge as is**, **#15 merge after must-fixes (fixed, see next line)**, **#16 merge as is** after the stack is updated.
+- **One must-fix, on #15, fixed in tests only (`981a8f6`):** `pay-soft.test.ts` and `pay-amount.test.ts` called the Buy action on an event with clock offset 0 and holds cast on 2026-12-01, so 4 of their 19 tests would go red from 2026-12-01 (reproduced with `Date` faked to 2026-12-02). `tests/helpers/clock.ts` pins the event clock; 19 of 19 today and with `Date` faked to 2026-12-02 and 2027-06-01. No assertion and nothing under `src/` changed.
+- **Not pushed anywhere else.** #14 and #16 unchanged; this fix is not merged up into `prd-4/first-impression-polish`. After #14 merges, the stack needs updating (#15 onto `main`, then #16 onto #15).
+- **#15's conflict with its base** was already resolved by the morning run's merge `cfacf14` (it was `NEXT.md` only, per `git merge-tree` of `d772743` against `445f47a`). Not undone: that would need a force-push.
+- **Gate on this branch** (cloud sandbox; Postgres 16 started by hand, migrations by `psql`; `npm ci` with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true`): lint 0 · typecheck clean · vitest 65 files, 577 passed, 33 skipped, 4 failed (template `inv-34-export`: `_prisma_migrations` does not exist when migrated by `psql`; CI-only) · inventory:lint OK · inventory:eval match (2,662, commitment `d4d64203…61d43`) · fixtures:check OK · inventory:eval:db match (2,662; 483 PaymentIntents, 48 refund calls, 0 pending) · `build:test` rc 0 · Playwright 46 passed. Not run: `foundation:drift` (template tag not reachable; no template-owned path changed). CI decides.
+- **Should-fixes left for you** (behaviour or wording) are in D-87 (5) and the three reviews.
+
+---
+
 ## ▶ 2026-11-26 (Fable 5.2, scheduled follow-through run, Thanksgiving morning CT): the three stacked draft PRs are merged up to date and their review should-fix items are applied. **Documents and merges only. Nothing merged to `main`, nothing deployed, all three still drafts.**
 
 **Where the three stand.** The "Gated" column is the commit the local gate ran on. Every commit after it on each branch changes documents only (the delta-review rows D-85 and D-86, the merges that carry them up, and this section), so the branch heads are later than these; the PR comments name them.

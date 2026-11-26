@@ -18,6 +18,7 @@ import { db } from '@/core/db';
 import { timestamp } from '@/inventory/time';
 import type { Command } from '@/inventory/types';
 import { resetAuthTables, signInAs } from '../helpers/auth';
+import { pinEventClock } from '../helpers/clock';
 import { addMember, makeOrg } from '../helpers/org';
 
 // The Buy action builds its gateway with stripeGateway(); a test swaps in its own factory for one call.
@@ -51,6 +52,9 @@ beforeAll(async () => {
   writeFileSync(join(dir, 'event.json'), readFileSync('fixtures/event.json', 'utf8'));
   writeFileSync(join(dir, 'customers.csv'), 'customer_id,name,email\nC-0001,One,one@example.test\n');
   eventId = (await loadFixtureEvent(org.id, dir)).eventId;
+  // the Buy action stamps on the event clock; pinned before this file's first command, so the action lands at the log's
+  // end on any date (the holds below are cast on 2026-12-01 and last 10 minutes)
+  await pinEventClock(eventId, '2026-11-01T00:00:00');
   member = (await addMember(org.id, 'member', 'member@example.test')).id;
 });
 afterEach(() => { gateway.current = null; });
