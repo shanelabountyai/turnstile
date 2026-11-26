@@ -31,6 +31,13 @@ Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` with CI's pu
 
 ## ▶ 2026-11-24 (Fable 5.2, scheduled run, about 12:45 AM CT): PRD-3 items 11, 10, 12 and 9 and the nightly demo reset (D-60) built on branch `prd-3/payment-refund-resilience`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy, and it turns on a nightly wipe and re-seed of the demo orgs.**
 
+**Update 2026-11-26 (Fable 5.2, scheduled follow-through run; a merge and documents only on this branch; D-83).** This section was written for head `a2a361d`. What has changed since:
+- **`prd-2/demo-safe-to-share` is merged in** (`cfacf14`; it carries `main`'s #13). Conflicts were in `NEXT.md`, `docs/decisions.md` and `docs/prds/README.md` only, each resolved keeping both sides; nothing under `src/` conflicted or changed. PR #15 no longer conflicts with its base.
+- So "Item 18 is not built here: covered by #13 (open)", "`e2e/hosted-demo.spec.ts` untouched", "45 passed, 1 failed" and step 5's "the hosted-demo member test needs the three lines from #14" describe `a2a361d`, not this head: #13 is merged, the spec is PRD-2's, and that test is not red.
+- **The refund retry's limits are now stated in the review's words (D-83):** one automatic retry at most; a refund created between 06:00 and 07:00 UTC gets none; a "needs the owner" refund holds the nightly reset back. **PRD-3's acceptance line on the retry is not fully met.** No behaviour changed.
+- **Wording left for you:** `docs/DEPLOY.md` ("until the D-60 seed change lands", "decided but not built") and `README.md` ("not reset between visitors", "needs the owner's reset") stop being true when this merges.
+- The gate and CI on the follow-through head, and your steps in order, are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
+
 **Read these two before anything else:**
 1. **Merging this turns on a nightly wipe and re-seed of the demo orgs on production through the existing 06:00 UTC cron** (only while `DEMO_MODE=1`; D-60, D-73).
 2. **You: confirm `STRIPE_SECRET_KEY` is set for Production in Vercel before merging.** With it missing, Pay now fails on the form instead of pretending to work (D-69). The live value was not read here and cannot be.
@@ -68,7 +75,26 @@ Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` with CI's pu
 
 ---
 
+## ▶ 2026-11-24 (Opus 5.5, live with Shane): PRD-3 item 18 built on branch `fix/hosted-demo-clock`. PR open, not merged.
+
+- `e2e/hosted-demo.spec.ts` puts both freshly seeded demo events at the moment sales open itself (`clocksToSalesOpen`: the same stored offset `setEventClock` writes, on an empty log), so its hold/release branch runs whatever the wall date. The two `axisNow(new Date()) < '2026-12-01T10:00:00'` branches are gone.
+- `docs/DEPLOY.md` records the demo's calendar end, and corrects the reset note: after 2026-12-01 10:00 a reset leaves the clock on the wall clock until D-60's seed change lands.
+- No product code, engine, fixture or schema change.
+
+Gate here: `tsc` clean · eslint on the spec clean · `inventory:lint` OK. The e2e was not run here (no Postgres or browser build in this session). CI runs the whole Playwright suite on the PR, but before 2026-12-01 that only shows the spec still passes; the after-the-date path is the same code with a different offset.
+
+**Next:** PRD-2 items 5, 6 and 8 (the password gate, D-61), then the rest of PRD-3 including the D-60 reset.
+
+---
+
 ## ▶ 2026-11-24 (Fable 5.2, scheduled run, started 2026-11-23 about 10:25 PM CT): PRD-2 items 5, 6 and 8 built on branch `prd-2/demo-safe-to-share`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy. Two things must happen before the merge.**
+
+**Update 2026-11-26 (Fable 5.2, scheduled follow-through run; documents only on this branch; D-82).** This section was written for head `ccb15c0`. What has changed since:
+- **Item 2 below is done.** Shane put the three-line `hosted-demo.spec.ts` change on this branch (`3e24bb2`, 2026-11-24). PR #13 merged to `main` (`7d68ca5`) and `main` was merged in here (`445f47a`), keeping #13's `clocksToSalesOpen()` and unconditional hold/release and this branch's `clock-movers` / no-Set-clock assertions; both `NEXT.md` sections are kept. CI on `445f47a` was green (`ci (off)`, `modules-removed`).
+- So "`e2e/hosted-demo.spec.ts` … untouched", "41 passed, 1 failed", "Likely conflict" and step 3 below describe `ccb15c0`, not this head. `docs/decisions.md` D-82 corrects D-68 (1).
+- **PRD-2 acceptance test 2 is partly met, by design** (D-67, D-82), not "Met": two visitors on one database, but not two complete walks in one org.
+- **One thing is left before the merge, and it is yours:** confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel (item 1 below). Not checked by any run.
+- The gate and CI on the follow-through head are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
 
 **Before merging, in this order:**
 1. **You: confirm `DEMO_ACCESS_PASSWORD` is 16+ characters in Vercel.** The build now refuses a shorter one (D-66). `deploy-env` runs first in the Vercel Production build, so a short live password fails the next Production build (the previous deployment keeps serving). The live value was not read here and cannot be.
