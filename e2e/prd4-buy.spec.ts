@@ -83,4 +83,11 @@ test('an orphan refusal names the stranded seat and keeps the pick ticked, in th
   await page.getByRole('button', { name: 'Hold seats in B' }).click();
   await expect(page.getByTestId('result')).toContainText('OK HELD');
   await expect(page.getByTestId('stranded')).toHaveCount(0);
+  // no seat on the page is still ticked; in section B the held seats read "held", unticked (the page opens on section A
+  // after an accepted hold: D-77 brings only a refused pick back to its section)
+  await expect(page.locator('input[name="seats[]"]:checked')).toHaveCount(0);
+  await page.getByRole('navigation', { name: 'Balcony sections' }).getByRole('link', { name: /^Section B/ }).click();
+  await expect(page.getByLabel('B-C-05 held')).not.toBeChecked();
+  await expect(page.getByLabel('B-C-06 held')).not.toBeChecked();
+  await expect(page.locator('input[name="seats[]"]:checked')).toHaveCount(0);
 });
