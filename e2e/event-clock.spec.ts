@@ -70,7 +70,11 @@ test('a member who posts Set clock anyway is refused inline: the org bar stays a
   for (const press of ['Set clock', 'Back to the wall clock']) {
     if (press === 'Set clock') await page.getByLabel('Set the event clock to').fill('2027-03-20T19:00:05');
     await page.getByRole('button', { name: press }).click();
-    await expect(page.getByRole('alert').filter({ hasText: CLOCK_MOVERS })).toBeVisible();
+    // The refusal of THIS press, in the form that was pressed: each ActionForm shows its own alert, and the first
+    // form's alert is still on the page when the second button is pressed. A page-wide locator matched the first
+    // alert at once (so the second press was not really checked) or, when the second had rendered, both (strict-mode
+    // failure, seen once in a full local run on 2026-11-26).
+    await expect(page.locator('form').filter({ has: page.getByRole('button', { name: press }) }).getByRole('alert')).toHaveText(CLOCK_MOVERS);
     await expect(page.getByText('Something went wrong')).toHaveCount(0);
     await expect(page.getByText(/^Error id:/)).toHaveCount(0);
     await expect(orgBar(page)).toContainText('Acme Studio');
