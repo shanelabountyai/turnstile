@@ -1,5 +1,61 @@
 # NEXT
 
+## ▶ 2026-11-26, afternoon (scheduled independent pre-merge review of #14, #15, #16; D-87)
+
+- **Reviews posted** on all three PRs (comment only). Verdicts: **#14 merge as is**, **#15 merge after must-fixes (fixed, see next line)**, **#16 merge as is** after the stack is updated.
+- **One must-fix, on #15, fixed in tests only (`981a8f6`):** `pay-soft.test.ts` and `pay-amount.test.ts` called the Buy action on an event with clock offset 0 and holds cast on 2026-12-01, so 4 of their 19 tests would go red from 2026-12-01 (reproduced with `Date` faked to 2026-12-02). `tests/helpers/clock.ts` pins the event clock; 19 of 19 today and with `Date` faked to 2026-12-02 and 2027-06-01. No assertion and nothing under `src/` changed.
+- **Not pushed anywhere else.** #14 and #16 unchanged; this fix is not merged up into `prd-4/first-impression-polish`. After #14 merges, the stack needs updating (#15 onto `main`, then #16 onto #15).
+- **#15's conflict with its base** was already resolved by the morning run's merge `cfacf14` (it was `NEXT.md` only, per `git merge-tree` of `d772743` against `445f47a`). Not undone: that would need a force-push.
+- **Gate on this branch** (cloud sandbox; Postgres 16 started by hand, migrations by `psql`; `npm ci` with `PRISMA_SCHEMA_ENGINE_BINARY=/bin/true`): lint 0 · typecheck clean · vitest 65 files, 577 passed, 33 skipped, 4 failed (template `inv-34-export`: `_prisma_migrations` does not exist when migrated by `psql`; CI-only) · inventory:lint OK · inventory:eval match (2,662, commitment `d4d64203…61d43`) · fixtures:check OK · inventory:eval:db match (2,662; 483 PaymentIntents, 48 refund calls, 0 pending) · `build:test` rc 0 · Playwright 46 passed. Not run: `foundation:drift` (template tag not reachable; no template-owned path changed). CI decides.
+- **Should-fixes left for you** (behaviour or wording) are in D-87 (5) and the three reviews.
+
+## ▶ 2026-11-24 (Fable 5.2, scheduled run, about 12:45 AM CT): PRD-3 items 11, 10, 12 and 9 and the nightly demo reset (D-60) built on branch `prd-3/payment-refund-resilience`. **Draft PR, not merged, nothing deployed. Merging it is a production deploy, and it turns on a nightly wipe and re-seed of the demo orgs.**
+
+**Update 2026-11-26 (Fable 5.2, scheduled follow-through run; a merge and documents only on this branch; D-83).** This section was written for head `a2a361d`. What has changed since:
+- **`prd-2/demo-safe-to-share` is merged in** (`cfacf14`; it carries `main`'s #13). Conflicts were in `NEXT.md`, `docs/decisions.md` and `docs/prds/README.md` only, each resolved keeping both sides; nothing under `src/` conflicted or changed. PR #15 no longer conflicts with its base.
+- So "Item 18 is not built here: covered by #13 (open)", "`e2e/hosted-demo.spec.ts` untouched", "45 passed, 1 failed" and step 5's "the hosted-demo member test needs the three lines from #14" describe `a2a361d`, not this head: #13 is merged, the spec is PRD-2's, and that test is not red.
+- **The refund retry's limits are now stated in the review's words (D-83):** one automatic retry at most; a refund created between 06:00 and 07:00 UTC gets none; a "needs the owner" refund holds the nightly reset back. **PRD-3's acceptance line on the retry is not fully met.** No behaviour changed.
+- **D-86 makes that exact:** "one automatic retry" is the nightly job; a box-office refund or a late-payment webhook in the same event still re-sends in-window rows, as D-70 says. `docs/DEPLOY.md` has a third stale clause ("leaves the clock on the wall clock").
+- **Wording left for you:** `docs/DEPLOY.md` ("until the D-60 seed change lands", "decided but not built") and `README.md` ("not reset between visitors", "needs the owner's reset") stop being true when this merges.
+- The gate and CI on the follow-through head, and your steps in order, are in the PR's "Merge checklist (2026-11-26 follow-through)" comment.
+
+**Read these two before anything else:**
+1. **Merging this turns on a nightly wipe and re-seed of the demo orgs on production through the existing 06:00 UTC cron** (only while `DEMO_MODE=1`; D-60, D-73).
+2. **You: confirm `STRIPE_SECRET_KEY` is set for Production in Vercel before merging.** With it missing, Pay now fails on the form instead of pretending to work (D-69). The live value was not read here and cannot be.
+
+**Base and merge order.** Open draft PR #14 (`prd-2/demo-safe-to-share`) had "Gate results" in its body, so this branch was cut from it (`ccb15c0`) and its PR is based on it. **Merge PRD-2 (#14) first, then this.** `main` had not moved (`4262a62`). Item 18 is not built here: covered by #13 (open).
+
+Built (D-69 to D-74):
+- **Item 11, Pay fails soft.** `payStart` previews the command in memory before it calls Stripe: an expired stored-`HELD` hold calls no Stripe method (the database eval shows it: 484 → 483 recorded PaymentIntents over the 2,662 fixture commands, same commitment). A Stripe failure on Pay leaves the hold `HELD` and comes back as a sentence on the form. One failed card-form lookup costs one hold its form. `stripeGateway()` throws on Production with no key.
+- **Item 12, refund retry.** A cron job retries an unconfirmed refund only while the code can show it is under 23 hours old (same idempotency key, inside Stripe's 24-hour window). Older ones are **not retried**, are counted as needing you, and show on the Ledger ("Refunds not yet confirmed by Stripe: N"). After the review the same rule guards the box office and the webhook, which used to re-send every pending refund of the event whatever its age. **Product call for you in D-70** (look the refund up at Stripe first: recommended after O-8).
+- **Item 9, warnings.** In demo mode a spent org says so on the Events card and above the customer picker on Buy. A clock move that closes sales asks first and states the one-way effect (in every mode). "Back to the wall clock" is replaced by a sentence when it can only fail or would break the walk. PRD-2's member behaviour is intact. **Every new sentence is in `src/checkout/prd3-wording.ts` and listed in the PR for you to approve.**
+- **The nightly reset (D-60).** Demo mode only: empties the 13 Turnstile tables and re-loads both demo orgs with the clock at sales open, in one transaction, after cancelling unsettled PaymentIntents. It refuses, with the reason in the cron's answer, while a refund is unconfirmed, a PaymentIntent could not be cancelled, the fixture files cannot be read, or rows exist outside the demo orgs. The build seed now also starts a fresh load at sales open whatever the date (one existing test expectation changed with that).
+- **Item 10, "Payment received by Stripe".** Built from Stripe's documented statuses, **not observed live**. It is the last code commit (`8c35cb7`), so `git revert 8c35cb7` is clean if O-8 shows otherwise; the branch without it was type-checked and its checkout tests run (156 passed).
+
+Not built, by the brief: item 18 (#13), anything from PRD-4 or PRD-5, any schema change, migration, dependency, engine or fixture change, any `vercel.json` change. `e2e/hosted-demo.spec.ts` untouched.
+
+Independent review (a separate agent, the diff against PRD-3 and D-60): 1 must-fix, 5 should-fix, 6 nits. The must-fix (the reset cancelled PaymentIntents before it knew it could finish, and a repeat cancel would have blocked it for good) is fixed with tests. What was not acted on is listed in the PR.
+
+Gate (cloud sandbox, Postgres 16, migrations by `psql`, `.env.test` with CI's public values), **base `ccb15c0` → branch**: tsc clean → clean · lint 0 → 0 · inventory:eval match (2,662, commitment `d4d64203…61d43`) → same · inventory:lint OK → OK · fixtures:check OK → OK · vitest 59 files, 500 passed, 33 skipped, 4 failed → 65 files, **577 passed**, 33 skipped, 4 failed (the same 4 template `inv-34-export` tests on both; confirmed on the base in this run: `relation "_prisma_migrations" does not exist`) · inventory:eval:db match, 2,662, 48 refund calls, 0 pending → same · `next build` (`build:test`) rc 0 → rc 0 · e2e full run 41 passed, 1 failed of 42 → **45 passed, 1 failed** of 46. The 1 failure on both is the hosted-demo member test PRD-2 left for you (D-68); the 4 new specs pass. Not run: `foundation:drift` (the template tag is not reachable here; no changed path is in its `OWNED` list, checked by hand), anything at Stripe. CI per check is in the PR body. CI decides.
+
+**Not verified:** anything live (the site, Vercel's cron, Neon, that the two fixture files reach the cron function on Vercel); anything at Stripe (the replay of an idempotency key, cancelling an already cancelled PaymentIntent, the statuses item 10 relies on, the redirect parameters); the live card form and its loading label; the live value of any variable.
+
+**Left for you, found on the way:**
+- The README still says a spent demo "needs the owner's reset" and that the database "is not reset between visitors". After this merges that is no longer the whole story. The README's wording is yours.
+- A refund that "needs the owner" also holds the nightly reset back (D-73). D-70 says how to settle one by hand.
+- The webhook route still builds `StripeLive` directly (PR #10's call 6): unchanged.
+
+**You, in order:**
+1. You: merge PRD-2 (#14) first (its own two steps are in the section below).
+2. You: confirm `STRIPE_SECRET_KEY` is set for Production in Vercel.
+3. You: read "Wording for Shane to approve" and the refund-retry product call in the PR; change `src/checkout/prd3-wording.ts` if you want other words.
+4. You: decide whether the nightly reset should go live now. If not, revert `9eeb816` (and the reset parts of `e06da89`) or leave this PR unmerged.
+5. You: get CI green (the hosted-demo member test needs the three lines from #14), mark ready, merge. That deploys.
+6. You: the next morning, read the cron's `cron.done` log line: `demoReset` should say `"ran": true`, `refunds` should be all zeros.
+7. You: run O-8 with the `docs/EVAL.md` script and the new "watch these" list under its table. If the card form comes back after paying, `git revert 8c35cb7`.
+
+---
+
 ## ▶ 2026-11-24 (Opus 5.5, live with Shane): PRD-3 item 18 built on branch `fix/hosted-demo-clock`. PR open, not merged.
 
 - `e2e/hosted-demo.spec.ts` puts both freshly seeded demo events at the moment sales open itself (`clocksToSalesOpen`: the same stored offset `setEventClock` writes, on an empty log), so its hold/release branch runs whatever the wall date. The two `axisNow(new Date()) < '2026-12-01T10:00:00'` branches are gone.

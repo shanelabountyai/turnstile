@@ -26,6 +26,6 @@ export const confirmRefund = orgAction(null, z.object({ event: z.string().min(1)
     payment_id: '', target: '', tickets: i.tickets, note: 'box office',
   };
   // a Stripe failure leaves the Refund PENDING_PROVIDER and says so on the page; a Stripe error never throws after the commit (D-56); a database error still does
-  const { pending } = await requestRefundSettled(ctx.orgId, ev.id, cmd, stripeGateway(), { clock });
+  const { pending } = await requestRefundSettled(ctx.orgId, ev.id, cmd, stripeGateway, { clock }); // built after the cast, inside settleRefunds: no key on Production leaves the refund pending, it does not throw (PRD-3 item 11)
   redirect(`/o/${ctx.slug}/events/${ev.eventKey}/box?order=${i.order}&r=${cmd.cmd_id}${pending ? '&stripe=pending' : ''}#refund`);
 });

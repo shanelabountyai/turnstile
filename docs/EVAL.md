@@ -183,4 +183,10 @@ Not yet run. Owner's step (O-8), on the live site after the money-boundary fixes
 
 **Review note, 2026-11-23 (D-58).** On `c957f7a` (what is deployed), step 5 can still show a card form if the refresh is quicker than the failure webhook, and a second card paid there is kept: no order, no refund. Branch `review/money-boundary-2026-11-23` (not merged, not deployed) removes the form once Stripe has the refused card, and refunds a success that still gets through. With that branch deployed, a sixth step is worth recording: after step 4, pay the same PaymentIntent from a second tab that was opened before the decline; expect no order, a **full refund** in Stripe, and a `checkout.paid_after_failed_refunded` line in the Vercel log. None of this has run against live Stripe.
 
+**While you are there, watch these for PRD-3 (2026-11-24, D-69, D-71; none of it has been seen live):**
+- Step 1, before you pay: the button reads "Loading the card form…" until the card fields appear.
+- Step 1, straight after paying, when Stripe sends you back to the Buy page: the hold should read "Payment received by Stripe; tickets appear when Stripe confirms it." with **no card form**, and the tickets should be there after a refresh. Write down what the address bar holds (`redirect_status`, `payment_intent`). If the card form comes back instead, item 10's guess about Stripe is wrong: revert that one commit.
+- Step 4, the decline: the form still says the hold cannot be paid again, and a refresh still shows no card form.
+- After step 2, the Ledger line should read "Refunds not yet confirmed by Stripe: 0."
+
 Until this table is filled, the claim stays: Stripe boundary tested against recorded payloads and a fixture signing secret.

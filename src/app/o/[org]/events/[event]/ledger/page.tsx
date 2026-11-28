@@ -1,7 +1,9 @@
 import { notFound } from 'next/navigation';
 import { eventNow } from '@/checkout/clock';
 import { axis, count, pageOf } from '@/checkout/format';
+import { unsettledRefundsWords } from '@/checkout/prd3-wording';
 import { dollars, eventByKey, readEvent, type EventView } from '@/checkout/read';
+import { pendingRefunds } from '@/checkout/refund-retry';
 import { requireOrg } from '@/core/authz/guards';
 import Link from 'next/link';
 import { EventTabs, LinkButton, PageHeader, Pill, ScrollTable, Section, Stat, Stats, type PillKind } from '@/components/ui';
@@ -29,6 +31,8 @@ export default async function Ledger({ params, searchParams }: { params: Promise
   const ev = await eventByKey(ctx.orgId, p.event);
   if (!ev) notFound();
   const v = await readEvent(ctx.orgId, ev.id, eventNow(new Date(), ev));
+  // PRD-3 item 12: refunds the engine has issued that Stripe has not been seen to confirm (stored rows, not the engine's view).
+  const pend = await pendingRefunds(ctx.orgId, ev.id);
   const base = `/o/${ctx.slug}/events/${ev.eventKey}`;
   const orderOf = new Map(v.orders.map((o) => [o.order, o]));
   const late = v.payments.filter((x) => x.late);
@@ -74,6 +78,9 @@ export default async function Ledger({ params, searchParams }: { params: Promise
           <Stat label="Refunded" value={<span data-testid="refunded">{dollars(l.refundedCents)}</span>} sub={`${count(l.refundedCents)}¢ · ${count(l.refunds)} refunds, ${count(late.length)} of them late money`} />
           <Stat label="Net" value={<span data-testid="net">{dollars(l.netCents)}</span>} k="good" sub={`✓ ${count(l.capturedCents)} − ${count(l.refundedCents)} = ${count(l.netCents)}¢`} />
         </Stats>
+        <p className={pend.unsettled > 0 ? 'limit' : 'muted'} role={pend.unsettled > 0 ? 'status' : undefined} data-testid="unsettled-refunds">
+          {unsettledRefundsWords(pend.unsettled, pend.retryable.length, pend.needsOwner.length)}
+        </p>
         <Stats>
           <Stat label="Tickets issued" value={count(l.ticketsIssued)} />
           <Stat label="Live" value={count(l.ticketsLive)} />

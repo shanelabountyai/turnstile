@@ -16,7 +16,7 @@ export type CancelArgs = { paymentIntentId: string; eventId: string };
 export const idempotencyKey = (eventId: string, id: string): string => `${eventId}:${id}`;
 
 export interface StripeGateway {
-  /** Idempotency key = event id + hold id (D-5, D-56). Returns the PaymentIntent id, which is the engine's payment_id. */
+  /** Idempotency key = event id + hold id (D-5, D-56). Returns the PaymentIntent id, which is the engine's payment_id. Throws StripeProviderError on any Stripe failure. */
   createPaymentIntent(a: PaymentIntentArgs): Promise<{ id: string }>;
   /** Idempotency key = event id + refund id (D-5, D-56). Returns Stripe's refund id. Throws StripeProviderError on any Stripe failure. */
   createRefund(a: RefundArgs): Promise<{ id: string }>;
@@ -24,11 +24,32 @@ export interface StripeGateway {
   cancelPaymentIntent(a: CancelArgs): Promise<void>;
   /** What Stripe Elements needs to confirm a PaymentIntent in the browser; null where there is no live Stripe, and null when the PaymentIntent can no longer take a first card. */
   clientSecret(paymentIntentId: string): Promise<string | null>;
+  /** What the Buy screen shows a PAYING hold, from one read of the PaymentIntent (PRD-3 item 10). */
+  payView(paymentIntentId: string): Promise<PayView>;
 }
 
-/** Live Stripe where a secret key is set, recorded otherwise. Recorded is safe to fall back to: it moves no money, and
- * nothing is sold without a webhook signed with STRIPE_WEBHOOK_SECRET (the e2e sets the fixture's; production never does). */
-export const stripeGateway = (): StripeGateway => (env.STRIPE_SECRET_KEY ? new StripeLive() : new StripeRecorded());
+/**
+ * `card`: Elements can still confirm a first card. `received`: Stripe has the payment (`processing` or `succeeded`) and
+ * the signed webhook has not landed yet, so the page shows no card form and says the tickets follow. `closed`: no card
+ * can be taken (refused, cancelled, or a status this app never creates).
+ */
+export type PayView = { kind: 'card'; clientSecret: string } | { kind: 'received' } | { kind: 'closed' };
+
+/** PaymentIntent statuses that mean Stripe has taken the payment or is taking it: nothing more for the customer to enter. */
+const RECEIVED: ReadonlySet<string> = new Set(['processing', 'succeeded']);
+
+/**
+ * Live Stripe where a secret key is set. Without one: the recorded double everywhere except a Production deployment,
+ * where a missing key is a configuration fault and this throws (PRD-3 item 11, review CODE-7). Before, Production fell
+ * back to the double silently: Pay answered "PAYING" for a PaymentIntent that did not exist. Off Production the
+ * fallback stays: it moves no money, and nothing is sold without a webhook signed with STRIPE_WEBHOOK_SECRET (tests,
+ * CI, a laptop and a Preview build have no key by design, D-5).
+ */
+export function stripeGateway(e: { VERCEL_ENV?: string; STRIPE_SECRET_KEY?: string } = env): StripeGateway {
+  if (e.STRIPE_SECRET_KEY) return new StripeLive(e.STRIPE_SECRET_KEY);
+  if (e.VERCEL_ENV === 'production') throw new StripeNotConfigured();
+  return new StripeRecorded();
+}
 
 /** The part of the official client StripeLive uses; a test passes a stand-in with these three calls. */
 export type StripeClient = Pick<Stripe, 'paymentIntents' | 'refunds'>;
@@ -47,11 +68,15 @@ export class StripeLive implements StripeGateway {
     this.s = new Stripe(secretKey);
   }
   async createPaymentIntent(a: PaymentIntentArgs) {
-    const pi = await this.s.paymentIntents.create(
-      { amount: a.amountCents, currency: a.currency.toLowerCase(), automatic_payment_methods: { enabled: true }, metadata: { hold_id: a.holdId, customer: a.customer, org_id: a.orgId, event_id: a.eventId } },
-      { idempotencyKey: idempotencyKey(a.eventId, a.holdId) },
-    );
-    return { id: pi.id };
+    try {
+      const pi = await this.s.paymentIntents.create(
+        { amount: a.amountCents, currency: a.currency.toLowerCase(), automatic_payment_methods: { enabled: true }, metadata: { hold_id: a.holdId, customer: a.customer, org_id: a.orgId, event_id: a.eventId } },
+        { idempotencyKey: idempotencyKey(a.eventId, a.holdId) },
+      );
+      return { id: pi.id };
+    } catch (e) {
+      throw providerError(e, `PaymentIntent for ${a.holdId}`); // PRD-3 item 11: payStart turns this into words on the form
+    }
   }
   async createRefund(a: RefundArgs) {
     try {
@@ -65,6 +90,15 @@ export class StripeLive implements StripeGateway {
     try {
       await this.s.paymentIntents.cancel(a.paymentIntentId, {}, { idempotencyKey: idempotencyKey(a.eventId, `cancel:${a.paymentIntentId}`) });
     } catch (e) {
+      // Stripe refuses to cancel a PaymentIntent that is already cancelled, and replays that refusal for the key. For
+      // every caller that is the outcome it wanted, so one read decides: `canceled` is success, anything else is the failure.
+      let status: string | null = null;
+      try {
+        status = (await this.s.paymentIntents.retrieve(a.paymentIntentId)).status;
+      } catch {
+        // the read failed too: report the cancel's own failure below
+      }
+      if (status === 'canceled') return;
       throw providerError(e, `cancel ${a.paymentIntentId}`);
     }
   }
@@ -74,12 +108,26 @@ export class StripeLive implements StripeGateway {
     const pi = await this.s.paymentIntents.retrieve(paymentIntentId);
     return PAYABLE.has(pi.status) && !pi.last_payment_error ? pi.client_secret : null;
   }
+  /** Not wrapped in providerError on purpose: payForms catches anything and logs the error's class only. */
+  async payView(paymentIntentId: string): Promise<PayView> {
+    const pi = await this.s.paymentIntents.retrieve(paymentIntentId);
+    if (RECEIVED.has(pi.status)) return { kind: 'received' };
+    return PAYABLE.has(pi.status) && !pi.last_payment_error && pi.client_secret ? { kind: 'card', clientSecret: pi.client_secret } : { kind: 'closed' };
+  }
 }
 
 /** Any failure from Stripe, so callers can leave a Refund PENDING_PROVIDER (D-23) instead of throwing after a commit. */
 export class StripeProviderError extends Error {
   constructor(message: string, readonly kind: 'idempotency' | 'other' = 'other') {
     super(message);
+  }
+}
+
+/** Production with no STRIPE_SECRET_KEY (PRD-3 item 11). A provider failure to every caller: a refund stays pending, a
+ * cancel is logged, Pay says so on the form. The message names the variable and never a value. */
+export class StripeNotConfigured extends StripeProviderError {
+  constructor() {
+    super('STRIPE_SECRET_KEY is not set on this Production deployment');
   }
 }
 
@@ -112,5 +160,10 @@ export class StripeRecorded implements StripeGateway {
   }
   async clientSecret() {
     return null;
+  }
+  /** A test says what Stripe would report for a PaymentIntent: its status, by id (PRD-3 item 10). Unset = no status known. */
+  readonly intentStatus = new Map<string, string>();
+  async payView(paymentIntentId: string): Promise<PayView> {
+    return RECEIVED.has(this.intentStatus.get(paymentIntentId) ?? '') ? { kind: 'received' } : { kind: 'closed' };
   }
 }

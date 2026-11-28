@@ -1,12 +1,17 @@
+import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { axisNow, eventNow } from '@/checkout/clock';
+import { crossesSalesClose, wallClockBlock } from '@/checkout/demo';
 import { axis, count, date, day, duration, refundWords, tierState, time } from '@/checkout/format';
 import { dollars, eventByKey, percent, readEvent, type EventView } from '@/checkout/read';
+import { CLOCK_PAST_CLOSE, WALL_CLOCK_BLOCKED } from '@/checkout/prd3-wording';
 import { CLOCK_MOVERS } from '@/checkout/refusal';
+import { demoEnabled } from '@/core/auth/demo';
 import { requireOrg } from '@/core/authz/guards';
 import { can } from '@/core/authz/permissions';
 import { ActionForm } from '@/core/ui/action-form';
-import { EventTabs, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
+import { EventTabs, Notice, PageHeader, Pill, ScrollTable, Section } from '@/components/ui';
+import { isTimestamp } from '@/inventory/time';
 import { setEventClock } from './actions';
 
 // Task 3.3, design pass (D-37, artboard docs/design/Event.dc.html): the event as of now (D-31 read model, D-34 server
@@ -22,7 +27,7 @@ const SOLD_OUT: Record<NonNullable<TierView['soldOut']>, { short: string; why: s
 
 export const metadata = { title: 'Event · Turnstile' };
 
-export default async function EventScreen({ params }: { params: Promise<{ org: string; event: string }> }) {
+export default async function EventScreen({ params, searchParams }: { params: Promise<{ org: string; event: string }>; searchParams: Promise<{ confirm_clock?: string }> }) {
   const ctx = await requireOrg((await params).org);
   const p = await params;
   const ev = await eventByKey(ctx.orgId, p.event);
@@ -35,6 +40,15 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
   // D-35: only `org.update` moves the clock. A role without it reads the clock and is told who can move it (D-65);
   // the action refuses the same roles itself, so this is what the screen offers, not the check.
   const mayMoveClock = can(ctx.role, 'org.update');
+  // PRD-3 item 9. A clock move that closes sales is one-way for the org: setEventClock sends it here to be confirmed
+  // (`confirm_clock`), and nothing is written until the confirmation is posted. The parameter is only ever a time to
+  // show back; the action checks the move again. In demo mode "Back to the wall clock" is not offered when it can only
+  // fail or would break the walk, and a sentence says why.
+  const demo = demoEnabled();
+  const wallAxis = axisNow(wall, ev.timezoneLabel);
+  const asked = (await searchParams).confirm_clock;
+  const confirmTo = mayMoveClock && asked && isTimestamp(asked) && crossesSalesClose(v.asOf, asked, v.event.salesCloseAt) ? asked : null;
+  const wallOff = wallClockBlock({ demo, offsetSeconds: ev.clockOffsetSeconds, wall: wallAxis, asOf: v.asOf, logAt: v.logAt, salesOpenAt: v.event.salesOpenAt, salesCloseAt: v.event.salesCloseAt, cancelledAt: v.event.cancelledAt });
 
   return (
     <>
@@ -121,21 +135,39 @@ export default async function EventScreen({ params }: { params: Promise<{ org: s
             Every command and screen reads this clock, which runs at wall-clock speed from where staff set it (D-35). The server decides each expiry at the
             inclusive second; it can only move forward past the log{v.logAt && <> (last command {axis(v.logAt)})</>}.
           </p>
-          <p>Wall clock {axis(axisNow(wall, ev.timezoneLabel))} · event clock <strong data-testid="event-clock">{axis(v.asOf)}</strong></p>
+          <p>Wall clock {axis(wallAxis)} · event clock <strong data-testid="event-clock">{axis(v.asOf)}</strong></p>
           {mayMoveClock ? (
             <>
+              {confirmTo && (
+                <div role="alert" data-testid="clock-confirm">
+                  <Notice k="risk" title={CLOCK_PAST_CLOSE.title}>
+                    <p>{CLOCK_PAST_CLOSE.body(axis(v.event.salesCloseAt), axis(confirmTo))}{demo && <> {CLOCK_PAST_CLOSE.demo}</>}</p>
+                    <div className="cluster">
+                      <ActionForm action={setEventClock.bind(null, ctx.slug)}>
+                        <input type="hidden" name="event" value={ev.eventKey} />
+                        <input type="hidden" name="to" value={confirmTo} />
+                        <input type="hidden" name="confirm" value="1" />
+                        <button type="submit">{CLOCK_PAST_CLOSE.confirm(axis(confirmTo))}</button>
+                      </ActionForm>
+                      <Link className="button secondary" href={`${base}#clock`}>{CLOCK_PAST_CLOSE.cancel}</Link>
+                    </div>
+                  </Notice>
+                </div>
+              )}
               <ActionForm action={setEventClock.bind(null, ctx.slug)}>
                 <input type="hidden" name="event" value={ev.eventKey} />
                 <div className="cluster">
-                  <label>Set the event clock to <input name="to" type="datetime-local" step={1} defaultValue={v.asOf} required /></label>
+                  <label>Set the event clock to <input name="to" type="datetime-local" step={1} defaultValue={confirmTo ?? v.asOf} required /></label>
                   <button type="submit">Set clock</button>
                 </div>
               </ActionForm>
-              <ActionForm action={setEventClock.bind(null, ctx.slug)}>
-                <input type="hidden" name="event" value={ev.eventKey} />
-                <input type="hidden" name="reset" value="1" />
-                <button type="submit" className="secondary">Back to the wall clock</button>
-              </ActionForm>
+              {wallOff ? <p className="hint" data-testid="wall-clock-off">{WALL_CLOCK_BLOCKED[wallOff]}</p> : (
+                <ActionForm action={setEventClock.bind(null, ctx.slug)}>
+                  <input type="hidden" name="event" value={ev.eventKey} />
+                  <input type="hidden" name="reset" value="1" />
+                  <button type="submit" className="secondary">Back to the wall clock</button>
+                </ActionForm>
+              )}
             </>
           ) : (
             <p data-testid="clock-movers">{CLOCK_MOVERS}</p>

@@ -1,7 +1,10 @@
 import Link from 'next/link';
 import { eventNow } from '@/checkout/clock';
+import { otherDemoOrg, usedUp } from '@/checkout/demo';
 import { axis, count, day, saleState, time } from '@/checkout/format';
+import { usedUpWords } from '@/checkout/prd3-wording';
 import { readEvent } from '@/checkout/read';
+import { demoEnabled } from '@/core/auth/demo';
 import { requireOrg } from '@/core/authz/guards';
 import { db } from '@/core/db';
 import { withOrg } from '@/core/db/rls';
@@ -30,6 +33,8 @@ export default async function Events({ params }: { params: Promise<{ org: string
               <h2 id={`ev-${e.eventKey}`}><Link href={base}>{v.event.name}</Link></h2>
               <Pill k={k}>{word}</Pill>
             </div>
+            {/* PRD-3 item 9: a spent demo org says what to do next */}
+            {usedUp(demoEnabled(), { asOf: v.asOf, ...v.event }) && <p className="limit" data-testid="used-up">{usedUpWords(otherDemoOrg(ctx.slug))}</p>}
             <p className="muted">{v.event.venue} · {day(v.event.startsAt)} · doors {time(v.event.doorsAt)} · event clock {axis(v.asOf)}</p>
             <div className="stats">
               {v.pools.map((x) => (
